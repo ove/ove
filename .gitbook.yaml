@@ -1,5 +1,5 @@
 root: ./docs/
 
 structure:
-  readme: ./product/README.md
-  summary: ./product/SUMMARY.md
+  readme: ./README.md
+  summary: ./SUMMARY.md
