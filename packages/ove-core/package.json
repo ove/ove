@@ -1,0 +1,12 @@
+{
+  "name": "ove-core",
+  "version": "0.1.0",
+  "description": "The Core libraries of OVE",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
+  "license": "MIT"
+}
