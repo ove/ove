@@ -5,11 +5,11 @@ Open Visualisation Environment is an open-source software stack, designed to be 
 
 ---
 
-# Build Instructions 
+## Build Instructions 
 
 The build system is based on [Lerna](https://lernajs.io/) using [Babel](http://babeljs.io/) for [Node.js](https://nodejs.org/en/) and uses a [PM2](http://pm2.keymetrics.io/) runtime.
 
-## Prerequisites 
+### Prerequisites 
 
 * [Node.js](https://nodejs.org/en/) (v4.0+)
 * [NPM](https://www.npmjs.com/) 
@@ -19,7 +19,7 @@ The build system is based on [Lerna](https://lernajs.io/) using [Babel](http://b
 
 Building ``OVE.Service.ImageTiles`` also requires the [.NET Core command-line tools](https://docs.microsoft.com/en-us/dotnet/core/tools/?tabs=netcore2x).
 
-## Build
+### Build
 
 Setup the lerna environment:
 * `git clone https://github.com/dsi-icl/ove`
@@ -31,13 +31,25 @@ Build and start runtime:
 * `lerna run build`
 * `pm2 start pm2.json`
 
-## Run
+### Run
 
 Run in Chrome:
 * Control Page `http://localhost:8081/control.html?layers=0,40`
 * Client Pages `http://localhost:8081/view.html?oveClientId=0` < check Clients.json for info 
 
-## Stop
+### Stop
 
 * `pm2 stop pm2.json`
 * `pm2 delete pm2.json`
+
+
+## Docker
+
+Alternatively, you can use docker.
+
+```sh
+docker build -t ove -f Dockerfile .
+docker run -d -p 8080-8090:8080-8090 --name ove ove
+```
+
+The app is now running in port 8080 of localhost.
