@@ -71,3 +71,5 @@ lib/
 .vs/
 obj/
 bin/
+*.csproj.user
+*.db

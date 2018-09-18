@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OVE.Service.ImageTiles.DbContexts;
 
 namespace OVE.Service.ImageTiles
 {
@@ -28,6 +30,9 @@ namespace OVE.Service.ImageTiles
 
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+
+            services.AddDbContext<ImageFileContext>(options => options.UseSqlite("Data Source=ImageFiles.db"));
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
