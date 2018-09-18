@@ -1,0 +1,14 @@
+.outer {
+    height: 70vh;
+    border: 1px solid #292929;
+    overflow:hidden;
+    position: absolute;
+    height: 1px;
+}
+.map {
+    width: 100%;
+    border: 0 none;
+    height: 1px;
+    vertical-align: middle;
+    margin: 0 auto;
+}

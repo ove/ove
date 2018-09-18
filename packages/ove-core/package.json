@@ -1,12 +1,23 @@
 {
-  "name": "ove-core",
+  "name": "@ove/ove-core",
   "version": "0.1.0",
-  "description": "The Core libraries of OVE",
-  "main": "lib/index.js",
+  "description": "The Core library of OVE",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "clean": "npx rimraf dist",
+    "build": "npx babel src --out-dir dist --copy-files",
+    "start": "node dist/index.js",
+    "start:dev": "babel-node src/index.js"
   },
   "keywords": [],
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "cors": "2.8.4",
+    "express": "4.16.3",
+    "express-ws": "4.0.0",
+    "uglify-js": "3.4.9",
+    "request": "2.88.0"
+  }
 }

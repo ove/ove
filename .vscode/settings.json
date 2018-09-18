@@ -1,0 +1,15 @@
+{
+    "files.exclude": {
+        "**/.git": false,
+        "**/.git*": true,
+        "**/.vscode": true,
+        "**/dist": true,
+        "**/lib": true,
+        "**/node_modules": true,
+        "**/package-lock.json": true
+    },
+    "javascript.preferences.quoteStyle": "single",
+    "typescript.validate.enable": false,
+    "typescript.format.enable": false,
+    "typescript.autoImportSuggestions.enabled": false
+}

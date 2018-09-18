@@ -1,0 +1,50 @@
+{
+    "extends": "standard",
+    "globals": {
+        "$": true,
+        "DEBUG": true,
+        "fetch": true,
+        "location": true,
+        "OVE": true
+    },
+    "overrides": [
+        {
+            "files": [ "**/view/*.js" ],
+            "globals": {
+                "initView": true,
+                "updateSections": true
+            }
+        },
+        {
+            "files": [ "ove.js" ],
+            "globals": {
+                "WebSocket": true
+            },
+            "rules": {
+                "no-unused-vars": ["error", { "vars": "all", "args": "none", "ignoreRestSiblings": true, "varsIgnorePattern": "OVE" }],
+                "spaced-comment": ["error", "always", {
+                    "line": { "markers": ["*package", "!", "/", ",", "=", "--" ], "exceptions": ["-----------------------------------------------------------//"] },
+                    "block": { "balanced": true, "markers": ["*package", "!", ",", ":", "::", "flow-include"], "exceptions": ["*"] }
+                }]
+            }
+        }
+    ],
+    "rules": {
+        "eqeqeq": ["off"],
+        "indent": ["error", 4, {
+            "SwitchCase": 1,
+            "VariableDeclarator": 1,
+            "outerIIFEBody": 1,
+            "MemberExpression": 1,
+            "FunctionDeclaration": { "parameters": 1, "body": 1 },
+            "FunctionExpression": { "parameters": 1, "body": 1 },
+            "CallExpression": { "arguments": 1 },
+            "ArrayExpression": 1,
+            "ObjectExpression": 1,
+            "ImportDeclaration": 1,
+            "flatTernaryExpressions": false,
+            "ignoreComments": false
+        }],
+        "semi": ["error", "always"]
+    }
+}

@@ -1,0 +1,9 @@
+.wrapper {
+    height: 100%;
+    overflow: hidden;
+}
+.html_frame {
+    -moz-transform: scale(1);
+    -o-transform: scale(1);
+    -webkit-transform: scale(1);
+}

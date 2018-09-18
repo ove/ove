@@ -1,0 +1,4 @@
+.outer {
+    display: table;
+    position: absolute;
+}
