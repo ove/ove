@@ -32,7 +32,7 @@
         {
             "files": [ "**/*.js" ],
             "globals": {
-                "initScenario": true,
+                "beginInitialization": true,
                 "loadSigma": true
             }
         }

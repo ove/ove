@@ -71,7 +71,7 @@ changeEvent = function () {
     }
 };
 
-initScenario = function () {
+beginInitialization = function () {
     $(document).on('ove.loaded', function () {
         window.ove.state.load().then(function () {
             if (window.ove.state.current.position) {

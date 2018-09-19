@@ -34,7 +34,7 @@
                 "doRegistration": true,
                 "handleBufferStatusChange": true,
                 "initCommon": true,
-                "initScenario": true,
+                "beginInitialization": true,
                 "loadURL": true,
                 "refresh": true,
                 "requestRegistration": true

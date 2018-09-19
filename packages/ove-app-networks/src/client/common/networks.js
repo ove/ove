@@ -3,7 +3,7 @@ $(function () {
         window.ove = new OVE();
         window.ove.context.isInitialized = false;
         window.ove.context.sigma = undefined;
-        initScenario();
+        beginInitialization();
     });
 });
 

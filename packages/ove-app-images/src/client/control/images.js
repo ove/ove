@@ -44,7 +44,7 @@ sendViewportDetails = function (viewer) {
     }
 };
 
-initScenario = function () {
+beginInitialization = function () {
     $(document).on('ove.loaded', function () {
         let state = window.ove.state.name || 'In2White';
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {

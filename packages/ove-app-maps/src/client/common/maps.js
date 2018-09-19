@@ -4,7 +4,7 @@ $(function () {
         window.ove.context.isInitialized = false;
         window.ove.context.layers = [];
         window.ove.context.map = undefined;
-        initScenario();
+        beginInitialization();
     });
 });
 

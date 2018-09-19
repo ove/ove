@@ -26,7 +26,7 @@ initControl = function (data) {
     window.ove.state.cache();
 };
 
-initScenario = function () {
+beginInitialization = function () {
     $(document).on('ove.loaded', function () {
         let state = window.ove.state.name || 'SigmaSample';
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {

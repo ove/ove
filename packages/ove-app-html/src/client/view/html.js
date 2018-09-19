@@ -17,7 +17,7 @@ getCSS = function () {
     };
 };
 
-initScenario = function () {
+beginInitialization = function () {
     initView();
     $(document).on('ove.loaded', function () {
         if (!window.ove.context.isInitialized) {

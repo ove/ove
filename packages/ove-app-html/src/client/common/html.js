@@ -2,7 +2,7 @@ $(function () {
     $(document).ready(function () {
         window.ove = new OVE();
         window.ove.context.isInitialized = false;
-        initScenario();
+        beginInitialization();
     });
 });
 

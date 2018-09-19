@@ -19,7 +19,7 @@ requestRegistration = function () {
 
 doRegistration = function () { }; // view-only operation
 
-initScenario = function () {
+beginInitialization = function () {
     $(document).on('ove.loaded', function () {
         let state = window.ove.state.name || 'DSIIntro';
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {

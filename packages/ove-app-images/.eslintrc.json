@@ -28,7 +28,7 @@
         {
             "files": [ "**/*.js" ],
             "globals": {
-                "initScenario": true,
+                "beginInitialization": true,
                 "loadOSD": true
             }
         }

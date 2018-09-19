@@ -19,9 +19,6 @@
             "files": [ "**/control/*.js" ],
             "globals": {
                 "initControl": true,
-                "loadMapControls": true,
-                "updateCenter": true,
-                "updateResolution": true,
                 "uploadMapPosition": true
             }
         },
@@ -37,7 +34,7 @@
                 "changeEvent": true,
                 "initCommon": true,
                 "initMap": true,
-                "initScenario": true
+                "beginInitialization": true
             }
         }
     ],

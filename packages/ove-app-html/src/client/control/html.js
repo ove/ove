@@ -17,7 +17,7 @@ getCSS = function () {
     return { width: '100vw', height: '60vh' };
 };
 
-initScenario = function () {
+beginInitialization = function () {
     $(document).on('ove.loaded', function () {
         let state = window.ove.state.name || 'Matrix';
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
