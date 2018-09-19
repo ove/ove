@@ -70,10 +70,10 @@ updateSections = function (m) {
         if (m.id) {
             let frame = $('#content-frame-section-' + m.id);
             if (frame.length) {
-                delete frame.detach();
+                frame.remove();
             }
         } else {
-            delete $('iframe').detach();
+            $('iframe').remove();
         }
     }
 };

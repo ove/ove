@@ -21,7 +21,7 @@ function OVE () {
     //-----------------------------------------------------------//
     //--                 Messaging Functions                   --//
     //-----------------------------------------------------------//
-    var getSocket = function (_private) {
+    var OVESocket = function (_private) {
         var onMessage = function (appId, message) { return 0; };
 
         //-- Socket init code --//
@@ -110,7 +110,7 @@ function OVE () {
     //-----------------------------------------------------------//
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
-    var getState = function (_private) {
+    var OVEState = function (_private) {
         this.cache = function (url) {
             $.ajax({ url: url || (_private.sectionId + '/state'), type: 'POST', data: JSON.stringify(this.current), contentType: 'application/json' });
         };
@@ -139,7 +139,7 @@ function OVE () {
 
     //-- holds private data within OVE library --//
     var _private = {};
-    this.socket = new getSocket(_private);
-    this.state = new getState(_private);
+    this.socket = new OVESocket(_private);
+    this.state = new OVEState(_private);
     setLayout(this, _private);
 }
