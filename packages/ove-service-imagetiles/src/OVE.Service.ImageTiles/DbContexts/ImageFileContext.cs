@@ -24,7 +24,7 @@ namespace OVE.Service.ImageTiles.DbContexts {
                 // otherwise add the sample image
                 context.ImageFiles.AddRange(
                     new ImageFileModel {
-                        Project = "Sample", Filename = "Imperial.png", Description = "A photo of Imperial",
+                        Project = "Sample", Name = "Imperial", Description = "A photo of Imperial",
                         Height = 100, Width = 100
                     }
                 );

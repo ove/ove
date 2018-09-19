@@ -18,13 +18,20 @@ namespace OVE.Service.ImageTiles.Models {
         [Required(AllowEmptyStrings = false)]
         [RegularExpression(@"^[-a-zA-Z0-9_.]+$", ErrorMessage = "Please keep file names to letters, numbers, dashes and underscores")]
         [MaxLength(50, ErrorMessage = "Please keep file names short - 50 characters")]
-        public string Filename { get; set; }
-        
+        public string Name { get; set; }
+        // todo this could be filled automatically from the upload form
+
         public string Description { get; set; }
 
         [ScaffoldColumn(false)]
         public int Width { get; set; }
         [ScaffoldColumn(false)]
         public int Height { get; set; }
+
+        /// <summary>
+        /// This is the actual location of the file on the filesystem (todo this will change to object store reference)
+        /// </summary>
+        [ScaffoldColumn(false)]
+        public string StorageLocation { get; set; }
     }
 }

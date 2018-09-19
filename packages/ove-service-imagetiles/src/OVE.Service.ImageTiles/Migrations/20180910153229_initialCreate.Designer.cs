@@ -8,8 +8,8 @@ using OVE.Service.ImageTiles.DbContexts;
 namespace OVE.Service.ImageTiles.Migrations
 {
     [DbContext(typeof(ImageFileContext))]
-    [Migration("20180908125748_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20180910153229_initialCreate")]
+    partial class initialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -24,14 +24,16 @@ namespace OVE.Service.ImageTiles.Migrations
 
                     b.Property<string>("Description");
 
-                    b.Property<string>("Filename")
+                    b.Property<int>("Height");
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50);
 
-                    b.Property<int>("Height");
-
                     b.Property<string>("Project")
                         .IsRequired();
+
+                    b.Property<string>("StorageLocation");
 
                     b.Property<int>("Width");
 

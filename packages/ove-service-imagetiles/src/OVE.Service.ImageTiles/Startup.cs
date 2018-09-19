@@ -29,6 +29,8 @@ namespace OVE.Service.ImageTiles
             });
 
 
+            services.AddSingleton(Configuration);  
+
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
             services.AddDbContext<ImageFileContext>(options => options.UseSqlite("Data Source=ImageFiles.db"));

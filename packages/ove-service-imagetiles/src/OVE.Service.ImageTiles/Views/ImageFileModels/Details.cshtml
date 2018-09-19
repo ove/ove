@@ -1,4 +1,6 @@
 ﻿@model OVE.Service.ImageTiles.Models.ImageFileModel
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
 
 @{
     ViewData["Title"] = "Details";
@@ -17,10 +19,10 @@
             @Html.DisplayFor(model => model.Project)
         </dd>
         <dt>
-            @Html.DisplayNameFor(model => model.Filename)
+            @Html.DisplayNameFor(model => model.Name)
         </dt>
         <dd>
-            @Html.DisplayFor(model => model.Filename)
+            @Html.DisplayFor(model => model.Name)
         </dd>
         <dt>
             @Html.DisplayNameFor(model => model.Description)
@@ -33,4 +35,7 @@
 <div>
     <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a> |
     <a asp-action="Index">Back to List</a>
+</div>
+<div>
+    <img src="@Url.Content(Configuration.GetValue<string>("ImageStorageConfig:BasePath").Replace("wwwroot","")+Model.Project+"/"+Model.StorageLocation)" alt="Image" style="width: 75%" />
 </div>

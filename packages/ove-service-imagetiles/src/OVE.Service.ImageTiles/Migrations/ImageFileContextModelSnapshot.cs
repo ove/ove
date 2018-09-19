@@ -22,14 +22,16 @@ namespace OVE.Service.ImageTiles.Migrations
 
                     b.Property<string>("Description");
 
-                    b.Property<string>("Filename")
+                    b.Property<int>("Height");
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50);
 
-                    b.Property<int>("Height");
-
                     b.Property<string>("Project")
                         .IsRequired();
+
+                    b.Property<string>("StorageLocation");
 
                     b.Property<int>("Width");
 
