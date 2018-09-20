@@ -108,9 +108,14 @@ onYouTubeIframeAPIReady = function () {
             'onStateChange': function (event) { }
         }
     });
-    window.ove.context.isInitialized = true;
-    setTimeout(function () {
-        // The YouTube API takes time to load the player
-        $(document).trigger('videos.initialized');
-    }, 1000);
+    var playerLoaded = function () {
+        if (!window.ove.context.youtubePlayer.loadVideoByUrl) {
+            setTimeout(playerLoaded, 1000);
+        } else {
+            // The YouTube API takes time to load the player
+            window.ove.context.isInitialized = true;
+            $(document).trigger('videos.initialized');
+        }
+    };
+    playerLoaded();
 };
