@@ -198,7 +198,7 @@ var deleteSections = function (req, res, next) {
     while (sections.length !== 0) {
         let section = sections.pop();
         if (section.app) {
-            request.get(section.app.url + '/flush');
+            request.post(section.app.url + '/flush');
         }
     }
     if (DEBUG) {
@@ -282,7 +282,7 @@ var deleteSectionById = function (req, res, next) {
     }
     let section = sections[sectionId];
     if (section.app) {
-        request.get(section.app.url + '/flush');
+        request.post(section.app.url + '/flush');
     }
     delete sections[sectionId];
     sections[sectionId] = {};
@@ -301,7 +301,16 @@ app.post('/section', createSection);
 app.get('/section/:id', readSectionById);
 app.post('/section/:id', updateSectionById);
 app.delete('/section/:id', deleteSectionById);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(yamljs.load(path.join(__dirname, 'swagger.yaml')), {
+
+// Swagger API documentation
+let swaggerDoc = (function (swagger) {
+    swagger.info.version = swagger.info.version.replace('@VERSION', pjson.version);
+    swagger.info.license.name = swagger.info.license.name.replace('@LICENSE', pjson.license);
+    swagger.info.contact.email = swagger.info.contact.email.replace('@AUTHOR',
+        pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
+    return swagger;
+})(yamljs.load(path.join(__dirname, 'swagger.yaml')));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
     swaggerOptions: {
         defaultModelsExpandDepth: -1
     }

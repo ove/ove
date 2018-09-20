@@ -1,20 +1,19 @@
 swagger: "2.0"
 info:
   description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). The OVE core provides functionality for CRUD operations on sections and obtaining details of clients."
-  version: "0.1.0"
+  version: "@VERSION"
   title: "OVE Core"
   contact:
-    email: "senaka.fernando15@imperial.ac.uk"
+    email: "@AUTHOR"
   license:
-    name: "MIT License"
+    name: "@LICENSE License"
     url: "https://raw.githubusercontent.com/dsi-icl/ove/master/LICENSE"
-host: "localhost:8080"
 basePath: "/"
 tags:
 - name: "clients"
   description: "Layout details of all clients"
 - name: "client"
-  description: "Layout details of an individual client"  
+  description: "Layout details of an individual client"
 - name: "sections"
   description: "Operations on all sections"
 - name: "section"
@@ -34,7 +33,7 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Clients"
-  /client/{id}:
+  /client/{sectionId}:
     get:
       tags:
       - "client"
@@ -43,7 +42,7 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - name: "id"
+      - name: "sectionId"
         in: "path"
         type: "integer"
         format: "int32"
@@ -301,7 +300,6 @@ definitions:
         type: "integer"
         format: "int32"
         example: 4320
-                    
   Section Metadata:
     description: "Response format, when fetching section details"
     type: "object"

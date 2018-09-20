@@ -1,0 +1,141 @@
+swagger: "2.0"
+info:
+  description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). OVE applications are applications designed to work with the OVE core. They are launched and managed within the browser-based OVE environment. Each OVE application exposes a standard control API and in some cases some application specific APIs."
+  version: "@VERSION"
+  title: "OVE Core"
+  contact:
+    email: "@AUTHOR"
+  license:
+    name: "@LICENSE License"
+    url: "https://raw.githubusercontent.com/dsi-icl/ove/master/LICENSE"
+basePath: "/"
+tags:
+- name: "named state"
+  description: "Named state configurations stored within the application"
+- name: "runtime state"
+  description: "Runtime state information cached within the application"  
+- name: "flush"
+  description: "Restores the application state and configuration to what they were when the application started"
+schemes:
+- "http"
+paths:
+  /flush:
+    post:
+      tags:
+      - "flush"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+  /state/{name}:
+    get:
+      tags:
+      - "named state"
+      summary: "Reads configuration of named state"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        type: "string"
+        description: "Name of state"
+        required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid state name' if no state by the given name was found."
+    post:
+      tags:
+      - "named state"
+      summary: "Creates or updates named state with provided configuration"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        type: "string"
+        description: "Name of state"
+        required: true
+      - in: "body"
+        name: "body"
+        description: "State configuration"
+        required: true
+        schema:
+            type: "object"
+      responses:
+        200:
+          description: "successful operation"
+  /{sectionId}/state:
+    get:
+      tags:
+      - "runtime state"
+      summary: "Reads state configuration of given section"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sectionId"
+        in: "path"
+        type: "string"
+        description: "Section ID"
+        required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        204:
+          description: "no state found"
+    post:
+      tags:
+      - "runtime state"
+      summary: "Creates or updates state configuration of given section"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sectionId"
+        in: "path"
+        type: "string"
+        description: "Section ID"
+        required: true
+      - in: "body"
+        name: "body"
+        description: "State configuration"
+        required: true
+        schema:
+            type: "object"
+      responses:
+        200:
+          description: "successful operation"
+  /state:
+    get:
+      tags:
+      - "runtime state"
+      summary: "Reads configuration of all states corresponding to all active sections"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "object"
+        204:
+          description: "no state found"
+externalDocs:
+  description: "Find out more about OVE"
+  url: "https://dsi.gitbook.io/ove"

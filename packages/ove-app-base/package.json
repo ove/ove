@@ -5,7 +5,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "npx rimraf lib",
-    "build": "npx babel src --out-dir lib"
+    "build": "npx babel src --out-dir lib --copy-files"
   },
   "keywords": [],
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
@@ -13,6 +13,8 @@
   "dependencies": {
     "express": "4.16.3",
     "cors": "2.8.4",
-    "jquery": "3.3.1"
+    "jquery": "3.3.1",
+    "swagger-ui-express": "4.0.1",
+    "yamljs" : "0.3.0"
   }
 }

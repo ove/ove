@@ -10,9 +10,9 @@ setTimeout(function () {
             let status = m.message.bufferStatus;
             if (status.type.registration) {
                 if (!bufferStatus[m.sectionId] || JSON.stringify(bufferStatus[m.sectionId]) === JSON.stringify({})) {
-                    bufferStatus[m.sectionId] = {clients:[]};
+                    bufferStatus[m.sectionId] = { clients: [] };
                     bufferStatus[m.sectionId].clients.push(status.clientId);
-                } else if (!context.bufferStatus.clients.includes(status.clientId)) {
+                } else if (!bufferStatus[m.sectionId].clients.includes(status.clientId)) {
                     bufferStatus[m.sectionId].clients.push(status.clientId);
                 }
             } else if (status.type.update && bufferStatus[m.sectionId] &&
@@ -47,7 +47,7 @@ app.get('/operation/:name(play|pause|stop|seekTo|bufferStatus)', function (req, 
             });
         }
         res.status(200).set('Content-Type', 'application/json').send(
-            JSON.stringify({status: (isComplete? 'complete' : 'buffering')}));
+            JSON.stringify({ status: (isComplete ? 'complete' : 'buffering') }));
     } else {
         let message = { operation: { name: name, executionTime: (new Date().getTime() + 350) } };
         if (name == 'seekTo') {
