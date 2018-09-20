@@ -8,9 +8,8 @@ Download and install with setup.py:
 
     cd ove/sdks/python
     setup.py install
-    
-## Example Usage
 
+## Example Usage
 
 ````python
 from ove.config import dodev
@@ -45,7 +44,6 @@ space.to_json("test")
 
 ````
 
-
 Videos can also be controlled independently:
 
 ```python
@@ -70,9 +68,7 @@ video2.pause()
 
 ```
 
-
 ``ove-python`` also includes a local web-server that can be used to host images.
-
 
 ````python
 import matplotlib.pyplot as plt
@@ -96,8 +92,6 @@ image.set_url(url)
 
 ````
 
-
-
 Testing both DODev left and DODev right:
 
 ````python
@@ -114,6 +108,3 @@ html.set_url("http://metafilter.com")
 html2 = space.add_section_by_grid(w=2, h=2, r=0, c=4, app_type='html')
 html2.set_url("http://ask.metafilter.com")
 ````
-
-
-

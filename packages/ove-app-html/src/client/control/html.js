@@ -5,7 +5,7 @@ initControl = function (data) {
     if (url) {
         window.ove.state.current.url = url;
         window.ove.state.current.launchDelay =
-            new URLSearchParams(location.search.slice(1)).get('launchDelay');
+            parseInt(new URLSearchParams(location.search.slice(1)).get('launchDelay') || 0);
     }
     window.ove.state.current.changeAt = new Date().getTime() + 350;
     window.ove.socket.send('html', window.ove.state.current);

@@ -67,7 +67,10 @@ typings/
 dist/
 lib/
 
-# visual studio for .netcore Image Tiles App
+# visual studio code for node.js
+.vscode/
+
+# visual studio for .netcore
 .vs/
 obj/
 bin/
