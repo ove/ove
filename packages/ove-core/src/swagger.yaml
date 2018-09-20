@@ -1,0 +1,327 @@
+swagger: "2.0"
+info:
+  description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). The OVE core provides functionality for CRUD operations on sections and obtaining details of clients."
+  version: "0.1.0"
+  title: "OVE Core"
+  contact:
+    email: "senaka.fernando15@imperial.ac.uk"
+  license:
+    name: "MIT License"
+    url: "https://raw.githubusercontent.com/dsi-icl/ove/master/LICENSE"
+host: "localhost:8080"
+basePath: "/"
+tags:
+- name: "clients"
+  description: "Layout details of all clients"
+- name: "client"
+  description: "Layout details of an individual client"  
+- name: "sections"
+  description: "Operations on all sections"
+- name: "section"
+  description: "Operations on an individual section"
+schemes:
+- "http"
+paths:
+  /clients:
+    get:
+      tags:
+      - "clients"
+      summary: "Reads details of all OVE clients"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Clients"
+  /client/{id}:
+    get:
+      tags:
+      - "client"
+      summary: "Reads details of OVE clients corresponding to a section"
+      description: "Will return an empty array if a section by the given id does not exist."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        type: "integer"
+        format: "int32"
+        description: "Section ID"
+        required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Clients"
+  /sections:
+    delete:
+      tags:
+      - "sections"
+      summary: "Deletes all sections"
+      description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them."
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+  /section:
+    post:
+      tags:
+      - "section"
+      summary: "Creates a section on OVE and deploys an application instance into it."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Section configuration"
+        required: true
+        schema:
+            $ref: "#/definitions/Section%20%28complete%29"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid space' if the name of the space was not provided or not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly setup."
+  /section/{id}:
+    get:
+      tags:
+      - "section"
+      summary: "Reads details of a section that has been created"
+      description: "Will return an empty array if a section by the given id does not exist."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        type: "integer"
+        format: "int32"
+        description: "Section ID"
+        required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Section%20Metadata"
+    post:
+      tags:
+      - "section"
+      summary: "Updates a section that has been created"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        type: "integer"
+        format: "int32"
+        description: "Section ID"
+        required: true
+      - in: "body"
+        name: "body"
+        description: "Section configuration"
+        schema:
+          $ref: "#/definitions/Section%20%28app-only%29"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid section id' if the section id was not found."
+    delete:
+      tags:
+      - "section"
+      summary: "Deletes the section with the given id"
+      description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        type: "integer"
+        format: "int32"
+        description: "Section ID"
+        required: true      
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid section id' if the section id was not found."
+definitions:
+  Clients:
+    type: "object"
+    additionalProperties:
+      type: "array"
+      items:
+        type: "object"
+        properties:
+          x:
+            type: "integer"
+            format: "int32"
+          y:
+            type: "integer"
+            format: "int32"
+          w:
+            type: "integer"
+            format: "int32"
+          h:
+            type: "integer"
+            format: "int32"
+    example:
+      "LocalNine":
+        -
+          x: 0
+          y: 1616
+          w: 1440
+          h: 808
+        -
+          x: 1440
+          y: 1616
+          w: 1440
+          h: 808
+        -
+          x: 2880
+          y: 1616
+          w: 1440
+          h: 808
+        -
+          x: 0
+          y: 808
+          w: 1440
+          h: 808
+        -
+          x: 1440
+          y: 808
+          w: 1440
+          h: 808
+        -
+          x: 2880
+          y: 808
+          w: 1440
+          h: 808
+        -
+          x: 0
+          y: 0
+          w: 1440
+          h: 808
+        -
+          x: 1440
+          y: 0
+          w: 1440
+          h: 808
+        -
+          x: 2880
+          y: 0
+          w: 1440
+          h: 808
+  Section (app-only):
+    description: "Used when updating a section"
+    type: "object"
+    properties:
+      app:
+        type: "object"
+        properties:
+          url:
+            type: "string"
+            example: "http://localhost:8084"
+          states:
+            type: "object"
+            properties:
+              load:
+                type: "object"
+                example: {"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}
+                description: "Accepts either a string or an application-specific state object."
+              cache:
+                type: "object"
+                example: {"first":{"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}, "second":{"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}}
+  Section (complete):
+    description: "Used when creating a section"
+    allOf: 
+    - $ref: "#/definitions/Section%20%28app-only%29" 
+    - type: "object"
+    properties:
+      space:
+        type: "string"
+        description: "Name of space"
+        example: "DODev"
+      x:
+        type: "integer"
+        format: "int32"
+      y:
+        type: "integer"
+        format: "int32"
+      w:
+        type: "integer"
+        format: "int32"
+        example: 30720
+      h:
+        type: "integer"
+        format: "int32"
+        example: 4320
+                    
+  Section Metadata:
+    description: "Response format, when fetching section details"
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int32"
+        example: 0
+      w:
+        type: "integer"
+        format: "int32"
+        example: 30720
+      h:
+        type: "integer"
+        format: "int32"
+        example: 4320
+      state:
+        type: "string"
+        description: "Name of the state will only be returned if a named state was loaded."
+        example: "DSI"
+externalDocs:
+  description: "Find out more about OVE"
+  url: "https://dsi.gitbook.io/ove"

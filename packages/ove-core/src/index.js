@@ -6,6 +6,8 @@ const request = require('request');
 const uglify = require('uglify-js');
 const app = express();
 const wss = require('express-ws')(app).getWss('/');
+const swaggerUi = require('swagger-ui-express');
+const yamljs = require('yamljs');
 const pjson = require('../package.json'); // this path might have to be fixed based on packaging
 const nodeModules = path.join(__dirname, '..', '..', '..', 'node_modules');
 
@@ -299,6 +301,11 @@ app.post('/section', createSection);
 app.get('/section/:id', readSectionById);
 app.post('/section/:id', updateSectionById);
 app.delete('/section/:id', deleteSectionById);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(yamljs.load(path.join(__dirname, 'swagger.yaml')), {
+    swaggerOptions: {
+        defaultModelsExpandDepth: -1
+    }
+}));
 
 /**************************************************************
                    OVE Messaging Middleware

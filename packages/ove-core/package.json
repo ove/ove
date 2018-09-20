@@ -18,6 +18,8 @@
     "express": "4.16.3",
     "express-ws": "4.0.0",
     "uglify-js": "3.4.9",
-    "request": "2.88.0"
+    "request": "2.88.0",
+    "swagger-ui-express": "4.0.1",
+    "yamljs" : "0.3.0"
   }
 }
