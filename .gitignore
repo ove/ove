@@ -76,3 +76,16 @@ obj/
 bin/
 *.csproj.user
 *.db
+
+# Pycharm project files
+idea/
+*.iml
+
+# Python virtual env folders
+.env/
+env/
+venv/
+
+# Python build files
+build/
+*.pyc
