@@ -5,7 +5,6 @@ const cors = require('cors');
 const app = express();
 const swaggerUi = require('swagger-ui-express');
 const yamljs = require('yamljs');
-const pjson = require('../package.json'); // this path might have to be fixed based on packaging
 
 module.exports = function (baseDir, appName) {
     app.use(express.json());
@@ -69,13 +68,15 @@ module.exports = function (baseDir, appName) {
     app.post('/flush', flush);
 
     // Swagger API documentation
-    let swaggerDoc = (function (swagger) {
+    let swaggerDoc = (function (swagger, pjson) {
+        swagger.info.title = swagger.info.title.replace('@NAME', pjson.name);
         swagger.info.version = swagger.info.version.replace('@VERSION', pjson.version);
         swagger.info.license.name = swagger.info.license.name.replace('@LICENSE', pjson.license);
         swagger.info.contact.email = swagger.info.contact.email.replace('@AUTHOR',
             pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
         return swagger;
-    })(yamljs.load(path.join(baseDir, '..', 'node_modules', '@ove', 'ove-app-base', 'lib', 'swagger.yaml')));
+    })(yamljs.load(path.join(baseDir, '..', 'node_modules', '@ove', 'ove-app-base', 'lib', 'swagger.yaml')),
+        require(path.join(baseDir, '..', 'package.json')));
     (function (swaggerDoc, swaggerExt) {
         if (fs.existsSync(swaggerExt)) {
             let swagger = yamljs.load(swaggerExt);
