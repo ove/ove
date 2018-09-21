@@ -1,33 +1,43 @@
+from typing import Dict, Union
+
 import requests
 import json
 import webbrowser
 import math
 import uuid
 
+_DEFAULT_GEOMETRY = {
+    "screen_rows": 0,
+    "screen_cols": 0,
+    "height": 0,
+    "width": 0
+}
+
+# Listed in pm2.json
+_DEFAULT_PORTS = {
+    'control': '8080',
+    'maps': '8081',
+    'images': '8082',
+    'html': '8083',
+    'videos': '8084',
+    'networks': '8085',
+    'charts': '8086',
+    'imagetiles': '8087'
+}
+
 
 class Space:
-    def __init__(self, ove_host, space_name, ports=False, geometry=False):
-
+    def __init__(self, ove_host, space_name, ports: Dict = None, geometry: Dict = None, offline: bool = True):
         if not ove_host.startswith("http"):
             ove_host = "http://" + ove_host
         self.ove_host = ove_host
 
+        self.client = RestClient(offline=offline)
+
         self.space_name = space_name
 
-        if not ports:
-            # Listed in pm2.json
-            ports = {'control': '8080',
-                     'maps': '8081',
-                     'images': '8082',
-                     'html': '8083',
-                     'videos': '8084',
-                     'networks': '8085',
-                     'charts': '8086',
-                     'imagetiles': '8087'
-                     }
-        self.ports = ports
-
-        self.geometry = geometry
+        self.ports = ports if ports is not None else _DEFAULT_PORTS
+        self.geometry = geometry if geometry is not None else _DEFAULT_GEOMETRY
 
         self.videos = Videos(self)
 
@@ -36,21 +46,26 @@ class Space:
         self.num_rows = 0
         self.num_cols = 0
 
-        self.set_grid(geometry["screen_rows"], geometry["screen_cols"])
+        self.set_grid(self.geometry["screen_rows"], self.geometry["screen_cols"])
 
         self.sections = []
+
+    def enable_online_mode(self):
+        self.client.offline = False
+
+    def enable_offline_mode(self):
+        self.client.offline = True
 
     def set_grid(self, rows, cols):
         self.num_rows = rows
         self.num_cols = cols
-        self.row_height = math.floor(self.geometry["height"] / rows)
-        self.col_width = math.floor(self.geometry["width"] / cols)
+        self.row_height = math.floor(self.geometry["height"] / max(rows, 1))
+        self.col_width = math.floor(self.geometry["width"] / max(cols, 1))
 
     def set_quarter_grid(self):
         self.set_grid(2 * self.geometry["screen_rows"], 2 * self.geometry["screen_cols"])
 
     def add_section_by_grid(self, w, h, r, c, app_type, allow_oversized_section=False):
-
         if not allow_oversized_section:
             if (w + c) > self.num_cols:
                 print("Section not created: would extend beyond space")
@@ -63,7 +78,7 @@ class Space:
                                 app_type, allow_oversized_section=allow_oversized_section)
 
     def delete_sections(self):
-        delete("%s:%s/sections" % (self.ove_host, self.ports['control']))
+        self.client.delete("%s:%s/sections" % (self.ove_host, self.ports['control']))
         self.sections = []
 
     def add_section(self, w, h, x, y, app_type, allow_oversized_section=False):
@@ -86,9 +101,8 @@ class Space:
                 print("Section not created: would extend beyond space")
                 return False
 
-        r = post("%s:%s/section" % (self.ove_host, self.ports['control']), json=data)
-
-        section_id = json.loads(r.text)["id"]
+        r = self.client.post("%s:%s/section" % (self.ove_host, self.ports['control']), params=data)
+        section_id = json.loads(r.text)["id"] if not self.client.offline else str(uuid.uuid4())
 
         print("Created section %s: control page is %s:%s/control.html?oveSectionId=%s" % (
             section_id, self.ove_host, self.ports['control'], section_id))
@@ -125,25 +139,25 @@ class Videos:
         self.video_port = space.ports["videos"]
         self.exec_commands = exec_commands
 
-    def play(self, params=False):
+    def play(self, params=None):
         request_url = "%s:%s/operation/play" % (self.space.ove_host, self.video_port)
         if self.exec_commands:
-            get(request_url, params=params)
+            self.space.client.get(request_url, params=params)
 
-    def pause(self, params=False):
+    def pause(self, params=None):
         request_url = "%s:%s/operation/pause" % (self.space.ove_host, self.video_port)
         if self.exec_commands:
-            get(request_url, params=params)
+            self.space.client.get(request_url, params=params)
 
-    def stop(self, params=False):
+    def stop(self, params=None):
         request_url = "%s:%s/operation/stop" % (self.space.ove_host, self.video_port)
         if self.exec_commands:
-            get(request_url, params=params)
+            self.space.client.get(request_url, params=params)
 
-    def seek(self, time, params=False):
+    def seek(self, time, params=None):
         request_url = "%s:%s/operation/seekTo&time=%s" % (self.space.ove_host, self.video_port, time)
         if self.exec_commands:
-            get(request_url, params=params)
+            self.space.client.get(request_url, params=params)
 
 
 class Section(object):
@@ -153,12 +167,18 @@ class Section(object):
         self.space = space
 
     def delete(self):
-        delete("%s:%s/section/%s" % (self.space.ove_host, self.space.ports['control'], self.section_id))
+        self.space.client.delete(
+            "%s:%s/section/%s" % (self.space.ove_host, self.space.ports['control'], self.section_id))
         self.space.sections.remove(self)
 
     def add_state(self, app, state_name, data):
-        post("%s:%s/state/%s" % (self.space.ove_host, self.space.ports[app], state_name), json=data)
+        self.space.client.post("%s:%s/state/%s" % (self.space.ove_host, self.space.ports[app], state_name), json=data)
         print("Created state: %s:%s/state/%s" % (self.space.ove_host, self.space.ports[app], state_name))
+
+    def get_app_json(self):
+        # this should never happen, but it's better to be safe than sorry
+        raise NotImplementedError("This method is not implemented. " +
+                                  "You've probably reached this point due to an API error")
 
     def to_json(self):
         return {
@@ -184,8 +204,7 @@ class HTMLSection(Section):
         request_url = "%s:%s/control.html?oveSectionId=%s&url=%s&launchDelay=%s" % (
             self.space.ove_host, self.space.ports['html'], self.section_id, url, launch_delay)
 
-        print("To load URL, open: " + request_url)
-        webbrowser.open(request_url)
+        self.space.client.open_browser(app_type="URL", request_url=request_url)
 
     def get_app_json(self):
         return {
@@ -209,8 +228,7 @@ class ImageSection(Section):
         request_url = "%s:%s/control.html?oveSectionId=%s&state=%s" % (
             self.space.ove_host, self.space.ports['images'], self.section_id, name)
 
-        print("To load image, open: " + request_url)
-        webbrowser.open(request_url)
+        self.space.client.open_browser(app_type="image", request_url=request_url)
 
     @staticmethod
     def build_image_state(image_url):
@@ -246,8 +264,7 @@ class VideoSection(Section):
         request_url = "%s:%s/control.html?oveSectionId=%s&url=%s" % (
             self.space.ove_host, self.space.ports['videos'], self.section_id, self.url)
 
-        print("To load video, open: " + request_url)
-        webbrowser.open(request_url)
+        self.space.client.open_browser(app_type="video", request_url=request_url)
 
     def get_app_json(self):
         return {
@@ -267,6 +284,7 @@ class VideoSection(Section):
     def seek(self):
         self.space.videos.seek({"oveSectionId": self.section_id})
 
+
 class MapSection(Section):
     def __init__(self, section_id, section_data, space):
         super(MapSection, self).__init__(section_id, section_data, space)
@@ -285,8 +303,7 @@ class MapSection(Section):
         request_url = "%s:%s/control.html?oveSectionId=%s&state=%s" % (
             self.space.ove_host, self.space.ports['maps'], self.section_id, name)
 
-        print("To load map, open: " + request_url)
-        webbrowser.open(request_url)
+        self.space.client.open_browser(app_type="map", request_url=request_url)
 
     def get_app_json(self):
         # TODO: checkme
@@ -330,8 +347,7 @@ class NetworkSection(Section):
         request_url = "%s:%s/control.html?oveSectionId=%s&state=%s" % (
             self.space.ove_host, self.space.ports['networks'], self.section_id, name)
 
-        print("To set network, open: " + request_url)
-        webbrowser.open(request_url)
+        self.space.client.open_browser(app_type="network", request_url=request_url)
 
     def get_app_json(self):
         # TODO: checkme
@@ -367,8 +383,7 @@ class ChartSection(Section):
         request_url = "%s:%s/control.html?oveSectionId=%s&state=%s" % (
             self.space.ove_host, self.space.ports['charts'], self.section_id, name)
 
-        print("To load chart, open: " + request_url)
-        webbrowser.open(request_url)
+        self.space.client.open_browser(app_type="chart", request_url=request_url)
 
     def get_app_json(self):
         # TODO: checkme
@@ -378,28 +393,38 @@ class ChartSection(Section):
         }
 
 
-def get(url, params):
-    try:
-        r = requests.get(url, params)
-        r.raise_for_status()
-        return r
-    except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
-        print("Request failed:", e)
+class RestClient:
+    def __init__(self, offline: bool = True):
+        self.offline = offline
 
+    def get(self, url, params: Union[str, Dict] = None):
+        if not self.offline:
+            try:
+                r = requests.get(url, params)
+                r.raise_for_status()
+            except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
+                print("Request failed:", e)
 
-def post(url, json=""):
-    try:
-        r = requests.post(url, json=json)
-        r.raise_for_status()
-        return r
-    except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
-        print("Request failed:", e)
+    def post(self, url, params: Union[str, Dict] = ""):
+        if not self.offline:
+            try:
+                r = requests.post(url, json=params)
+                r.raise_for_status()
+                return r
+            except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
+                print("Request failed:", e)
 
+    def delete(self, url):
+        if not self.offline:
+            try:
+                r = requests.delete(url)
+                r.raise_for_status()
+                return r
+            except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
+                print("Request failed:", e)
 
-def delete(url):
-    try:
-        r = requests.delete(url)
-        r.raise_for_status()
-        return r
-    except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
-        print("Request failed:", e)
+    def open_browser(self, app_type: str, request_url: str):
+        if not self.offline:
+            # temporally adding this method here
+            print("To load ", app_type, ", open: " + request_url)
+            webbrowser.open(request_url)

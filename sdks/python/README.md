@@ -11,10 +11,14 @@ Download and install with setup.py:
 
 ## Example Usage
 
-````python
-from ove.config import dodev
+**Note:** The space is automatically put into offline mode which allows you to design your space without pushing changes 
+live into the DO environment. If you wish to interact with the space directly you can **enable online mode** after import.
 
-space = dodev
+````python
+from ove.config import dodev as space
+
+# enable live mode if you wish to interact with the space directly
+# space.enable_online_mode()
 
 space.delete_sections()
 
