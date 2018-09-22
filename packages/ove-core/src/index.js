@@ -152,11 +152,11 @@ var createSection = function (req, res, next) {
     // Deploy an App into a section
     let sectionId = sections.length;
     if (req.body.app) {
-        section.app = { 'url': req.body.app.url };
+        section.app = { 'url': req.body.app.url.replace(/\/$/, '') };
         if (req.body.app.states) {
             if (req.body.app.states.cache) {
                 Object.keys(req.body.app.states.cache).forEach(function (name) {
-                    request.post(req.body.app.url + '/state/' + name, {
+                    request.post(section.app.url + '/state/' + name, {
                         headers: { 'Content-Type': 'application/json' },
                         json: req.body.app.states.cache[name]
                     });
@@ -166,7 +166,7 @@ var createSection = function (req, res, next) {
                 if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
                     section.app.state = req.body.app.states.load;
                 } else {
-                    request.post(req.body.app.url + '/' + sectionId + '/state', {
+                    request.post(section.app.url + '/' + sectionId + '/state', {
                         headers: { 'Content-Type': 'application/json' },
                         json: req.body.app.states.load
                     });
@@ -239,11 +239,11 @@ var updateSectionById = function (req, res, next) {
         commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId } }));
     }
     if (req.body.app) {
-        sections[sectionId].app = { 'url': req.body.app.url };
+        sections[sectionId].app = { 'url': req.body.app.url.replace(/\/$/, '') };
         if (req.body.app.states) {
             if (req.body.app.states.cache) {
                 Object.keys(req.body.app.states.cache).forEach(function (name) {
-                    request.post(req.body.app.url + '/state/' + name, {
+                    request.post(sections[sectionId].app.url + '/state/' + name, {
                         headers: { 'Content-Type': 'application/json' },
                         json: req.body.app.states.cache[name]
                     });
@@ -253,7 +253,7 @@ var updateSectionById = function (req, res, next) {
                 if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
                     sections[sectionId].app.state = req.body.app.states.load;
                 } else {
-                    request.post(req.body.app.url + '/' + sectionId + '/state', {
+                    request.post(sections[sectionId].app.url + '/' + sectionId + '/state', {
                         headers: { 'Content-Type': 'application/json' },
                         json: req.body.app.states.load
                     });

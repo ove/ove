@@ -36,10 +36,10 @@ function OVE () {
             }
         });
         ws.addEventListener('message', function (m) {
-            if (DEBUG) {
-                console.log(m.data);
-            }
             var data = JSON.parse(m.data);
+            if (DEBUG) {
+                console.log(JSON.stringify(Object.assign({ time: new Date().toISOString() }, data)));
+            }
             if (data.appId && (!data.sectionId || data.sectionId == _private.sectionId)) {
                 onMessage(data.appId, data.message);
             }
@@ -50,11 +50,20 @@ function OVE () {
             onMessage = func;
         };
         this.send = function (appId, message) {
-            if (_private.sectionId) {
-                ws.send(JSON.stringify({ appId: appId, sectionId: _private.sectionId, message: message }));
-            } else {
-                ws.send(JSON.stringify({ appId: appId, message: message }));
-            }
+            new Promise(function (resolve, reject) {
+                var x = setInterval(function () {
+                    if (ws.readyState == WebSocket.OPEN) {
+                        clearInterval(x);
+                        resolve('socket open');
+                    }
+                }, 100);
+            }).then(function () {
+                if (_private.sectionId) {
+                    ws.send(JSON.stringify({ appId: appId, sectionId: _private.sectionId, message: message }));
+                } else {
+                    ws.send(JSON.stringify({ appId: appId, message: message }));
+                }
+            });
         };
     };
 
