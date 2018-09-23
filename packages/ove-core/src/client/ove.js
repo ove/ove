@@ -25,23 +25,31 @@ function OVE () {
         var onMessage = function (appId, message) { return 0; };
 
         //-- Socket init code --//
-        var wsUrl = 'ws://' + getHostName(false) + '/';
-        var ws = new WebSocket(wsUrl);
-        ws.addEventListener('error', console.error);
-        ws.addEventListener('open', function (m) {
-            if (DEBUG) {
-                console.log('websocket connection made with ' + wsUrl);
-            }
-        });
-        ws.addEventListener('message', function (m) {
-            var data = JSON.parse(m.data);
-            if (DEBUG) {
-                console.log(JSON.stringify(Object.assign({ time: new Date().toISOString() }, data)));
-            }
-            if (data.appId && (!data.sectionId || data.sectionId == _private.sectionId)) {
-                onMessage(data.appId, data.message);
-            }
-        });
+        var getSocket = function (url) {
+            _private.ws = new WebSocket(url);
+            _private.ws.addEventListener('error', console.error);
+            _private.ws.addEventListener('open', function (m) {
+                if (DEBUG) {
+                    console.log('websocket connection made with ' + url);
+                }
+            });
+            _private.ws.addEventListener('message', function (m) {
+                var data = JSON.parse(m.data);
+                if (DEBUG) {
+                    console.log(JSON.stringify(Object.assign({ time: new Date().toISOString() }, data)));
+                }
+                if (data.appId && (!data.sectionId || data.sectionId == _private.sectionId)) {
+                    onMessage(data.appId, data.message);
+                }
+            });
+            _private.ws.addEventListener('close', function (m) {
+                if (DEBUG) {
+                    console.warn('lost websocket connection attempting to reconnect');
+                }
+                setTimeout(function () { getSocket(url); }, 5000);
+            });
+        };
+        getSocket('ws://' + getHostName(false) + '/');
 
         //-- SDK functions --//
         this.on = function (func) {
@@ -50,16 +58,16 @@ function OVE () {
         this.send = function (appId, message) {
             new Promise(function (resolve, reject) {
                 var x = setInterval(function () {
-                    if (ws.readyState == WebSocket.OPEN) {
+                    if (_private.ws.readyState == WebSocket.OPEN) {
                         clearInterval(x);
                         resolve('socket open');
                     }
                 }, 100);
             }).then(function () {
                 if (_private.sectionId) {
-                    ws.send(JSON.stringify({ appId: appId, sectionId: _private.sectionId, message: message }));
+                    _private.ws.send(JSON.stringify({ appId: appId, sectionId: _private.sectionId, message: message }));
                 } else {
-                    ws.send(JSON.stringify({ appId: appId, message: message }));
+                    _private.ws.send(JSON.stringify({ appId: appId, message: message }));
                 }
             });
         };

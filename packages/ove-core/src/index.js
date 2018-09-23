@@ -27,7 +27,7 @@ app.use(express.json());
                     this.send(msg);
                 } catch (e) {
                     if (this.readyState == 1) {
-                        console.log('error sending message' + e.message);
+                        console.error('error sending message' + e.message);
                     }
                     // ignore all other errors, since there is no value in recording them.
                 }
@@ -188,7 +188,7 @@ var createSection = function (req, res, next) {
         }
     });
     if (DEBUG) {
-        console.log('Active sections: ' + sections.length);
+        console.log('active sections: ' + sections.length);
     }
     res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
 };
@@ -202,7 +202,7 @@ var deleteSections = function (req, res, next) {
         }
     }
     if (DEBUG) {
-        console.log('Active sections: ' + sections.length);
+        console.log('active sections: ' + sections.length);
     }
     wss.clients.forEach(function (c) {
         if (c.readyState == 1) {
@@ -342,7 +342,7 @@ app.ws('/', function (s, req) {
                     }
                 });
             } else {
-                console.error('Section information cannot be requested from within a section.');
+                console.error('section information cannot be requested from within a section.');
             }
 
             // All other messages
@@ -350,7 +350,7 @@ app.ws('/', function (s, req) {
             wss.clients.forEach(function (c) {
                 if (c !== s && c.readyState == 1) {
                     if (DEBUG) {
-                        console.log('Sending message to socket: ' + c.id);
+                        console.log('sending message to socket: ' + c.id);
                     }
                     c.safeSend(msg);
                 }
@@ -359,9 +359,9 @@ app.ws('/', function (s, req) {
     });
     if (DEBUG) {
         s.id = wss.clients.size;
-        console.log('Websocket connection established. Clients connected: ' + wss.clients.size);
+        console.log('websocket connection established. Clients connected: ' + wss.clients.size);
     }
 });
 
 app.listen(process.env.PORT || 8080);
-console.log('OVE Core started');
+console.log('OVE core started');
