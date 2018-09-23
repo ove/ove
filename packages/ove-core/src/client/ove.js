@@ -27,9 +27,7 @@ function OVE () {
         //-- Socket init code --//
         var wsUrl = 'ws://' + getHostName(false) + '/';
         var ws = new WebSocket(wsUrl);
-        ws.addEventListener('error', function (m) {
-            console.error(m);
-        });
+        ws.addEventListener('error', console.error);
         ws.addEventListener('open', function (m) {
             if (DEBUG) {
                 console.log('websocket connection made with ' + wsUrl);

@@ -49,7 +49,7 @@ uploadMapPosition = function () {
     let resolution = parseFloat(context.map.getView().getResolution()) /
         Math.sqrt(window.ove.layout.section.w * window.ove.layout.section.h / (size[0] * size[1]));
     if (tl == null || br == null) {
-        setTimeout(function () { uploadMapPosition(); }, 70);
+        setTimeout(uploadMapPosition, 70);
     } else {
         let position = {
             bounds: { x: tl[0], y: tl[1], w: (br[0] - tl[0]), h: (br[1] - tl[1]) },

@@ -22,8 +22,6 @@ doRegistration = function () { }; // view-only operation
 beginInitialization = function () {
     $(document).on('ove.loaded', function () {
         let state = window.ove.state.name || 'DSIIntro';
-        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
-            initControl(data);
-        });
+        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initControl);
     });
 };
