@@ -120,7 +120,7 @@ module.exports = function (baseDir, appName) {
         }
         res.set('Content-Type', cType).send(text);
     });
-    app.use('/:fileName(index|control|view).html', function (req, res, next) {
+    app.use('/(:fileName(index|control|view).html)?', function (req, res, next) {
         res.send(fs.readFileSync(path.join(baseDir, 'client', 'index.html'), 'utf8')
             .replace(/_OVETYPE_/g, req.params.fileName == 'control' ? 'control' : 'view')
             .replace(/_OVEHOST_/g, process.env.OVE_HOST));
