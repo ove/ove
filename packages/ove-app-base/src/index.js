@@ -27,10 +27,12 @@ module.exports = function (baseDir, appName) {
 
     var readStateByName = function (req, res, next) {
         if (!module.exports.config.states[req.params.name]) {
-            res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid state name' }));
+            res.status(400).set('Content-Type', 'application/json').send(
+                JSON.stringify({ error: 'invalid state name' }));
+        } else {
+            res.status(200).set('Content-Type', 'application/json').send(
+                JSON.stringify(module.exports.config.states[req.params.name]));
         }
-        res.status(200).set('Content-Type', 'application/json').send(
-            JSON.stringify(module.exports.config.states[req.params.name]));
     };
 
     var readState = function (req, res, next) {

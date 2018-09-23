@@ -100,97 +100,100 @@ var listClientById = function (req, res, next) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+    } else {
+        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(sections[sectionId].clients));
     }
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(sections[sectionId].clients));
 };
 
 // Creates an individual section
 var createSection = function (req, res, next) {
     if (!req.body.space || !clients[req.body.space]) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid space' }));
-    }
-    if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
+    } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid dimensions' }));
-    }
-    let section = { w: req.body.w, h: req.body.h, clients: {} };
-    section.clients[req.body.space] = [];
+    } else {
+        let section = { w: req.body.w, h: req.body.h, clients: {} };
+        section.clients[req.body.space] = [];
 
-    // Calculate the dimensions on a client-by-client basis
-    clients[req.body.space].forEach(function (e) {
-        if ((e.x + e.w) > req.body.x && (req.body.x + req.body.w) > e.x &&
-            (e.y + e.h) > req.body.y && (req.body.y + req.body.h) > e.y) {
-            let c = Object.assign({}, e);
-            if (!c.offset) {
-                c.offset = { x: 0, y: 0 };
+        // Calculate the dimensions on a client-by-client basis
+        clients[req.body.space].forEach(function (e) {
+            if ((e.x + e.w) > req.body.x && (req.body.x + req.body.w) > e.x &&
+                (e.y + e.h) > req.body.y && (req.body.y + req.body.h) > e.y) {
+                let c = Object.assign({}, e);
+                if (!c.offset) {
+                    c.offset = { x: 0, y: 0 };
+                }
+                if (c.x >= req.body.x) {
+                    c.x -= req.body.x;
+                } else if (c.x + c.w > req.body.x) {
+                    c.offset.x += (req.body.x - c.x);
+                    c.x = 0;
+                    c.w -= c.offset.x;
+                }
+                if (c.x + c.w > req.body.w) {
+                    c.w = (req.body.w - c.x);
+                }
+                if (c.y >= req.body.y) {
+                    c.y -= req.body.y;
+                } else if (c.y + c.h > req.body.y) {
+                    c.offset.y += (req.body.y - c.y);
+                    c.y = 0;
+                    c.h -= c.offset.y;
+                }
+                if (c.y + c.h > req.body.h) {
+                    c.h = (req.body.h - c.y);
+                }
+                section.clients[req.body.space].push(c);
+            } else {
+                section.clients[req.body.space].push({});
             }
-            if (c.x >= req.body.x) {
-                c.x -= req.body.x;
-            } else if (c.x + c.w > req.body.x) {
-                c.offset.x += (req.body.x - c.x);
-                c.x = 0;
-                c.w -= c.offset.x;
-            }
-            if (c.x + c.w > req.body.w) {
-                c.w = (req.body.w - c.x);
-            }
-            if (c.y >= req.body.y) {
-                c.y -= req.body.y;
-            } else if (c.y + c.h > req.body.y) {
-                c.offset.y += (req.body.y - c.y);
-                c.y = 0;
-                c.h -= c.offset.y;
-            }
-            if (c.y + c.h > req.body.h) {
-                c.h = (req.body.h - c.y);
-            }
-            section.clients[req.body.space].push(c);
-        } else {
-            section.clients[req.body.space].push({});
-        }
-    });
+        });
 
-    // Deploy an App into a section
-    let sectionId = sections.length;
-    if (req.body.app) {
-        section.app = { 'url': req.body.app.url.replace(/\/$/, '') };
-        if (req.body.app.states) {
-            if (req.body.app.states.cache) {
-                Object.keys(req.body.app.states.cache).forEach(function (name) {
-                    request.post(section.app.url + '/state/' + name, {
-                        headers: { 'Content-Type': 'application/json' },
-                        json: req.body.app.states.cache[name]
+        // Deploy an App into a section
+        let sectionId = sections.length;
+        if (req.body.app) {
+            section.app = { 'url': req.body.app.url.replace(/\/$/, '') };
+            if (req.body.app.states) {
+                if (req.body.app.states.cache) {
+                    Object.keys(req.body.app.states.cache).forEach(function (name) {
+                        request.post(section.app.url + '/state/' + name, {
+                            headers: { 'Content-Type': 'application/json' },
+                            json: req.body.app.states.cache[name]
+                        });
                     });
-                });
-            }
-            if (req.body.app.states.load) {
-                if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
-                    section.app.state = req.body.app.states.load;
-                } else {
-                    request.post(section.app.url + '/' + sectionId + '/state', {
-                        headers: { 'Content-Type': 'application/json' },
-                        json: req.body.app.states.load
-                    });
+                }
+                if (req.body.app.states.load) {
+                    if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
+                        section.app.state = req.body.app.states.load;
+                    } else {
+                        request.post(section.app.url + '/' + sectionId + '/state', {
+                            headers: { 'Content-Type': 'application/json' },
+                            json: req.body.app.states.load
+                        });
+                    }
                 }
             }
         }
-    }
-    sections[sectionId] = section;
+        sections[sectionId] = section;
 
-    // Notify OVE viewers/controllers
-    wss.clients.forEach(function (c) {
-        if (c.readyState == 1) {
-            c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'create', id: sectionId, clients: section.clients } }));
-            if (section.app) {
-                setTimeout(function () {
-                    c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId, app: section.app } }));
-                }, 150);
+        // Notify OVE viewers/controllers
+        wss.clients.forEach(function (c) {
+            if (c.readyState == 1) {
+                c.safeSend(JSON.stringify({ appId: 'core',
+                    message: { action: 'create', id: sectionId, clients: section.clients } }));
+                if (section.app) {
+                    setTimeout(function () {
+                        c.safeSend(JSON.stringify({ appId: 'core',
+                            message: { action: 'update', id: sectionId, app: section.app } }));
+                    }, 150);
+                }
             }
+        });
+        if (DEBUG) {
+            console.log('active sections: ' + sections.length);
         }
-    });
-    if (DEBUG) {
-        console.log('active sections: ' + sections.length);
+        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
     }
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
 };
 
 // Deletes all sections
@@ -217,12 +220,13 @@ var readSectionById = function (req, res, next) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+    } else {
+        let section = { id: sectionId, w: sections[sectionId].w, h: sections[sectionId].h };
+        if (sections[sectionId].app && sections[sectionId].app.state) {
+            section.state = sections[sectionId].app.state;
+        }
+        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(section));
     }
-    let section = { id: sectionId, w: sections[sectionId].w, h: sections[sectionId].h };
-    if (sections[sectionId].app && sections[sectionId].app.state) {
-        section.state = sections[sectionId].app.state;
-    }
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(section));
 };
 
 // Updates an individual section
@@ -230,48 +234,48 @@ var updateSectionById = function (req, res, next) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
-    }
-
-    // Redeploys an App into a section
-    let commands = [];
-    if (sections[sectionId].app) {
-        delete sections[sectionId].app;
-        commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId } }));
-    }
-    if (req.body.app) {
-        sections[sectionId].app = { 'url': req.body.app.url.replace(/\/$/, '') };
-        if (req.body.app.states) {
-            if (req.body.app.states.cache) {
-                Object.keys(req.body.app.states.cache).forEach(function (name) {
-                    request.post(sections[sectionId].app.url + '/state/' + name, {
-                        headers: { 'Content-Type': 'application/json' },
-                        json: req.body.app.states.cache[name]
-                    });
-                });
-            }
-            if (req.body.app.states.load) {
-                if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
-                    sections[sectionId].app.state = req.body.app.states.load;
-                } else {
-                    request.post(sections[sectionId].app.url + '/' + sectionId + '/state', {
-                        headers: { 'Content-Type': 'application/json' },
-                        json: req.body.app.states.load
+    } else {
+        // Redeploys an App into a section
+        let commands = [];
+        if (sections[sectionId].app) {
+            delete sections[sectionId].app;
+            commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId } }));
+        }
+        if (req.body.app) {
+            sections[sectionId].app = { 'url': req.body.app.url.replace(/\/$/, '') };
+            if (req.body.app.states) {
+                if (req.body.app.states.cache) {
+                    Object.keys(req.body.app.states.cache).forEach(function (name) {
+                        request.post(sections[sectionId].app.url + '/state/' + name, {
+                            headers: { 'Content-Type': 'application/json' },
+                            json: req.body.app.states.cache[name]
+                        });
                     });
                 }
+                if (req.body.app.states.load) {
+                    if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
+                        sections[sectionId].app.state = req.body.app.states.load;
+                    } else {
+                        request.post(sections[sectionId].app.url + '/' + sectionId + '/state', {
+                            headers: { 'Content-Type': 'application/json' },
+                            json: req.body.app.states.load
+                        });
+                    }
+                }
             }
+            commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId, app: req.body.app } }));
         }
-        commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId, app: req.body.app } }));
-    }
 
-    // Notify OVE viewers/controllers
-    wss.clients.forEach(function (c) {
-        if (c.readyState == 1) {
-            commands.forEach(function (m) {
-                c.safeSend(m);
-            });
-        }
-    });
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+        // Notify OVE viewers/controllers
+        wss.clients.forEach(function (c) {
+            if (c.readyState == 1) {
+                commands.forEach(function (m) {
+                    c.safeSend(m);
+                });
+            }
+        });
+        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+    }
 };
 
 // Deletes an individual section
@@ -279,19 +283,20 @@ var deleteSectionById = function (req, res, next) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
-    }
-    let section = sections[sectionId];
-    if (section.app) {
-        request.post(section.app.url + '/flush');
-    }
-    delete sections[sectionId];
-    sections[sectionId] = {};
-    wss.clients.forEach(function (c) {
-        if (c.readyState == 1) {
-            c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'delete', id: sectionId } }));
+    } else {
+        let section = sections[sectionId];
+        if (section.app) {
+            request.post(section.app.url + '/flush');
         }
-    });
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+        delete sections[sectionId];
+        sections[sectionId] = {};
+        wss.clients.forEach(function (c) {
+            if (c.readyState == 1) {
+                c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'delete', id: sectionId } }));
+            }
+        });
+        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+    }
 };
 
 app.get('/clients', listClients);
