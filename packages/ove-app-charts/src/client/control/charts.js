@@ -2,24 +2,19 @@ initControl = function (data) {
     let context = window.ove.context;
     context.isInitialized = false;
 
-    let sectionWidth = window.ove.layout.section.w;
-    let sectionHeight = window.ove.layout.section.h;
-    let sectionRatio = sectionWidth / sectionHeight;
-    let controlMaxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
-    let controlMaxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
-    let controlRatio = controlMaxWidth / controlMaxHeight;
-    let controlWidth = 700;
-    let controlHeight = 350;
-    if (sectionRatio >= controlRatio) {
-        controlWidth = controlMaxWidth;
-        controlHeight = (sectionHeight * controlWidth) / sectionWidth;
+    let l = window.ove.layout;
+    let maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
+    let maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
+    // multiplying by 1.0 for float division
+    let width, height;
+    if (l.section.w * maxHeight >= maxWidth * l.section.h) {
+        width = maxWidth;
+        height = maxWidth * 1.0 * l.section.h / l.section.w;
     } else {
-        controlHeight = controlMaxHeight;
-        controlWidth = (sectionWidth * controlHeight) / sectionHeight;
+        height = maxHeight;
+        width = maxHeight * 1.0 * l.section.w / l.section.h;
     }
-
-    $('#vegaArea').css('width', controlWidth);
-    $('#vegaArea').css('height', controlHeight);
+    $('#vegaArea').css({ width: width, height: height });
     window.ove.state.current = data;
     loadVega();
     window.ove.socket.send('charts', window.ove.state.current);

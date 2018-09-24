@@ -6,17 +6,15 @@ initControl = function (data) {
     let maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
     let maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
     // multiplying by 1.0 for float division
+    let width, height;
     if (l.section.w * maxHeight >= maxWidth * l.section.h) {
-        $('#contentDiv').css({
-            width: maxWidth,
-            height: maxWidth * 1.0 * l.section.h / l.section.w
-        });
+        width = maxWidth;
+        height = maxWidth * 1.0 * l.section.h / l.section.w;
     } else {
-        $('#contentDiv').css({
-            width: maxHeight * 1.0 * l.section.w / l.section.h,
-            height: maxHeight
-        });
+        height = maxHeight;
+        width = maxHeight * 1.0 * l.section.w / l.section.h;
     }
+    $('#contentDiv').css({ width: width, height: height });
     window.ove.state.current.config = data;
     loadOSD(data).then(function () {
         for (let e of ['resize', 'zoom', 'pan']) {
