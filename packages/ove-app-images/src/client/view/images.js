@@ -11,6 +11,11 @@ initView = function () {
 updateImage = function () {
     let context = window.ove.context;
     if (!context.isInitialized) {
+        // Fix for chrome unable to load large images (#54)
+        if (window.ove.state.current.config.tileSources && window.ove.state.current.config.tileSources.url) {
+            window.ove.state.current.config.tileSources.url += '?nonce=' +
+                new URLSearchParams(location.search.slice(1)).get('oveClientId');
+        }
         loadOSD(window.ove.state.current.config).then(function () {
             context.osd.setVisible(false);
             context.osd.setFullPage(true);

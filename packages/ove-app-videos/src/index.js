@@ -52,6 +52,9 @@ app.get('/operation/:name(play|pause|stop|seekTo|bufferStatus)', function (req, 
         let message = { operation: { name: name, executionTime: (new Date().getTime() + 350) } };
         if (name == 'seekTo') {
             message.operation.time = req.query.time;
+        } else if (name == 'play') {
+            message.operation.loop = (typeof req.query.loop != 'undefined' &&
+                (JSON.parse(String(req.query.loop).toLowerCase()) == true));
         }
         if (sectionId) {
             ws.send(JSON.stringify({ appId: 'videos', sectionId: sectionId, message: message }));

@@ -24,12 +24,30 @@ initCommon = function () {
                     switch (op.name) {
                         case 'play':
                             context.youtubePlayer.playVideo();
+                            if (op.loop) {
+                                let timeout = setInterval(function () {
+                                    if (context.youtubePlayer.getPlayerState() == 0) {
+                                        // if video has reached the end, loop it.
+                                        context.youtubePlayer.playVideo();
+                                    }
+                                }, 100);
+                                if (context.loop) {
+                                    // the original timer is cleared only after the newer timer has
+                                    // been set, to ensure playback is synchronised across browsers.
+                                    clearInterval(context.loop);
+                                }
+                                context.loop = timeout;
+                            } else if (context.loop) {
+                                clearInterval(context.loop);
+                                context.loop = undefined;
+                            }
                             break;
                         case 'pause':
                             context.youtubePlayer.pauseVideo();
                             break;
                         case 'stop':
-                            context.youtubePlayer.stopVideo();
+                            context.youtubePlayer.pauseVideo();
+                            context.youtubePlayer.seekTo(op.time, true);
                             break;
                         default:
                             context.youtubePlayer.seekTo(op.time, true);
@@ -88,7 +106,7 @@ handleBufferStatusChange = function (status) {
         if (status.percentage >= 15) {
             context.bufferStatus.clients.splice(context.bufferStatus.clients.indexOf(status.clientId), 1);
             if (context.bufferStatus.clients.length == 0) {
-                context.youtubePlayer.stopVideo();
+                context.youtubePlayer.seekTo(0, true);
                 context.youtubePlayer.setPlaybackRate(1);
                 $('#youtube_player').show();
                 refresh();
