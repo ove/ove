@@ -12,6 +12,7 @@ namespace OVE.Service.ImageTiles
     public class Program
     {
         public static void Main(string[] args) {
+            Startup.GetVersionNumber();
             var host = CreateWebHostBuilder(args).Build();
             ConfigureDatabase(host);
 

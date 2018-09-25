@@ -1,5 +1,6 @@
 ﻿@model OVE.Service.ImageTiles.Models.ImageFileModel
 @using Microsoft.Extensions.Configuration
+@using OVE.Service.ImageTiles.Controllers
 @inject IConfiguration Configuration
 
 @{
@@ -29,6 +30,12 @@
         </dt>
         <dd>
             @Html.DisplayFor(model => model.Description)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.ProcessingErrors)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.ProcessingErrors)
         </dd>
     </dl>
 </div>

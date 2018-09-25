@@ -24,6 +24,9 @@
             <th>
                 @Html.DisplayNameFor(model => model.StorageLocation)
             </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ProcessingState)
+            </th>
             <th></th>
         </tr>
     </thead>
@@ -41,6 +44,9 @@
             </td>
             <td>
                 @Html.DisplayFor(modelItem => item.StorageLocation)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ProcessingState)
             </td>
             <td>
                 <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |

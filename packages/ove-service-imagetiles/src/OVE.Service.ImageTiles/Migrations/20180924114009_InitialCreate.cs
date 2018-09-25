@@ -2,7 +2,7 @@
 
 namespace OVE.Service.ImageTiles.Migrations
 {
-    public partial class initialCreate : Migration
+    public partial class InitialCreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -14,9 +14,9 @@ namespace OVE.Service.ImageTiles.Migrations
                     Project = table.Column<string>(nullable: false),
                     Name = table.Column<string>(maxLength: 50, nullable: false),
                     Description = table.Column<string>(nullable: true),
-                    Width = table.Column<int>(nullable: false),
-                    Height = table.Column<int>(nullable: false),
-                    StorageLocation = table.Column<string>(nullable: true)
+                    StorageLocation = table.Column<string>(nullable: true),
+                    ProcessingErrors = table.Column<string>(nullable: true),
+                    ProcessingState = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {

@@ -20,14 +20,7 @@ namespace OVE.Service.ImageTiles.DbContexts {
                 if (context.ImageFiles.Any()) {
                     return; // DB has been seeded
                 }
-
-                // otherwise add the sample image
-                context.ImageFiles.AddRange(
-                    new ImageFileModel {
-                        Project = "Sample", Name = "Imperial", Description = "A photo of Imperial",
-                        Height = 100, Width = 100
-                    }
-                );
+                
                 context.SaveChanges();
             }
         }

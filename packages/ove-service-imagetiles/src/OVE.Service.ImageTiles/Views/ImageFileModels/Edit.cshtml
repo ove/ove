@@ -35,6 +35,14 @@
                 <input asp-for="StorageLocation" class="form-control" readonly />
             </div>
             <div class="form-group">
+                <label asp-for="ProcessingState" class="control-label"></label>
+                <input asp-for="ProcessingState" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="ProcessingErrors" class="control-label"></label>
+                <input asp-for="ProcessingErrors" class="form-control" />
+            </div>
+            <div class="form-group">
                 @Html.Label("StorageLocation", "Image File", new { @class = "control-label col-md-2" })
                 <div class="col-md-10">
                     <input type="file" id="upload" name="upload" title="Choose Image file" />
