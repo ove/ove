@@ -106,6 +106,7 @@ handleBufferStatusChange = function (status) {
         if (status.percentage >= 15) {
             context.bufferStatus.clients.splice(context.bufferStatus.clients.indexOf(status.clientId), 1);
             if (context.bufferStatus.clients.length == 0) {
+                context.youtubePlayer.pauseVideo();
                 context.youtubePlayer.seekTo(0, true);
                 context.youtubePlayer.setPlaybackRate(1);
                 $('#youtube_player').show();
