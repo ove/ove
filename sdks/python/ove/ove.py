@@ -27,7 +27,9 @@ _DEFAULT_PORTS = {
 
 
 class Space:
-    def __init__(self, ove_host, space_name, ports: Dict = None, geometry: Dict = None, offline: bool = True):
+    def __init__(self, ove_host, space_name, ports = None, geometry = None, offline = True):
+        # type (string, string, Dict, Dict, bool) -> None
+
         if not ove_host.startswith("http"):
             ove_host = "http://" + ove_host
         self.ove_host = ove_host
@@ -127,10 +129,45 @@ class Space:
         return section
 
     def to_json(self, title):
-        return {
+        return json.dumps({
             "Attribution": {"Title": title},
             "Sections": [section.to_json() for section in self.sections]
-        }
+        })
+
+    def load_json(self, json_string):
+        data = json.loads(json_string)
+
+        for section_data in data["Sections"]:
+
+            app_type = section_data["app"]["url"].lower().split("_")[-1]
+            section = self.add_section(section_data["w"], section_data["h"], section_data["x"], section_data["y"],
+                                       app_type)
+
+            state = section_data["app"]["states"]["load"]
+
+            if app_type == "maps":
+                section.set_position(latitude=state["center"][0], longitude=state["center"][1],
+                                     resolution=state["resolution"], zoom=state["zoom"])
+            elif app_type == "images":
+                section.set_url(state["config"]["tileSources"]["url"])
+
+            elif app_type == "html":
+                section.set_url(state["url"])
+
+            elif app_type == "videos":
+                section.set_url(state["url"])
+
+            elif app_type == "networks":
+                settings = state["settings"]
+                section.set_data(json_url=state.get("jsonURL", ""), gexf_url=state.get("gexfURL", ""),
+                                 default_node_color=settings["defaultNodeColor"], auto_rescale=settings["autoRescale"])
+
+            elif app_type == "charts":
+                section.set_specification(state.get("specURL", False), state.get("spec", False),
+                                          state.get("options", False))
+
+            else:
+                print("Don't know how to recreate section of type " + app_type)
 
 
 class Videos:
@@ -172,7 +209,7 @@ class Section(object):
         self.space.sections.remove(self)
 
     def add_state(self, app, state_name, data):
-        self.space.client.post("%s:%s/state/%s" % (self.space.ove_host, self.space.ports[app], state_name), json=data)
+        self.space.client.post("%s:%s/state/%s" % (self.space.ove_host, self.space.ports[app], state_name), params=data)
         print("Created state: %s:%s/state/%s" % (self.space.ove_host, self.space.ports[app], state_name))
 
     def get_app_json(self):
@@ -195,21 +232,19 @@ class HTMLSection(Section):
     def __init__(self, section_id, section_data, space):
         super(HTMLSection, self).__init__(section_id, section_data, space)
         self.url = ""
-        self.launch_delay = 0
 
-    def set_url(self, url, launch_delay=0):
+    def set_url(self, url):
         self.url = url
-        self.launch_delay = launch_delay
 
-        request_url = "%s:%s/control.html?oveSectionId=%s&url=%s&launchDelay=%s" % (
-            self.space.ove_host, self.space.ports['html'], self.section_id, url, launch_delay)
+        request_url = "%s:%s/control.html?oveSectionId=%s&url=%s" % (
+            self.space.ove_host, self.space.ports['html'], self.section_id, url)
 
         self.space.client.open_browser(app_type="URL", request_url=request_url)
 
     def get_app_json(self):
         return {
             "url": "OVE_APP_HTML",
-            "states": {"load": {"url": self.url, "launchDelay": self.launch_delay}}
+            "states": {"load": {"url": self.url}}
         }
 
 
@@ -250,7 +285,7 @@ class ImageSection(Section):
     def get_app_json(self):
         return {
             "url": "OVE_APP_IMAGES",
-            "states": {"load": {"config": self.state, "position": {}}}
+            "states": {"load": {"config": self.state["config"], "position": {}}}
         }
 
 
@@ -394,10 +429,12 @@ class ChartSection(Section):
 
 
 class RestClient:
-    def __init__(self, offline: bool = True):
+    def __init__(self, offline=True):
+        # type: (bool) -> None
         self.offline = offline
 
-    def get(self, url, params: Union[str, Dict] = None):
+    def get(self, url, params=None):
+        # type: (str, Union[str, Dict]) -> None
         if not self.offline:
             try:
                 r = requests.get(url, params)
@@ -405,7 +442,8 @@ class RestClient:
             except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
                 print("Request failed:", e)
 
-    def post(self, url, params: Union[str, Dict] = ""):
+    def post(self, url, params=""):
+        # type: (str, Union[str, Dict]) -> Union([requests.models.Response, None])
         if not self.offline:
             try:
                 r = requests.post(url, json=params)
@@ -423,7 +461,8 @@ class RestClient:
             except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
                 print("Request failed:", e)
 
-    def open_browser(self, app_type: str, request_url: str):
+    def open_browser(self, app_type, request_url):
+        # type: (str, str) -> None
         if not self.offline:
             # temporally adding this method here
             print("To load ", app_type, ", open: " + request_url)
