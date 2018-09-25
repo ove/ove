@@ -16,8 +16,8 @@ updateURL = function () {
         }).css(getCSS()).appendTo('.wrapper');
         context.isInitialized = true;
     }
-    let current = window.ove.state.current;
-    let launchDelay = typeof current.launchDelay !== 'undefined' ? current.launchDelay : 0;
+    let state = window.ove.state.current;
+    let launchDelay = typeof state.launchDelay !== 'undefined' ? state.launchDelay : 0;
     if (launchDelay > 0) {
         $('.html-frame').hide();
     }
@@ -26,9 +26,9 @@ updateURL = function () {
             setTimeout(function () {
                 $('.html-frame').show();
             // helps browsers pre-load content before displaying page
-            }, current.launchDelay);
+            }, launchDelay);
         }
-        $('.html-frame').attr('src', current.url);
+        $('.html-frame').attr('src', state.url);
         // helps browsers load content precisely at the same time
-    }, (current.changeAt || new Date().getTime()) - new Date().getTime());
+    }, (state.changeAt || new Date().getTime()) - new Date().getTime());
 };
