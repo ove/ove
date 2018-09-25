@@ -43,6 +43,12 @@ paths:
       produces:
       - "application/json"
       parameters:
+      - name: "loop"
+        in: "query"
+        type: "string"
+        enum: ["true", "false"]
+        description: "Loop playback or not"
+        required: false
       - name: "oveSectionId"
         in: "query"
         type: "integer"
