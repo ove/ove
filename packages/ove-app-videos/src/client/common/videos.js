@@ -10,12 +10,12 @@ $(function () {
 initCommon = function () {
     let context = window.ove.context;
     window.ove.socket.on(function (appId, message) {
-        if (appId == 'videos' && context.isInitialized) {
+        if (appId == 'videos') {
             if (message.state) {
                 handleStateChange(message.state);
-            } else if (message.bufferStatus) {
+            } else if (message.bufferStatus && context.isInitialized) {
                 handleBufferStatusChange(message.bufferStatus);
-            } else if (message.operation) {
+            } else if (message.operation && context.isInitialized) {
                 let op = message.operation;
                 setTimeout(function () {
                     switch (op.name) {
