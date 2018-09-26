@@ -78,7 +78,7 @@ bin/
 *.db
 
 # Pycharm project files
-idea/
+.idea/
 *.iml
 
 # Python virtual env folders
