@@ -14,6 +14,8 @@ There are several potential pitfalls that you should be aware of when developing
 
 **Server scalability**. If a section spans multiple OVE clients, then each may make near-simultaneous requests for the same content (e.g., webpages in the case of the HTML app, or image tiles in the case of the images app). You should ensure that whatever server(s) that is deployed to serve these requests to be configured to handle the expected load. Additionally, if you are loading content from a third-party service using an API, you should ensure that you will not exceed limits on the peak request frequency (which could result in your requests being throttled or API keys revoked).
 
+**Frame Options**: A website can set the [X-Frame-Options](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options) header to indicate that it should not be embedded in an [iframe](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe); this will prevent it from being loaded by the OVE HTML app. Some websites use this mechanism to disallow embedding except for specific alternative URLs.
+
 ## Ergonomic considerations
 
 **Background colours**. White backgrounds may be blinding when displayed on multiple monitors. Dark or black backgrounds will help to hide screen bezels, which can otherwise be distracting.
