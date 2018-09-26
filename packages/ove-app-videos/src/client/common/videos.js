@@ -9,9 +9,6 @@ $(function () {
 
 initCommon = function () {
     let context = window.ove.context;
-    if (!context.isInitialized) {
-        $('<script>', { src: 'https://www.youtube.com/iframe_api' }).insertBefore($('script:first'));
-    }
     window.ove.socket.on(function (appId, message) {
         if (appId == 'videos' && context.isInitialized) {
             if (message.state) {
@@ -23,34 +20,16 @@ initCommon = function () {
                 setTimeout(function () {
                     switch (op.name) {
                         case 'play':
-                            context.youtubePlayer.playVideo();
-                            if (op.loop) {
-                                let timeout = setInterval(function () {
-                                    if (context.youtubePlayer.getPlayerState() == 0) {
-                                        // if video has reached the end, loop it.
-                                        context.youtubePlayer.playVideo();
-                                    }
-                                }, 100);
-                                if (context.loop) {
-                                    // the original timer is cleared only after the newer timer has
-                                    // been set, to ensure playback is synchronised across browsers.
-                                    clearInterval(context.loop);
-                                }
-                                context.loop = timeout;
-                            } else if (context.loop) {
-                                clearInterval(context.loop);
-                                context.loop = undefined;
-                            }
+                            context.player.play(op.loop);
                             break;
                         case 'pause':
-                            context.youtubePlayer.pauseVideo();
+                            context.player.pause();
                             break;
                         case 'stop':
-                            context.youtubePlayer.pauseVideo();
-                            context.youtubePlayer.seekTo(op.time, true);
+                            context.player.stop();
                             break;
                         default:
-                            context.youtubePlayer.seekTo(op.time, true);
+                            context.player.seekTo(op.time);
                     }
                 // run operation precisely at the same time
                 }, op.executionTime - new Date().getTime());
@@ -60,13 +39,7 @@ initCommon = function () {
 };
 
 loadURL = function () {
-    if (window.ove.context.isInitialized) {
-        handleStateChange(null);
-    } else {
-        $(document).on('videos.initialized', function () {
-            handleStateChange(null);
-        });
-    }
+    handleStateChange(null);
 };
 
 handleStateChange = function (state) {
@@ -78,21 +51,21 @@ handleStateChange = function (state) {
         window.ove.state.current = state;
     }
     if (current.url != state.url) {
-        $('#youtube_player').hide();
-        requestRegistration();
-        context.youtubePlayer.loadVideoByUrl(state.url, 0, 'highres');
-        $('#youtube_overlay').css('display', 'block');
-        setTimeout(function () {
-            context.youtubePlayer.setPlaybackQuality(state.playbackQuality || 'highres');
-            let rate = 1;
-            context.youtubePlayer.getAvailablePlaybackRates().forEach(function (r) {
-                if (rate < r) {
-                    rate = r;
-                }
+        if (!context.isInitialized) {
+            context.player = state.url.includes('youtube') ? new window.OVEYouTubePlayer() : new window.OVEHTML5VideoPlayer();
+            context.player.initialize().then(function () {
+                window.ove.context.isInitialized = true;
+                $('#video_player').hide();
+                requestRegistration();
+                context.player.load(state);
+                refresh();
             });
-            context.youtubePlayer.setPlaybackRate(rate);
-        }, 500);
-        refresh();
+        } else {
+            $('#video_player').hide();
+            requestRegistration();
+            context.player.load(state);
+            refresh();
+        }
     }
 };
 
@@ -106,35 +79,10 @@ handleBufferStatusChange = function (status) {
         if (status.percentage >= 15) {
             context.bufferStatus.clients.splice(context.bufferStatus.clients.indexOf(status.clientId), 1);
             if (context.bufferStatus.clients.length == 0) {
-                context.youtubePlayer.pauseVideo();
-                context.youtubePlayer.seekTo(0, true);
-                context.youtubePlayer.setPlaybackRate(1);
-                $('#youtube_player').show();
+                context.player.ready();
+                $('#video_player').show();
                 refresh();
             }
         }
     }
-};
-
-onYouTubeIframeAPIReady = function () {
-    window.ove.context.youtubePlayer = new YT.Player('youtube_player', {
-        height: '100%',
-        width: '100%',
-        videoId: '',
-        playerVars: { 'autoplay': 0, 'controls': 0, 'rel': 0, 'showinfo': 0, 'loop': 1 },
-        events: {
-            'onReady': function (event) { event.target.mute(); },
-            'onStateChange': function (event) { }
-        }
-    });
-    var playerLoaded = function () {
-        if (!window.ove.context.youtubePlayer.loadVideoByUrl) {
-            setTimeout(playerLoaded, 1000);
-        } else {
-            // The YouTube API takes time to load the player
-            window.ove.context.isInitialized = true;
-            $(document).trigger('videos.initialized');
-        }
-    };
-    playerLoaded();
 };

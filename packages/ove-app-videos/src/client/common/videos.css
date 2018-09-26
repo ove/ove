@@ -12,7 +12,7 @@ body {
     margin: 0px;
     overflow: hidden;
 }
-.youtube_player {
+.video_player {
     position: fixed;
     top: 0;
     left: 0;

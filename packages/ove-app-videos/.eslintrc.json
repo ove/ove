@@ -23,9 +23,17 @@
         {
             "files": [ "**/common/*.js" ],
             "globals": {
-                "handleStateChange": true,
-                "onYouTubeIframeAPIReady": true,
-                "YT": true
+                "handleStateChange": true
+            }
+        },
+        {
+            "files": [ "**/players/*.js" ],
+            "rules": {
+                "no-unused-vars": ["error", {
+                    "vars": "all",
+                    "args": "none",
+                    "ignoreRestSiblings": true,
+                    "varsIgnorePattern": "OVE.*Player"}]
             }
         },
         {

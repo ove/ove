@@ -4,12 +4,11 @@ initView = function () {
     setInterval(function () {
         try {
             let context = window.ove.context;
-            let youtubePlayer = context.youtubePlayer;
-            if (youtubePlayer != null && youtubePlayer.getDuration() > 0) {
+            if (context.player != null && context.player.isVideoLoaded()) {
                 var status = {
                     type: { update: true },
                     clientId: context.uuid,
-                    percentage: youtubePlayer.getVideoLoadedFraction() * 100
+                    percentage: context.player.getLoadedPercentage()
                 };
                 if (JSON.stringify(status) !== JSON.stringify(context.bufferStatus.self)) {
                     // avoid repeatedly broadcasting same status
@@ -18,14 +17,14 @@ initView = function () {
                     context.bufferStatus.self = status;
                 }
             }
-        } catch (e) { } // random youtube errors
+        } catch (e) { } // random player errors
     }, 700);
 };
 
 refresh = function () {
-    $('#youtube_player').css('transform', 'scale(' + (window.ove.context.scale + 0.001) + ')');
+    $('#video_player').css('transform', 'scale(' + (window.ove.context.scale + 0.001) + ')');
     setTimeout(function () {
-        $('#youtube_player').css('transform', 'scale(' + window.ove.context.scale + ')');
+        $('#video_player').css('transform', 'scale(' + window.ove.context.scale + ')');
     }, 1000);
 };
 
@@ -50,7 +49,7 @@ beginInitialization = function () {
         let context = window.ove.context;
         let l = window.ove.layout;
         context.scale = Math.min(l.section.w / l.w, l.section.h / l.h);
-        $('#youtube_player').css({
+        $('#video_player').css({
             zoom: 1,
             transformOrigin: 100 * l.x / (l.section.w - l.section.w / context.scale) + '% ' + 100 * l.y / (l.section.h - l.section.h / context.scale) + '%',
             transform: 'scale(' + context.scale + ')',
