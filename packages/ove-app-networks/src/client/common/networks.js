@@ -13,11 +13,14 @@ loadSigma = function () {
     let context = window.ove.context;
     if (!context.isInitialized) {
         context.sigma = new sigma({
-            renderers: [{ type: (window.ove.state.current.renderer || 'webgl'), container: $('#graphArea')[0] }],
+            // We render on WebGL by default, but this can be overridden for a specific visualization.
+            renderers: [{ type: (window.ove.state.current.renderer || 'webgl'), container: $(Constants.CONTENT_DIV)[0] }],
             settings: window.ove.state.current.settings || { autoRescale: false, clone: false }
         });
         context.isInitialized = true;
     }
+    // sigma.js supports two content formats, GEXF (Gephi) and JSON. The format is chosen based
+    // on the type of url specified in the state configuration.
     if (window.ove.state.current.jsonURL) {
         sigma.parsers.json(window.ove.state.current.jsonURL, context.sigma, function (sigma) {
             sigma.refresh();

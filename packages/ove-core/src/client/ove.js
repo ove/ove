@@ -36,7 +36,8 @@ function OVE () {
             _private.ws.addEventListener('message', function (m) {
                 var data = JSON.parse(m.data);
                 if (DEBUG) {
-                    console.log(JSON.stringify(Object.assign({ time: new Date().toISOString() }, data)));
+                    // We want to print the time corresponding to the local timezone based on the locale
+                    console.log(JSON.stringify(Object.assign({ time: new Date().toLocaleString() }, data)));
                 }
                 if (data.appId && (!data.sectionId || data.sectionId == _private.sectionId)) {
                     onMessage(data.appId, data.message);

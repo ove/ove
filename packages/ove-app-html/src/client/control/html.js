@@ -8,8 +8,7 @@ initControl = function (data) {
             parseInt(OVE.Utils.getQueryParam('launchDelay', 0));
     }
     window.ove.state.current.changeAt = new Date().getTime() + 350;
-    window.ove.socket.send('html', window.ove.state.current);
-    window.ove.state.cache();
+    OVE.Utils.broadcastState('html', window.ove.state.current);
     updateURL();
 };
 
@@ -18,10 +17,5 @@ getCSS = function () {
 };
 
 beginInitialization = function () {
-    $(document).on(OVE.Event.LOADED, function () {
-        let state = window.ove.state.name || 'Matrix';
-        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
-            initControl(data);
-        });
-    });
+    OVE.Utils.initControl('Matrix', initControl);
 };

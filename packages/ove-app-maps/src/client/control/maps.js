@@ -3,18 +3,7 @@ initControl = function (data) {
     context.isInitialized = false;
 
     let l = window.ove.layout;
-    let maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
-    let maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
-    // multiplying by 1.0 for float division
-    let width, height;
-    if (l.section.w * maxHeight >= maxWidth * l.section.h) {
-        width = maxWidth;
-        height = maxWidth * 1.0 * l.section.h / l.section.w;
-    } else {
-        height = maxHeight;
-        width = maxHeight * 1.0 * l.section.w / l.section.h;
-    }
-    $('.map, .outer').css({ width: width, height: height });
+    OVE.Utils.resizeController('.map, .outer');
     initCommon().then(function () {
         let enabledLayers = OVE.Utils.getQueryParam('layers', '0').split(',');
         if (window.ove.state.current.position && enabledLayers !== window.ove.state.current.enabledLayers) {
@@ -26,9 +15,10 @@ initControl = function (data) {
             context.layers[e].setVisible(true);
         });
         initMap({
-            center: [parseFloat(data.center[0]), parseFloat(data.center[1])],
-            resolution: parseFloat(data.resolution) *
-                (data.scaled ? Math.sqrt(l.section.w * l.section.h / (parseInt(width) * parseInt(height))) : 1.0),
+            center: [+(data.center[0]), +(data.center[1])],
+            resolution: +(data.resolution) *
+                (data.scaled ? Math.sqrt(l.section.w * l.section.h /
+                    (parseInt($('.outer').css('width')) * parseInt($('.outer').css('height')))) : 1.0),
             zoom: parseInt(data.zoom),
             enableRotation: false
         });
@@ -46,7 +36,7 @@ uploadMapPosition = function () {
     let size = context.map.getSize();
     let tl = context.map.getCoordinateFromPixel([0, 0]);
     let br = context.map.getCoordinateFromPixel(size);
-    let resolution = parseFloat(context.map.getView().getResolution()) /
+    let resolution = +(context.map.getView().getResolution()) /
         Math.sqrt(window.ove.layout.section.w * window.ove.layout.section.h / (size[0] * size[1]));
     if (tl == null || br == null) {
         setTimeout(uploadMapPosition, 70);
@@ -59,8 +49,7 @@ uploadMapPosition = function () {
         if (!window.ove.state.current.position ||
             !OVE.Utils.JSON.equals(position, window.ove.state.current.position)) {
             window.ove.state.current.position = position;
-            window.ove.socket.send('maps', window.ove.state.current);
-            window.ove.state.cache();
+            OVE.Utils.broadcastState('maps', window.ove.state.current);
         }
     }
 };

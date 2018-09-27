@@ -3,7 +3,7 @@ const Constants = {
                                 Viewer
     **************************************************************/
     BUFFER_STATUS_BROADCAST_FREQUENCY: 700,
-    RE_SCALE_DURING_REFRESH_TIMEOUT: 1000,
+    RESCALE_DURING_REFRESH_TIMEOUT: 1000,
 
     /**************************************************************
                               Controller
@@ -25,13 +25,13 @@ const Constants = {
     SOCKET_READY_WAIT_TIME: 3000,
     OPERATION_SYNC_DELAY: 350,
     HTTP_HEADER_CONTENT_TYPE: 'Content-Type',
-    HTTP_CONTENT_TYPE_JS: 'application/json',
+    HTTP_CONTENT_TYPE_JSON: 'application/json',
 
     /**************************************************************
                                 Common
     **************************************************************/
     MIN_BUFFERED_PERCENTAGE: 15,
-    VIDEO_PLAYER_DIV: '#video_player',
+    CONTENT_DIV: '#video_player',
     APP_NAME: 'videos'
 };
 

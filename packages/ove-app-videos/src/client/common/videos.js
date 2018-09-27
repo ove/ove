@@ -70,7 +70,7 @@ handleStateChange = function (state) {
         // not initialized - the only difference is the need to wait for the
         // initialization to complete.
         let loadPlayer = function () {
-            $(Constants.VIDEO_PLAYER_DIV).hide();
+            $(Constants.CONTENT_DIV).hide();
             requestRegistration();
             context.player.load(state);
             refresh();
@@ -118,7 +118,7 @@ handleBufferStatusChange = function (status) {
             context.bufferStatus.clients.splice(context.bufferStatus.clients.indexOf(status.clientId), 1);
             if (context.bufferStatus.clients.length === 0) {
                 context.player.ready();
-                $(Constants.VIDEO_PLAYER_DIV).show();
+                $(Constants.CONTENT_DIV).show();
                 refresh();
             }
         }

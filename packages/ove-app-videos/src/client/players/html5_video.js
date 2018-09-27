@@ -10,7 +10,7 @@ function OVEHTML5VideoPlayer () {
                 muted: true,
                 autoplay: false,
                 controls: false
-            }).css({ width: '100%', height: '100%' }).appendTo(Constants.VIDEO_PLAYER_DIV);
+            }).css({ width: '100%', height: '100%' }).appendTo(Constants.CONTENT_DIV);
             resolve('video player loaded');
         });
     };

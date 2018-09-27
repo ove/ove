@@ -65,7 +65,7 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
                 }
             });
         }
-        res.status(HttpStatus.OK).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(
+        res.status(HttpStatus.OK).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(
             JSON.stringify({ status: (isComplete ? Constants.BufferStatus.COMPLETE : Constants.BufferStatus.BUFFERING) }));
     } else {
         // Play and SeekTo commands receive additional query parameters.
@@ -87,7 +87,7 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
             ws.send(JSON.stringify({ appId: Constants.APP_NAME, message: message }));
         }
         res.status(HttpStatus.OK).set(Constants.HTTP_HEADER_CONTENT_TYPE,
-            Constants.HTTP_CONTENT_TYPE_JS).send(JSON.stringify({}));
+            Constants.HTTP_CONTENT_TYPE_JSON).send(JSON.stringify({}));
     }
 });
 

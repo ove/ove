@@ -16,15 +16,11 @@ requestRegistration = function () {
     // Broadcast a registration request along with a state update such that viewers
     // then replicate the state.
     window.ove.socket.send(Constants.APP_NAME, { bufferStatus: { type: { requestRegistration: true } } });
-    window.ove.socket.send(Constants.APP_NAME, { state: window.ove.state.current });
-    window.ove.state.cache();
+    OVE.Utils.broadcastState(Constants.APP_NAME, { state: window.ove.state.current });
 };
 
 doRegistration = function () { }; // View-only operation
 
 beginInitialization = function () {
-    $(document).on(OVE.Event.LOADED, function () {
-        let state = window.ove.state.name || Constants.DEFAULT_STATE_NAME;
-        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initControl);
-    });
+    OVE.Utils.initControl(Constants.DEFAULT_STATE_NAME, initControl);
 };

@@ -2,30 +2,12 @@ initControl = function (data) {
     let context = window.ove.context;
     context.isInitialized = false;
 
-    let l = window.ove.layout;
-    let maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
-    let maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
-    // multiplying by 1.0 for float division
-    let width, height;
-    if (l.section.w * maxHeight >= maxWidth * l.section.h) {
-        width = maxWidth;
-        height = maxWidth * 1.0 * l.section.h / l.section.w;
-    } else {
-        height = maxHeight;
-        width = maxHeight * 1.0 * l.section.w / l.section.h;
-    }
-    $('#vegaArea').css({ width: width, height: height });
+    OVE.Utils.resizeController('#vegaArea');
     window.ove.state.current = data;
     loadVega();
-    window.ove.socket.send('charts', window.ove.state.current);
-    window.ove.state.cache();
+    OVE.Utils.broadcastState('charts', window.ove.state.current);
 };
 
 beginInitialization = function () {
-    $(document).on(OVE.Event.LOADED, function () {
-        let state = window.ove.state.name || 'VegaSample';
-        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
-            initControl(data);
-        });
-    });
+    OVE.Utils.initControl('VegaSample', initControl);
 };

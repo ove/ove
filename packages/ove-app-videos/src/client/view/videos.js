@@ -32,10 +32,10 @@ initView = function () {
 refresh = function () {
     // A refresh operation takes place when a player is loaded or when a video is
     // ready to be played. This ensures that proper CSS settings are applied.
-    $(Constants.VIDEO_PLAYER_DIV).css('transform', 'scale(' + (window.ove.context.scale + 0.001) + ')');
+    $(Constants.CONTENT_DIV).css('transform', 'scale(' + (window.ove.context.scale + 0.001) + ')');
     setTimeout(function () {
-        $(Constants.VIDEO_PLAYER_DIV).css('transform', 'scale(' + window.ove.context.scale + ')');
-    }, Constants.RE_SCALE_DURING_REFRESH_TIMEOUT);
+        $(Constants.CONTENT_DIV).css('transform', 'scale(' + window.ove.context.scale + ')');
+    }, Constants.RESCALE_DURING_REFRESH_TIMEOUT);
 };
 
 requestRegistration = function () {
@@ -63,9 +63,9 @@ beginInitialization = function () {
     $(document).on(OVE.Event.LOADED, function () {
         let context = window.ove.context;
         let l = window.ove.layout;
-        context.scale = Math.min(l.section.w / l.w, l.section.h / l.h);
         // Appropriately scaling and positioning the player is necessary.
-        $(Constants.VIDEO_PLAYER_DIV).css({
+        context.scale = Math.min(l.section.w / l.w, l.section.h / l.h);
+        $(Constants.CONTENT_DIV).css({
             zoom: 1,
             transformOrigin: 100 * l.x / (l.section.w - l.section.w / context.scale) + '% ' +
                              100 * l.y / (l.section.h - l.section.h / context.scale) + '%',
