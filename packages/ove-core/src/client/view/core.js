@@ -10,7 +10,7 @@ $(function () {
 initView = function () {
     // We will attempt to load content by restoring the existing state either after 15s,
     // or when the browser is resized.
-    let loadFunction = function () {
+    const loadFunction = function () {
         if (!window.ove.context.isInitialized) {
             window.ove.socket.send('core', { action: 'request' });
         }
@@ -32,10 +32,10 @@ updateSections = function (m) {
     if (!window.ove.context.isInitialized) {
         window.ove.context.isInitialized = true;
     }
-    let id = OVE.Utils.getQueryParam('oveClientId');
+    const id = OVE.Utils.getQueryParam('oveClientId');
     if (m.action === 'create') {
-        let client = id.substr(id.lastIndexOf('-') + 1);
-        let space = id.substr(0, id.lastIndexOf('-'));
+        const client = id.substr(id.lastIndexOf('-') + 1);
+        const space = id.substr(0, id.lastIndexOf('-'));
         let layout = (m.clients[space] || [])[client] || {};
         if (Object.keys(layout).length === 0) {
             // This can happen either when the clientId was valid and no layout exists or if the clientId was invalid.
@@ -58,7 +58,7 @@ updateSections = function (m) {
             }).appendTo('.container');
         }
     } else if (m.action === 'update') {
-        let frame = $('#content-frame-section-' + m.id);
+        const frame = $('#content-frame-section-' + m.id);
         if (frame.length) {
             if (m.app) {
                 frame.attr('src', m.app.url + '/view.html?oveClientId=' + id + '.' + m.id);
@@ -70,7 +70,7 @@ updateSections = function (m) {
         }
     } else if (m.action === 'delete') {
         if (m.id) {
-            let frame = $('#content-frame-section-' + m.id);
+            const frame = $('#content-frame-section-' + m.id);
             if (frame.length) {
                 frame.remove();
             }

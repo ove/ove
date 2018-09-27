@@ -1,7 +1,7 @@
 initControl = function (data) {
     window.ove.context.isInitialized = false;
     window.ove.state.current = data;
-    let url = OVE.Utils.getQueryParam('url');
+    const url = OVE.Utils.getQueryParam('url');
     if (url) {
         window.ove.state.current.url = url;
         window.ove.state.current.launchDelay =

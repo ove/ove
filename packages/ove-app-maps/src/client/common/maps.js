@@ -13,11 +13,11 @@ $(function () {
 
 // Initialization that is common to viewers and controllers.
 initCommon = function () {
-    let context = window.ove.context;
-    let fetchPromise = fetch('layers.json').then(r => r.text()).then(text => {
+    const context = window.ove.context;
+    const fetchPromise = fetch('layers.json').then(r => r.text()).then(text => {
         $.each(JSON.parse(text), function (i, e) {
             if (e.type === 'ol.layer.Tile') {
-                let TileConfig = {
+                const TileConfig = {
                     visible: e.visible,
                     source: eval('new window.' + e.source.type + '(' + JSON.stringify(e.source.config) + ')') // jshint ignore:line
                 };
@@ -29,7 +29,7 @@ initCommon = function () {
                     context.layers[i].bingMapsSource = { config: e.source.config };
                 }
             } else if (e.type === 'ol.layer.Vector') {
-                let TileConfig = {
+                const TileConfig = {
                     visible: e.visible,
                     source: new window.ol.source.Vector({
                         url: e.source.config.url,
@@ -60,11 +60,10 @@ initCommon = function () {
 };
 
 initMap = function (view) {
-    let context = window.ove.context;
-    context.map = new window.ol.Map({
+    window.ove.context.map = new window.ol.Map({
         target: 'map',
         controls: [],
-        layers: context.layers,
+        layers: window.ove.context.layers,
         interactions: window.ol.interaction.defaults({
             pinchRotate: false,
             zoomDuration: 0

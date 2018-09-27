@@ -2,6 +2,7 @@
     "extends": "standard",
     "globals": {
         "$": true,
+        "Constants": true,
         "DEBUG": true,
         "fetch": true,
         "location": true,
@@ -34,7 +35,6 @@
         }
     ],
     "rules": {
-        "eqeqeq": ["off"],
         "indent": ["error", 4, {
             "SwitchCase": 1,
             "VariableDeclarator": 1,

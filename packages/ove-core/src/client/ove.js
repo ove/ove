@@ -21,29 +21,29 @@ function OVE () {
     //-----------------------------------------------------------//
     //--                 Messaging Functions                   --//
     //-----------------------------------------------------------//
-    var OVESocket = function (_private) {
+    var OVESocket = function (__private) {
         var onMessage = function () { return 0; };
 
         //-- Socket init code --//
         var getSocket = function (url) {
-            _private.ws = new WebSocket(url);
-            _private.ws.addEventListener('error', console.error);
-            _private.ws.addEventListener('open', function () {
+            __private.ws = new WebSocket(url);
+            __private.ws.addEventListener('error', console.error);
+            __private.ws.addEventListener('open', function () {
                 if (DEBUG) {
                     console.log('websocket connection made with ' + url);
                 }
             });
-            _private.ws.addEventListener('message', function (m) {
+            __private.ws.addEventListener('message', function (m) {
                 var data = JSON.parse(m.data);
                 if (DEBUG) {
-                    // We want to print the time corresponding to the local timezone based on the locale
+                    //-- We want to print the time corresponding to the local timezone based on the locale --//
                     console.log(JSON.stringify(Object.assign({ time: new Date().toLocaleString() }, data)));
                 }
-                if (data.appId && (!data.sectionId || data.sectionId == _private.sectionId)) {
+                if (data.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
                     onMessage(data.appId, data.message);
                 }
             });
-            _private.ws.addEventListener('close', function () {
+            __private.ws.addEventListener('close', function () {
                 if (DEBUG) {
                     console.warn('lost websocket connection attempting to reconnect');
                 }
@@ -59,16 +59,16 @@ function OVE () {
         this.send = function (appId, message) {
             new Promise(function (resolve) {
                 var x = setInterval(function () {
-                    if (_private.ws.readyState == WebSocket.OPEN) {
+                    if (__private.ws.readyState === WebSocket.OPEN) {
                         clearInterval(x);
                         resolve('socket open');
                     }
                 }, 100);
             }).then(function () {
-                if (_private.sectionId) {
-                    _private.ws.send(JSON.stringify({ appId: appId, sectionId: _private.sectionId, message: message }));
+                if (__private.sectionId) {
+                    __private.ws.send(JSON.stringify({ appId: appId, sectionId: __private.sectionId, message: message }));
                 } else {
-                    _private.ws.send(JSON.stringify({ appId: appId, message: message }));
+                    __private.ws.send(JSON.stringify({ appId: appId, message: message }));
                 }
             });
         };
@@ -77,8 +77,8 @@ function OVE () {
     //-----------------------------------------------------------//
     //--                   Layout Variables                    --//
     //-----------------------------------------------------------//
-    var setLayout = function (_self, _private) {
-        _self.layout = {};
+    var setLayout = function (__self, __private) {
+        __self.layout = {};
         var fetchSection = function (sectionId) {
             if (sectionId) {
                 if (DEBUG) {
@@ -87,9 +87,9 @@ function OVE () {
                 fetch(getHostName(true) + '/section/' + sectionId)
                     .then(function (r) { return r.text(); }).then(function (text) {
                         var section = JSON.parse(text);
-                        _self.layout.section = { w: section.w, h: section.h };
-                        _self.state.name = OVE.Utils.getQueryParam('state', section.state);
-                        _private.sectionId = section.id;
+                        __self.layout.section = { w: section.w, h: section.h };
+                        __self.state.name = OVE.Utils.getQueryParam('state', section.state);
+                        __private.sectionId = section.id;
                         if (DEBUG) {
                             console.log('got details from section: ' + section.id);
                         }
@@ -118,7 +118,7 @@ function OVE () {
         //-- call APIs /clients or /client/{sectionId}  --//
         fetch(getHostName(true) + '/client' + (sectionId ? '/' + sectionId : 's'))
             .then(function (r) { return r.text(); }).then(function (text) {
-                _self.layout = (JSON.parse(text)[space] || [])[client] || {};
+                __self.layout = (JSON.parse(text)[space] || [])[client] || {};
                 fetchSection(sectionId);
             });
     };
@@ -126,16 +126,16 @@ function OVE () {
     //-----------------------------------------------------------//
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
-    var OVEState = function (_private) {
+    var OVEState = function (__private) {
         this.cache = function (url) {
-            $.ajax({ url: url || (_private.sectionId + '/state'), type: 'POST', data: JSON.stringify(this.current), contentType: 'application/json' });
+            $.ajax({ url: url || (__private.sectionId + '/state'), type: 'POST', data: JSON.stringify(this.current), contentType: 'application/json' });
         };
         this.load = function (url) {
-            var _self = this;
+            var __self = this;
             return new Promise(function (resolve) {
-                $.get(url || (_private.sectionId + '/state')).done(function (state) {
+                $.get(url || (__private.sectionId + '/state')).done(function (state) {
                     if (state) {
-                        _self.current = state;
+                        __self.current = state;
                         resolve('state loaded');
                     }
                 });
@@ -148,14 +148,14 @@ function OVE () {
     this.context = {
         uuid: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = Math.random() * 16 | 0;
-            var v = c == 'x' ? r : (r & 0x3 | 0x8);
+            var v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         })
     };
 
     //-- holds private data within OVE library --//
-    var _private = {};
-    this.socket = new OVESocket(_private);
-    this.state = new OVEState(_private);
-    setLayout(this, _private);
+    var __private = {};
+    this.socket = new OVESocket(__private);
+    this.state = new OVEState(__private);
+    setLayout(this, __private);
 }

@@ -1,5 +1,5 @@
 function OVEHTML5VideoPlayer () {
-    let getPlayer = function () {
+    const getPlayer = function () {
         return $('#video')[0];
     };
 

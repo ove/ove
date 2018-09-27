@@ -20,12 +20,12 @@ module.exports = function (baseDir, appName) {
     **************************************************************/
     var state = [];
 
-    var createStateByName = function (req, res) {
+    const createStateByName = function (req, res) {
         module.exports.config.states[req.params.name] = req.body;
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
     };
 
-    var readStateByName = function (req, res) {
+    const readStateByName = function (req, res) {
         if (!module.exports.config.states[req.params.name]) {
             res.status(400).set('Content-Type', 'application/json').send(
                 JSON.stringify({ error: 'invalid state name' }));
@@ -35,7 +35,7 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var readState = function (_req, res) {
+    const readState = function (_req, res) {
         if (state.length > 0) {
             res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state));
         } else {
@@ -43,7 +43,7 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var readStateOfSection = function (req, res) {
+    const readStateOfSection = function (req, res) {
         if (state[req.params.id]) {
             res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state[req.params.id]));
         } else {
@@ -51,12 +51,12 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var updateStateOfSection = function (req, res) {
+    const updateStateOfSection = function (req, res) {
         state[req.params.id] = req.body;
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
     };
 
-    var flush = function (_req, res) {
+    const flush = function (_req, res) {
         state = [];
         module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
@@ -100,11 +100,12 @@ module.exports = function (baseDir, appName) {
                     Static Content and Embedded Data
     **************************************************************/
     app.use('/data', express.static(path.join(baseDir, 'data')));
-    app.use('/:fileName(' + appName + ').:type.:fileType(js|css)', function (req, res) {
+    app.use('/' + appName + '.:type.:fileType(js|css)', function (req, res) {
         let text = '';
-        let type = req.params.type === 'control' ? 'control' : 'view';
-        for (let context of ['common', type]) {
-            let fp = path.join(baseDir, 'client', context, req.params.fileName + '.' + req.params.fileType);
+        const type = req.params.type === 'control' ? 'control' : 'view';
+        const fileName = appName + '.' + req.params.fileType;
+        for (const context of ['common', type]) {
+            const fp = path.join(baseDir, 'client', context, fileName);
             if (fs.existsSync(fp)) {
                 text += fs.readFileSync(fp, 'utf8');
             }
@@ -112,7 +113,7 @@ module.exports = function (baseDir, appName) {
         let cType;
         switch (req.params.fileType) {
             case 'js':
-                let fp = path.join(baseDir, 'client', 'constants', req.params.fileName + '.' + req.params.fileType);
+                const fp = path.join(baseDir, 'client', 'constants', fileName);
                 if (fs.existsSync(fp)) {
                     text = fs.readFileSync(fp, 'utf8').replace('exports.Constants = Constants;', '') + text;
                 }

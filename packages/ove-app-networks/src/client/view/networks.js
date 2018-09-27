@@ -14,7 +14,7 @@ beginInitialization = function () {
         if (!window.ove.context.isInitialized) {
             window.ove.state.load().then(loadSigma);
         }
-        let l = window.ove.layout;
+        const l = window.ove.layout;
         // The network is plotted across the entire canvas and then
         // moved into place based on the client's coordinates.
         $(Constants.CONTENT_DIV).css({

@@ -9,7 +9,7 @@ initView = function () {
 };
 
 getCSS = function () {
-    let l = window.ove.layout;
+    const l = window.ove.layout;
     return {
         transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',
         width: l.section.w + 'px',

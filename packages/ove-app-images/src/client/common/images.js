@@ -10,13 +10,13 @@ $(function () {
 });
 
 loadOSD = function (config) {
+    // Returns a promise such that subsequent tasks can happen following this.
     return new Promise(function (resolve) {
-        let context = window.ove.context;
         config.id = 'contentDiv';
         config.prefixUrl = '/images/';
         config.animationTime = 0;
-        context.osd = window.OpenSeadragon(config);
-        context.osd.clearControls();
+        window.ove.context.osd = window.OpenSeadragon(config);
+        window.ove.context.osd.clearControls();
         resolve('OSD loaded');
     });
 };

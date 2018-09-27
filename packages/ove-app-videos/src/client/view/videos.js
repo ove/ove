@@ -1,9 +1,9 @@
 initView = function () {
     window.ove.context.isInitialized = false;
     initCommon();
-    let broadcastBufferStatus = function () {
+    const broadcastBufferStatus = function () {
         try {
-            let context = window.ove.context;
+            const context = window.ove.context;
             // We are doing nothing if the player is not initialized or if
             // no video is loaded as yet.
             if (context.player && context.player.isVideoLoaded()) {
@@ -47,7 +47,7 @@ requestRegistration = function () {
 
 doRegistration = function () {
     // Only viewers respond to registration requests. Controllers don't respond to this.
-    let context = window.ove.context;
+    const context = window.ove.context;
     if (!context.bufferStatus.clients.includes(context.uuid)) {
         context.bufferStatus.clients.push(context.uuid);
     }
@@ -62,7 +62,7 @@ beginInitialization = function () {
     initView();
     $(document).on(OVE.Event.LOADED, function () {
         let context = window.ove.context;
-        let l = window.ove.layout;
+        const l = window.ove.layout;
         // Appropriately scaling and positioning the player is necessary.
         context.scale = Math.min(l.section.w / l.w, l.section.h / l.h);
         $(Constants.CONTENT_DIV).css({

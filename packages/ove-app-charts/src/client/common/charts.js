@@ -9,14 +9,16 @@ $(function () {
 });
 
 loadVega = function () {
-    let context = window.ove.context;
-    if (!context.isInitialized) {
+    if (!window.ove.context.isInitialized) {
         // no initialization to do
-        context.isInitialized = true;
+        window.ove.context.isInitialized = true;
     }
 
     if (window.ove.state.current.specURL) {
         let spec = window.ove.state.current.specURL;
+        // TODO: test if window.vegaEmbed works and also whether the .then() can be removed.
+        // also check if the repeated initialization makes sense or whether the block below
+        // needs to be within the initialization block above.
         vegaEmbed('#vegaArea', spec, window.ove.state.current.options)
             .then(function (result) { })
             .catch(console.error);

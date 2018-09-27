@@ -1,6 +1,5 @@
 initControl = function (data) {
-    let context = window.ove.context;
-    context.isInitialized = false;
+    window.ove.context.isInitialized = false;
 
     OVE.Utils.resizeController('#vegaArea');
     window.ove.state.current = data;

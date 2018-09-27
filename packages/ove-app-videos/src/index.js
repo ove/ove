@@ -78,7 +78,7 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
             // The typeof check is better than an equals check since undefined can
             // be overridden.
             message.operation.loop = (typeof req.query.loop !== 'undefined' &&
-                (JSON.parse(String(req.query.loop).toLowerCase()) == true));
+                JSON.parse(String(req.query.loop).toLowerCase()));
         }
         // If the section id is not set the message will be available to all the sections.
         if (sectionId) {

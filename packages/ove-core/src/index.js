@@ -10,8 +10,9 @@ const swaggerUi = require('swagger-ui-express');
 const yamljs = require('yamljs');
 const pjson = require('../package.json'); // this path might have to be fixed based on packaging
 const nodeModules = path.join(__dirname, '..', '..', '..', 'node_modules');
+const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', 'Clients.json')));
 
-var DEBUG = true;
+const DEBUG = true;
 
 app.use(cors());
 app.use(express.json());
@@ -26,7 +27,7 @@ app.use(express.json());
                 try {
                     this.send(msg);
                 } catch (e) {
-                    if (this.readyState == 1) {
+                    if (this.readyState === 1) {
                         console.error('error sending message' + e.message);
                     }
                     // ignore all other errors, since there is no value in recording them.
@@ -61,7 +62,7 @@ app.get('/:page(ove.js)', function (req, res) {
 /**************************************************************
                    Static Content of OVE Core
 **************************************************************/
-app.get('/', function (req, res) {
+app.get('/', function (_req, res) {
     res.sendFile(path.join(__dirname, 'blank.html'));
 });
 app.use('/core.:type.:fileType(js|css)', function (req, res) {
@@ -95,14 +96,13 @@ app.use('/', express.static(path.join(nodeModules, 'jquery', 'dist')));
 /**************************************************************
                     APIs Exposed by OVE Core
 **************************************************************/
-var clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', 'Clients.json')));
 var sections = [];
 
-var listClients = function (req, res) {
+const listClients = function (_req, res) {
     res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(clients));
 };
 
-var listClientById = function (req, res) {
+const listClientById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
@@ -112,7 +112,7 @@ var listClientById = function (req, res) {
 };
 
 // Creates an individual section
-var createSection = function (req, res) {
+const createSection = function (req, res) {
     if (!req.body.space || !clients[req.body.space]) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid space' }));
     } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
@@ -184,7 +184,7 @@ var createSection = function (req, res) {
 
         // Notify OVE viewers/controllers
         wss.clients.forEach(function (c) {
-            if (c.readyState == 1) {
+            if (c.readyState === 1) {
                 c.safeSend(JSON.stringify({ appId: 'core',
                     message: { action: 'create', id: sectionId, clients: section.clients } }));
                 if (section.app) {
@@ -203,7 +203,7 @@ var createSection = function (req, res) {
 };
 
 // Deletes all sections
-var deleteSections = function (req, res) {
+const deleteSections = function (_req, res) {
     while (sections.length !== 0) {
         let section = sections.pop();
         if (section.app) {
@@ -214,7 +214,7 @@ var deleteSections = function (req, res) {
         console.log('active sections: ' + sections.length);
     }
     wss.clients.forEach(function (c) {
-        if (c.readyState == 1) {
+        if (c.readyState === 1) {
             c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'delete' } }));
         }
     });
@@ -222,7 +222,7 @@ var deleteSections = function (req, res) {
 };
 
 // Fetches details of an individual section
-var readSectionById = function (req, res) {
+const readSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
@@ -236,7 +236,7 @@ var readSectionById = function (req, res) {
 };
 
 // Updates an individual section
-var updateSectionById = function (req, res) {
+const updateSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
@@ -274,7 +274,7 @@ var updateSectionById = function (req, res) {
 
         // Notify OVE viewers/controllers
         wss.clients.forEach(function (c) {
-            if (c.readyState == 1) {
+            if (c.readyState === 1) {
                 commands.forEach(function (m) {
                     c.safeSend(m);
                 });
@@ -285,7 +285,7 @@ var updateSectionById = function (req, res) {
 };
 
 // Deletes an individual section
-var deleteSectionById = function (req, res) {
+const deleteSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
@@ -297,7 +297,7 @@ var deleteSectionById = function (req, res) {
         delete sections[sectionId];
         sections[sectionId] = {};
         wss.clients.forEach(function (c) {
-            if (c.readyState == 1) {
+            if (c.readyState === 1) {
                 c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'delete', id: sectionId } }));
             }
         });
@@ -330,7 +330,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
 /**************************************************************
                    OVE Messaging Middleware
 **************************************************************/
-app.ws('/', function (s, req) {
+app.ws('/', function (s) {
     s.safeSend(JSON.stringify({ func: 'connect' }));
     s.on('message', function (msg) {
         let m = JSON.parse(msg);
@@ -341,7 +341,7 @@ app.ws('/', function (s, req) {
                 sections.forEach(function (section, sectionId) {
                     if (section) {
                         wss.clients.forEach(function (c) {
-                            if (c.readyState == 1) {
+                            if (c.readyState === 1) {
                                 c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'create', id: sectionId, clients: section.clients } }));
                                 if (section.app) {
                                     setTimeout(function () {
@@ -359,7 +359,7 @@ app.ws('/', function (s, req) {
             // All other messages
         } else {
             wss.clients.forEach(function (c) {
-                if (c !== s && c.readyState == 1) {
+                if (c !== s && c.readyState === 1) {
                     if (DEBUG) {
                         console.log('sending message to socket: ' + c.id);
                     }

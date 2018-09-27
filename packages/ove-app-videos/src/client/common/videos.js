@@ -12,7 +12,7 @@ $(function () {
 
 // Initialization that is common to viewers and controllers.
 initCommon = function () {
-    let context = window.ove.context;
+    const context = window.ove.context;
     window.ove.socket.on(function (appId, message) {
         if (appId === Constants.APP_NAME) {
             // we can receive a stat update before the application has been initialized.
@@ -54,8 +54,6 @@ loadURL = function () {
 };
 
 handleStateChange = function (state) {
-    let context = window.ove.context;
-
     let current = {};
     if (!state) {
         // if incoming state is null, we don't need to care about current state.
@@ -66,10 +64,11 @@ handleStateChange = function (state) {
     }
 
     if (current.url !== state.url) {
+        let context = window.ove.context;
         // the way we load the player doesn't change even if the application was
         // not initialized - the only difference is the need to wait for the
         // initialization to complete.
-        let loadPlayer = function () {
+        const loadPlayer = function () {
             $(Constants.CONTENT_DIV).hide();
             requestRegistration();
             context.player.load(state);
@@ -104,7 +103,7 @@ handleBufferStatusChange = function (status) {
     //   4. After the above steps are completed peers start broadcasting their buffer statuses.
     //   5. If at least 15% of a video is buffered across all peers synchronized playback
     //      can begin and the video will be displayed.
-    let context = window.ove.context;
+    const context = window.ove.context;
     if (status.type.requestRegistration) {
         // this code is executed when this instance of the application receives a
         // registration request. The controller and the viewer handles this differently.

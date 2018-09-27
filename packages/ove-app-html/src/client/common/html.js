@@ -9,17 +9,16 @@ $(function () {
 });
 
 updateURL = function () {
-    let context = window.ove.context;
-    if (!context.isInitialized) {
+    if (!window.ove.context.isInitialized) {
         $('<iframe>', {
             class: 'html-frame',
             frameborder: 0,
             scrolling: 'no'
         }).css(getCSS()).appendTo('.wrapper');
-        context.isInitialized = true;
+        window.ove.context.isInitialized = true;
     }
-    let state = window.ove.state.current;
-    let launchDelay = typeof state.launchDelay !== 'undefined' ? state.launchDelay : 0;
+    const state = window.ove.state.current;
+    const launchDelay = typeof state.launchDelay !== 'undefined' ? state.launchDelay : 0;
     if (launchDelay > 0) {
         $('.html-frame').hide();
     }

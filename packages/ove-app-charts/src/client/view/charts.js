@@ -14,7 +14,7 @@ beginInitialization = function () {
         if (!window.ove.context.isInitialized) {
             window.ove.state.load().then(loadVega);
         }
-        let l = window.ove.layout;
+        const l = window.ove.layout;
         $('#vegaArea').css({
             transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',
             width: l.section.w + 'px',
