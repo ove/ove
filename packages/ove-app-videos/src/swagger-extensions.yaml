@@ -72,7 +72,6 @@ paths:
         format: "float"
         description: "Time in seconds from start of video"
         required: true
-      parameters:
       - name: "oveSectionId"
         in: "query"
         type: "integer"
