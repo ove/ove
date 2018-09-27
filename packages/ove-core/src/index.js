@@ -40,10 +40,16 @@ app.use(express.json());
 /**************************************************************
                       OVE Client Library
 **************************************************************/
-app.get('/:page(ove.js)', function (req, res, next) {
+app.get('/:page(ove.js)', function (req, res) {
+    let text = fs.readFileSync(path.join(__dirname, 'client', req.params.page), 'utf8');
+    for (let file of ['utils', 'constants']) {
+        let fp = path.join(__dirname, 'client', 'utils', file + '.js');
+        if (fs.existsSync(fp)) {
+            text += fs.readFileSync(fp, 'utf8');
+        }
+    }
     res.set('Content-Type', 'application/javascript').send(uglify.minify(
-        fs.readFileSync(path.join(__dirname, 'client', req.params.page), 'utf8')
-            .replace(/DEBUG/g, DEBUG)
+        text.replace(/DEBUG/g, DEBUG)
             .replace(/@VERSION/g, pjson.version)
             .replace(/@LICENSE/g, pjson.license)
             .replace(/@AUTHOR/g, pjson.author)
@@ -55,12 +61,12 @@ app.get('/:page(ove.js)', function (req, res, next) {
 /**************************************************************
                    Static Content of OVE Core
 **************************************************************/
-app.get('/', function (req, res, next) {
+app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, 'blank.html'));
 });
-app.use('/core.:type.:fileType(js|css)', function (req, res, next) {
+app.use('/core.:type.:fileType(js|css)', function (req, res) {
     let text = '';
-    let type = req.params.type == 'control' ? 'control' : 'view';
+    let type = req.params.type === 'control' ? 'control' : 'view';
     for (let context of ['common', type]) {
         let fp = path.join(__dirname, 'client', context, 'core.' + req.params.fileType);
         if (fs.existsSync(fp)) {
@@ -80,9 +86,9 @@ app.use('/core.:type.:fileType(js|css)', function (req, res, next) {
     }
     res.set('Content-Type', cType).send(text);
 });
-app.use('/:fileName(index|control|view).html', function (req, res, next) {
+app.use('/:fileName(index|control|view).html', function (req, res) {
     res.send(fs.readFileSync(path.join(__dirname, 'client', 'index.html'), 'utf8')
-        .replace(/_OVETYPE_/g, req.params.fileName == 'control' ? 'control' : 'view'));
+        .replace(/_OVETYPE_/g, req.params.fileName === 'control' ? 'control' : 'view'));
 });
 app.use('/', express.static(path.join(nodeModules, 'jquery', 'dist')));
 
@@ -92,11 +98,11 @@ app.use('/', express.static(path.join(nodeModules, 'jquery', 'dist')));
 var clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', 'Clients.json')));
 var sections = [];
 
-var listClients = function (req, res, next) {
+var listClients = function (req, res) {
     res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(clients));
 };
 
-var listClientById = function (req, res, next) {
+var listClientById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
@@ -106,7 +112,7 @@ var listClientById = function (req, res, next) {
 };
 
 // Creates an individual section
-var createSection = function (req, res, next) {
+var createSection = function (req, res) {
     if (!req.body.space || !clients[req.body.space]) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid space' }));
     } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
@@ -197,7 +203,7 @@ var createSection = function (req, res, next) {
 };
 
 // Deletes all sections
-var deleteSections = function (req, res, next) {
+var deleteSections = function (req, res) {
     while (sections.length !== 0) {
         let section = sections.pop();
         if (section.app) {
@@ -216,7 +222,7 @@ var deleteSections = function (req, res, next) {
 };
 
 // Fetches details of an individual section
-var readSectionById = function (req, res, next) {
+var readSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
@@ -230,7 +236,7 @@ var readSectionById = function (req, res, next) {
 };
 
 // Updates an individual section
-var updateSectionById = function (req, res, next) {
+var updateSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
@@ -279,7 +285,7 @@ var updateSectionById = function (req, res, next) {
 };
 
 // Deletes an individual section
-var deleteSectionById = function (req, res, next) {
+var deleteSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
         res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
@@ -330,7 +336,7 @@ app.ws('/', function (s, req) {
         let m = JSON.parse(msg);
 
         // Method for viewers to request section information, helps browser crash recovery
-        if (m.appId == 'core' && m.message.action == 'request') {
+        if (m.appId === 'core' && m.message.action === 'request') {
             if (m.sectionId === undefined) {
                 sections.forEach(function (section, sectionId) {
                     if (section) {

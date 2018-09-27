@@ -22,7 +22,7 @@ initControl = function (data) {
 };
 
 beginInitialization = function () {
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         let state = window.ove.state.name || 'SigmaSample';
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
             initControl(data);

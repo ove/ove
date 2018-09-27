@@ -2,6 +2,7 @@
     "extends": "standard",
     "globals": {
         "$": true,
+        "Constants": true,
         "DEBUG": true,
         "fetch": true,
         "location": true,
@@ -24,6 +25,16 @@
             "files": [ "**/common/*.js" ],
             "globals": {
                 "handleStateChange": true
+            }
+        },
+        {
+            "files": [ "**/constants/*.js" ],
+            "rules": {
+                "no-unused-vars": ["error", {
+                    "vars": "all",
+                    "args": "none",
+                    "ignoreRestSiblings": true,
+                    "varsIgnorePattern": "Constants"}]
             }
         },
         {

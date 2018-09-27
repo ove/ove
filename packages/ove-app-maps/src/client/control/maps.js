@@ -16,7 +16,7 @@ initControl = function (data) {
     }
     $('.map, .outer').css({ width: width, height: height });
     initCommon().then(function () {
-        let enabledLayers = (new URLSearchParams(location.search.slice(1)).get('layers') || '0').split(',');
+        let enabledLayers = OVE.Utils.getQueryParam('layers', '0').split(',');
         if (window.ove.state.current.position && enabledLayers !== window.ove.state.current.enabledLayers) {
             // if the layers have changed, clear the cached position to force a broadcast.
             window.ove.state.current.position = null;
@@ -57,7 +57,7 @@ uploadMapPosition = function () {
             resolution: resolution,
             zoom: context.map.getView().getZoom() };
         if (!window.ove.state.current.position ||
-            JSON.stringify(position) !== JSON.stringify(window.ove.state.current.position)) {
+            !OVE.Utils.JSON.equals(position, window.ove.state.current.position)) {
             window.ove.state.current.position = position;
             window.ove.socket.send('maps', window.ove.state.current);
             window.ove.state.cache();
@@ -72,7 +72,7 @@ changeEvent = function () {
 };
 
 beginInitialization = function () {
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         window.ove.state.load().then(function () {
             if (window.ove.state.current.position) {
                 let p = window.ove.state.current.position;

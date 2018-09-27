@@ -1,4 +1,5 @@
 $(function () {
+    // This is what happens first. After OVE is loaded, the viewer will be initialized
     $(document).ready(function () {
         window.ove = new OVE();
         window.ove.context.isInitialized = false;
@@ -7,7 +8,8 @@ $(function () {
 });
 
 initView = function () {
-    // We will attempt to load content by restoring the existing state either after 15s, or when the browser is resized.
+    // We will attempt to load content by restoring the existing state either after 15s,
+    // or when the browser is resized.
     let loadFunction = function () {
         if (!window.ove.context.isInitialized) {
             window.ove.socket.send('core', { action: 'request' });
@@ -20,7 +22,7 @@ initView = function () {
     setTimeout(loadFunction, 15000);
 
     window.ove.socket.on(function (appId, message) {
-        if (appId == 'core') {
+        if (appId === 'core') {
             updateSections(message);
         }
     });
@@ -30,12 +32,12 @@ updateSections = function (m) {
     if (!window.ove.context.isInitialized) {
         window.ove.context.isInitialized = true;
     }
-    let id = new URLSearchParams(location.search.slice(1)).get('oveClientId');
-    if (m.action == 'create') {
+    let id = OVE.Utils.getQueryParam('oveClientId');
+    if (m.action === 'create') {
         let client = id.substr(id.lastIndexOf('-') + 1);
         let space = id.substr(0, id.lastIndexOf('-'));
         let layout = (m.clients[space] || [])[client] || {};
-        if (Object.keys(layout).length == 0) {
+        if (Object.keys(layout).length === 0) {
             // This can happen either when the clientId was valid and no layout exists or if the clientId was invalid.
             // This ensures that a frame is still created but not visible.
             layout = { h: 0, w: 0, offset: { x: 0, y: 0 } };
@@ -55,7 +57,7 @@ updateSections = function (m) {
                 marginTop: layout.offset.y
             }).appendTo('.container');
         }
-    } else if (m.action == 'update') {
+    } else if (m.action === 'update') {
         let frame = $('#content-frame-section-' + m.id);
         if (frame.length) {
             if (m.app) {
@@ -66,7 +68,7 @@ updateSections = function (m) {
                 }
             }
         }
-    } else if (m.action == 'delete') {
+    } else if (m.action === 'delete') {
         if (m.id) {
             let frame = $('#content-frame-section-' + m.id);
             if (frame.length) {

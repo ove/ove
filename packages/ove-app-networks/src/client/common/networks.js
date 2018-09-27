@@ -1,4 +1,6 @@
 $(function () {
+    // This is what happens first. After OVE is loaded, either the viewer or controller
+    // will be initialized. Application specific context variables are also initialized at this point.
     $(document).ready(function () {
         window.ove = new OVE();
         window.ove.context.isInitialized = false;

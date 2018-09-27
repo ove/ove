@@ -4,7 +4,7 @@ const request = require('request');
 const server = require('http').createServer(app);
 
 var layers = [];
-if (typeof config.layers == 'string') {
+if (typeof config.layers === 'string') {
     request(config.layers, { json: true }, function (err, resp, body) {
         if (err) {
             console.error(err);
@@ -15,7 +15,7 @@ if (typeof config.layers == 'string') {
 } else {
     layers = config.layers;
 }
-app.get('/layers.json', function (req, res, next) {
+app.get('/layers.json', function (req, res) {
     res.send(JSON.stringify(layers));
 });
 app.use('/', express.static(path.join(__dirname, 'ol3-cesium-v1.6')));

@@ -20,12 +20,12 @@ module.exports = function (baseDir, appName) {
     **************************************************************/
     var state = [];
 
-    var createStateByName = function (req, res, next) {
+    var createStateByName = function (req, res) {
         module.exports.config.states[req.params.name] = req.body;
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
     };
 
-    var readStateByName = function (req, res, next) {
+    var readStateByName = function (req, res) {
         if (!module.exports.config.states[req.params.name]) {
             res.status(400).set('Content-Type', 'application/json').send(
                 JSON.stringify({ error: 'invalid state name' }));
@@ -35,7 +35,7 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var readState = function (req, res, next) {
+    var readState = function (req, res) {
         if (state.length > 0) {
             res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state));
         } else {
@@ -43,7 +43,7 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var readStateOfSection = function (req, res, next) {
+    var readStateOfSection = function (req, res) {
         if (state[req.params.id]) {
             res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state[req.params.id]));
         } else {
@@ -51,12 +51,12 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var updateStateOfSection = function (req, res, next) {
+    var updateStateOfSection = function (req, res) {
         state[req.params.id] = req.body;
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
     };
 
-    var flush = function (req, res, next) {
+    var flush = function (req, res) {
         state = [];
         module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
@@ -100,9 +100,9 @@ module.exports = function (baseDir, appName) {
                     Static Content and Embedded Data
     **************************************************************/
     app.use('/data', express.static(path.join(baseDir, 'data')));
-    app.use('/:fileName(' + appName + ').:type.:fileType(js|css)', function (req, res, next) {
+    app.use('/:fileName(' + appName + ').:type.:fileType(js|css)', function (req, res) {
         let text = '';
-        let type = req.params.type == 'control' ? 'control' : 'view';
+        let type = req.params.type === 'control' ? 'control' : 'view';
         for (let context of ['common', type]) {
             let fp = path.join(baseDir, 'client', context, req.params.fileName + '.' + req.params.fileType);
             if (fs.existsSync(fp)) {
@@ -112,6 +112,10 @@ module.exports = function (baseDir, appName) {
         let cType;
         switch (req.params.fileType) {
             case 'js':
+                let fp = path.join(baseDir, 'client', 'constants', req.params.fileName + '.' + req.params.fileType);
+                if (fs.existsSync(fp)) {
+                    text = fs.readFileSync(fp, 'utf8').replace('exports.Constants = Constants;', '') + text;
+                }
                 cType = 'application/javascript';
                 break;
             case 'css':
@@ -122,9 +126,9 @@ module.exports = function (baseDir, appName) {
         }
         res.set('Content-Type', cType).send(text);
     });
-    app.use('/(:fileName(index|control|view).html)?', function (req, res, next) {
+    app.use('/(:fileName(index|control|view).html)?', function (req, res) {
         res.send(fs.readFileSync(path.join(baseDir, 'client', 'index.html'), 'utf8')
-            .replace(/_OVETYPE_/g, req.params.fileName == 'control' ? 'control' : 'view')
+            .replace(/_OVETYPE_/g, req.params.fileName === 'control' ? 'control' : 'view')
             .replace(/_OVEHOST_/g, process.env.OVE_HOST));
     });
     app.use('/', express.static(path.join(baseDir, 'client')));

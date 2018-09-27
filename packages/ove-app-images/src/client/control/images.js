@@ -34,7 +34,7 @@ sendViewportDetails = function (viewer) {
             zoom: context.osd.viewport.getZoom()
         };
         if (!window.ove.state.current.viewport ||
-            JSON.stringify(viewport) !== JSON.stringify(window.ove.state.current.viewport)) {
+            !OVE.Utils.JSON.equals(viewport, window.ove.state.current.viewport)) {
             window.ove.state.current.viewport = viewport;
             window.ove.socket.send('images', window.ove.state.current);
             window.ove.state.cache();
@@ -43,7 +43,7 @@ sendViewportDetails = function (viewer) {
 };
 
 beginInitialization = function () {
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         let state = window.ove.state.name || 'In2White';
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
             initControl(data);

@@ -1,7 +1,7 @@
 initView = function () {
     window.ove.context.isInitialized = false;
     window.ove.socket.on(function (appId, message) {
-        if (appId == 'html') {
+        if (appId === 'html') {
             window.ove.state.current = message;
             updateURL();
         }
@@ -19,7 +19,7 @@ getCSS = function () {
 
 beginInitialization = function () {
     initView();
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         if (!window.ove.context.isInitialized) {
             window.ove.state.load().then(updateURL);
         }

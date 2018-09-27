@@ -87,19 +87,19 @@ function OVE () {
                     .then(function (r) { return r.text(); }).then(function (text) {
                         var section = JSON.parse(text);
                         _self.layout.section = { w: section.w, h: section.h };
-                        _self.state.name = new URLSearchParams(location.search.slice(1)).get('state') || section.state;
+                        _self.state.name = OVE.Utils.getQueryParam('state', section.state);
                         _private.sectionId = section.id;
                         if (DEBUG) {
                             console.log('got details from section: ' + section.id);
                         }
-                        $(document).trigger('ove.loaded');
+                        $(document).trigger(OVE.Event.LOADED);
                     });
             }
         };
-        var id = new URLSearchParams(location.search.slice(1)).get('oveClientId');
-        //-- cliendId will not be provided by a controller --//
+        var id = OVE.Utils.getQueryParam('oveClientId');
+        //-- clientId will not be provided by a controller --//
         if (!id) {
-            fetchSection(new URLSearchParams(location.search.slice(1)).get('oveSectionId'));
+            fetchSection(OVE.Utils.getQueryParam('oveSectionId'));
             return;
         }
         var sectionId = id.substr(id.lastIndexOf('.') + 1);
@@ -109,7 +109,7 @@ function OVE () {
             //-- oveClientId has the format "{space}-{client}.{sectionId}" --//
             //-- the ".{sectionId}" portion is optional and can be omitted --//
             id = sectionId;
-            sectionId = new URLSearchParams(location.search.slice(1)).get('oveSectionId');
+            sectionId = OVE.Utils.getQueryParam('oveSectionId');
         }
         var client = id.substr(id.lastIndexOf('-') + 1);
         var space = id.substr(0, id.lastIndexOf('-'));

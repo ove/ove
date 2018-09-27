@@ -1,4 +1,7 @@
 $(function () {
+    // This is what happens first. After OVE is loaded, either the viewer or controller
+    // will be initialized. The viewer or controller has the freedom to call the initCommon
+    // at any point. Application specific context variables are also initialized at this point.
     $(document).ready(function () {
         window.ove = new OVE();
         window.ove.context.isInitialized = false;
@@ -8,23 +11,24 @@ $(function () {
     });
 });
 
+// Initialization that is common to viewers and controllers.
 initCommon = function () {
     let context = window.ove.context;
     let fetchPromise = fetch('layers.json').then(r => r.text()).then(text => {
         $.each(JSON.parse(text), function (i, e) {
-            if (e.type == 'ol.layer.Tile') {
+            if (e.type === 'ol.layer.Tile') {
                 let TileConfig = {
                     visible: e.visible,
                     source: eval('new window.' + e.source.type + '(' + JSON.stringify(e.source.config) + ')') // jshint ignore:line
                 };
-                if (e.source.type == 'ol.source.BingMaps') {
+                if (e.source.type === 'ol.source.BingMaps') {
                     TileConfig.preload = Infinity;
                 }
                 context.layers[i] = new window.ol.layer.Tile(TileConfig);
-                if (e.source.type == 'ol.source.BingMaps') {
+                if (e.source.type === 'ol.source.BingMaps') {
                     context.layers[i].bingMapsSource = { config: e.source.config };
                 }
-            } else if (e.type == 'ol.layer.Vector') {
+            } else if (e.type === 'ol.layer.Vector') {
                 let TileConfig = {
                     visible: e.visible,
                     source: new window.ol.source.Vector({
@@ -46,7 +50,7 @@ initCommon = function () {
         // Give some time for the layers to load for the first time, and then keep checking.
         setInterval(function () {
             context.layers.forEach(function (e) {
-                if (e.bingMapsSource && e.getSource().getState() != 'ready') {
+                if (e.bingMapsSource && e.getSource().getState() !== 'ready') {
                     e.setSource(eval('new window.ol.source.BingMaps(' + JSON.stringify(e.bingMapsSource.config) + ')')); // jshint ignore:line
                 }
             });

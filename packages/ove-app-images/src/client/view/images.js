@@ -1,7 +1,7 @@
 initView = function () {
     window.ove.context.isInitialized = false;
     window.ove.socket.on(function (appId, message) {
-        if (appId == 'images') {
+        if (appId === 'images') {
             window.ove.state.current = message;
             updateImage();
         }
@@ -13,8 +13,7 @@ updateImage = function () {
     if (!context.isInitialized) {
         // Fix for chrome unable to load large images (#54)
         if (window.ove.state.current.config.tileSources && window.ove.state.current.config.tileSources.url) {
-            window.ove.state.current.config.tileSources.url += '?nonce=' +
-                new URLSearchParams(location.search.slice(1)).get('oveClientId');
+            window.ove.state.current.config.tileSources.url += '?nonce=' + OVE.Utils.getQueryParam('oveClientId');
         }
         loadOSD(window.ove.state.current.config).then(function () {
             context.osd.setVisible(false);
@@ -32,7 +31,7 @@ setPosition = function () {
     let context = window.ove.context;
     let l = window.ove.layout;
     var v = window.ove.state.current.viewport;
-    if (v && Object.keys(l).length != 0) {
+    if (v && Object.keys(l).length !== 0) {
         var center = [v.bounds.x + v.bounds.w * (0.5 * l.w + l.x) / l.section.w,
             v.bounds.y + v.bounds.h * (0.5 * l.h + l.y) / l.section.h];
         context.osd.viewport.panTo(
@@ -46,7 +45,7 @@ setPosition = function () {
 
 beginInitialization = function () {
     initView();
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         if (!window.ove.context.isInitialized) {
             window.ove.state.load().then(updateImage);
         }

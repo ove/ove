@@ -1,7 +1,7 @@
 initView = function () {
     window.ove.context.isInitialized = false;
     window.ove.socket.on(function (appId, message) {
-        if (appId == 'maps') {
+        if (appId === 'maps') {
             window.ove.state.current = message;
             updateMap();
         }
@@ -12,7 +12,7 @@ initView = function () {
 updateMap = function () {
     let context = window.ove.context;
     let l = window.ove.layout;
-    if (Object.keys(l).length == 0) {
+    if (Object.keys(l).length === 0) {
         return;
     }
     let p = window.ove.state.current.position;
@@ -35,7 +35,7 @@ updateMap = function () {
 
 beginInitialization = function () {
     initView();
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         if (!window.ove.context.isInitialized) {
             window.ove.state.load().then(updateMap);
         }

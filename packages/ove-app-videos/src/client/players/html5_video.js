@@ -1,4 +1,8 @@
 function OVEHTML5VideoPlayer () {
+    let getPlayer = function () {
+        return $('#video')[0];
+    };
+
     this.initialize = function () {
         return new Promise(function (resolve, reject) {
             $('<video>', {
@@ -6,46 +10,47 @@ function OVEHTML5VideoPlayer () {
                 muted: true,
                 autoplay: false,
                 controls: false
-            }).css({ width: '100%', height: '100%' }).appendTo('#video_player');
+            }).css({ width: '100%', height: '100%' }).appendTo(Constants.VIDEO_PLAYER_DIV);
             resolve('video player loaded');
         });
     };
 
     this.load = function (config) {
-        $('#video')[0].src = config.url;
+        getPlayer().src = config.url;
         setTimeout(function () {
-            $('#video')[0].playbackRate = 1;
-        }, 500);
+            // Wait for the player to be ready.
+            getPlayer().playbackRate = Constants.STANDARD_RATE;
+        }, Constants.VIDEO_READY_TIMEOUT);
     };
 
-    this.ready = function () {
-        this.stop();
-        $('#video')[0].playbackRate = 1;
-    };
+    // The ready function is similar to the stop function in this case.
+    this.ready = this.stop;
 
     this.play = function (loop) {
-        $('#video')[0].loop = loop;
-        $('#video')[0].play();
+        getPlayer().loop = loop;
+        getPlayer().play();
     };
 
     this.pause = function () {
-        $('#video')[0].pause();
-    };
-
-    this.stop = function () {
-        this.pause();
-        this.seekTo(0);
+        getPlayer().pause();
     };
 
     this.seekTo = function (time) {
-        $('#video')[0].currentTime = time;
+        getPlayer().currentTime = time;
+    };
+
+    this.stop = function () {
+        // Stopping a video is the same as pausing it and moving the time slider
+        // to the beginning.
+        this.pause();
+        this.seekTo(Constants.STARTING_TIME);
     };
 
     this.isVideoLoaded = function () {
-        return $('#video')[0] != null && $('#video')[0].duration > 0;
+        return getPlayer() && getPlayer().duration > 0;
     };
 
     this.getLoadedPercentage = function () {
-        return $('#video')[0].seekable.end($('#video')[0].seekable.length - 1) * 100 / $('#video')[0].duration;
+        return getPlayer().seekable.end(getPlayer().seekable.length - 1) * 100 / getPlayer().duration;
     };
 }

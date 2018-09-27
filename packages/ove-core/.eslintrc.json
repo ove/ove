@@ -16,7 +16,7 @@
             }
         },
         {
-            "files": [ "ove.js" ],
+            "files": [ "ove.js", "**/utils/*.js" ],
             "globals": {
                 "WebSocket": true
             },

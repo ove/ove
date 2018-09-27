@@ -1,7 +1,7 @@
 initView = function () {
     window.ove.context.isInitialized = false;
     window.ove.socket.on(function (appId, message) {
-        if (appId == 'charts') {
+        if (appId === 'charts') {
             window.ove.state.current = message;
             loadVega();
         }
@@ -10,7 +10,7 @@ initView = function () {
 
 beginInitialization = function () {
     initView();
-    $(document).on('ove.loaded', function () {
+    $(document).on(OVE.Event.LOADED, function () {
         if (!window.ove.context.isInitialized) {
             window.ove.state.load().then(loadVega);
         }
