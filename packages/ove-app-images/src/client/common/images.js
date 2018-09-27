@@ -10,7 +10,7 @@ $(function () {
 });
 
 loadOSD = function (config) {
-    return new Promise(function (resolve, reject) {
+    return new Promise(function (resolve) {
         let context = window.ove.context;
         config.id = 'contentDiv';
         config.prefixUrl = '/images/';

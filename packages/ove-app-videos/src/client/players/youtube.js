@@ -8,7 +8,7 @@ function OVEYouTubePlayer () {
     let _private = {};
 
     this.initialize = function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
             // We retain a reference to the resolve method, because this promise would be
             // resolved later on. See window.onYouTubeIframeAPIReady below.
             _private.resolve = resolve;

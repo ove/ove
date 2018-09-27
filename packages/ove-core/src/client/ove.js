@@ -22,13 +22,13 @@ function OVE () {
     //--                 Messaging Functions                   --//
     //-----------------------------------------------------------//
     var OVESocket = function (_private) {
-        var onMessage = function (appId, message) { return 0; };
+        var onMessage = function () { return 0; };
 
         //-- Socket init code --//
         var getSocket = function (url) {
             _private.ws = new WebSocket(url);
             _private.ws.addEventListener('error', console.error);
-            _private.ws.addEventListener('open', function (m) {
+            _private.ws.addEventListener('open', function () {
                 if (DEBUG) {
                     console.log('websocket connection made with ' + url);
                 }
@@ -43,7 +43,7 @@ function OVE () {
                     onMessage(data.appId, data.message);
                 }
             });
-            _private.ws.addEventListener('close', function (m) {
+            _private.ws.addEventListener('close', function () {
                 if (DEBUG) {
                     console.warn('lost websocket connection attempting to reconnect');
                 }
@@ -57,7 +57,7 @@ function OVE () {
             onMessage = func;
         };
         this.send = function (appId, message) {
-            new Promise(function (resolve, reject) {
+            new Promise(function (resolve) {
                 var x = setInterval(function () {
                     if (_private.ws.readyState == WebSocket.OPEN) {
                         clearInterval(x);
@@ -132,7 +132,7 @@ function OVE () {
         };
         this.load = function (url) {
             var _self = this;
-            return new Promise(function (resolve, reject) {
+            return new Promise(function (resolve) {
                 $.get(url || (_private.sectionId + '/state')).done(function (state) {
                     if (state) {
                         _self.current = state;

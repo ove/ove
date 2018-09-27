@@ -35,7 +35,7 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    var readState = function (req, res) {
+    var readState = function (_req, res) {
         if (state.length > 0) {
             res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state));
         } else {
@@ -56,7 +56,7 @@ module.exports = function (baseDir, appName) {
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
     };
 
-    var flush = function (req, res) {
+    var flush = function (_req, res) {
         state = [];
         module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
         res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));

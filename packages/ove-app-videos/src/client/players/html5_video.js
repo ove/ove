@@ -4,7 +4,7 @@ function OVEHTML5VideoPlayer () {
     };
 
     this.initialize = function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
             $('<video>', {
                 id: 'video',
                 muted: true,
