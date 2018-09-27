@@ -9,11 +9,7 @@ initView = function () {
 };
 
 beginInitialization = function () {
-    initView();
-    $(document).on(OVE.Event.LOADED, function () {
-        if (!window.ove.context.isInitialized) {
-            window.ove.state.load().then(loadVega);
-        }
+    OVE.Utils.initView(initView, loadVega, function () {
         const l = window.ove.layout;
         $('#vegaArea').css({
             transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',

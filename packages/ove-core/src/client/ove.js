@@ -136,8 +136,8 @@ function OVE () {
                 $.get(url || (__private.sectionId + '/state')).done(function (state) {
                     if (state) {
                         __self.current = state;
-                        resolve('state loaded');
                     }
+                    resolve('state loaded');
                 });
             });
         };

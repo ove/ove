@@ -1,7 +1,7 @@
 initView = function () {
     window.ove.context.isInitialized = false;
     window.ove.socket.on(function (appId, message) {
-        if (appId === 'html') {
+        if (appId === Constants.APP_NAME) {
             window.ove.state.current = message;
             updateURL();
         }
@@ -10,6 +10,8 @@ initView = function () {
 
 getCSS = function () {
     const l = window.ove.layout;
+    // The webpage is plotted across the entire canvas and then
+    // moved into place based on the client's coordinates.
     return {
         transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',
         width: l.section.w + 'px',
@@ -18,10 +20,5 @@ getCSS = function () {
 };
 
 beginInitialization = function () {
-    initView();
-    $(document).on(OVE.Event.LOADED, function () {
-        if (!window.ove.context.isInitialized) {
-            window.ove.state.load().then(updateURL);
-        }
-    });
+    OVE.Utils.initView(initView, updateURL);
 };

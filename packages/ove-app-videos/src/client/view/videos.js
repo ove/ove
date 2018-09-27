@@ -59,8 +59,7 @@ doRegistration = function () {
 };
 
 beginInitialization = function () {
-    initView();
-    $(document).on(OVE.Event.LOADED, function () {
+    OVE.Utils.initView(initView, loadURL, function () {
         let context = window.ove.context;
         const l = window.ove.layout;
         // Appropriately scaling and positioning the player is necessary.
@@ -73,6 +72,5 @@ beginInitialization = function () {
             width: (l.section.w / context.scale) + 'px',
             height: (l.section.h / context.scale) + 'px'
         });
-        window.ove.state.load().then(loadURL);
     });
 };

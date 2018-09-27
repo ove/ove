@@ -71,16 +71,9 @@ beginInitialization = function () {
             if (window.ove.state.current.position) {
                 const p = window.ove.state.current.position;
                 initControl({ center: p.center, resolution: p.resolution, zoom: p.zoom, scaled: true });
+            } else {
+                OVE.Utils.initControlOnDemand('London', initControl);
             }
         });
-        $(document).trigger('maps.stateLoaded');
-    });
-    $(document).on('maps.stateLoaded', function () {
-        const state = window.ove.state.name || 'London';
-        if (!window.ove.state.current.position) {
-            $.ajax({ url: 'state/' + state, dataType: 'json' }).done(function (data) {
-                initControl(data);
-            });
-        }
     });
 };

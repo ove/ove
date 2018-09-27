@@ -33,49 +33,55 @@ updateSections = function (m) {
         window.ove.context.isInitialized = true;
     }
     const id = OVE.Utils.getQueryParam('oveClientId');
-    if (m.action === 'create') {
-        const client = id.substr(id.lastIndexOf('-') + 1);
-        const space = id.substr(0, id.lastIndexOf('-'));
-        let layout = (m.clients[space] || [])[client] || {};
-        if (Object.keys(layout).length === 0) {
-            // This can happen either when the clientId was valid and no layout exists or if the clientId was invalid.
-            // This ensures that a frame is still created but not visible.
-            layout = { h: 0, w: 0, offset: { x: 0, y: 0 } };
-        }
-        if (layout.h > 0 && layout.w > 0) {
-            $('<iframe>', {
-                id: 'content-frame-section-' + m.id,
-                frameborder: 0,
-                scrolling: 'no'
-            }).css({
-                // The height is scaled to suit display ranges in most screens
-                height: layout.h * 0.999,
-                width: layout.w,
-                zIndex: m.id,
-                position: 'absolute',
-                marginLeft: layout.offset.x,
-                marginTop: layout.offset.y
-            }).appendTo('.container');
-        }
-    } else if (m.action === 'update') {
-        const frame = $('#content-frame-section-' + m.id);
-        if (frame.length) {
-            if (m.app) {
-                frame.attr('src', m.app.url + '/view.html?oveClientId=' + id + '.' + m.id);
-            } else {
-                if (frame.attr('src')) {
-                    frame.attr('src', null);
-                }
+    switch (m.action) {
+        case 'create':
+            const client = id.substr(id.lastIndexOf('-') + 1);
+            const space = id.substr(0, id.lastIndexOf('-'));
+            let layout = (m.clients[space] || [])[client] || {};
+            if (Object.keys(layout).length === 0) {
+                // This can happen either when the clientId was valid and no layout exists or if the clientId was invalid.
+                // This ensures that a frame is still created but not visible.
+                layout = { h: 0, w: 0, offset: { x: 0, y: 0 } };
             }
-        }
-    } else if (m.action === 'delete') {
-        if (m.id) {
+            if (layout.h > 0 && layout.w > 0) {
+                $('<iframe>', {
+                    id: 'content-frame-section-' + m.id,
+                    frameborder: 0,
+                    scrolling: 'no'
+                }).css({
+                    // The height is scaled to suit display ranges in most screens
+                    height: layout.h * 0.999,
+                    width: layout.w,
+                    zIndex: m.id,
+                    position: 'absolute',
+                    marginLeft: layout.offset.x,
+                    marginTop: layout.offset.y
+                }).appendTo('.container');
+            }
+            break;
+        case 'update':
             const frame = $('#content-frame-section-' + m.id);
             if (frame.length) {
-                frame.remove();
+                if (m.app) {
+                    frame.attr('src', m.app.url + '/view.html?oveClientId=' + id + '.' + m.id);
+                } else {
+                    if (frame.attr('src')) {
+                        frame.attr('src', null);
+                    }
+                }
             }
-        } else {
-            $('iframe').remove();
-        }
+            break;
+        case 'delete':
+            if (m.id) {
+                const frame = $('#content-frame-section-' + m.id);
+                if (frame.length) {
+                    frame.remove();
+                }
+            } else {
+                $('iframe').remove();
+            }
+            break;
+        default:
+            console.warn('Ignoring unknown action: ' + m.action);
     }
 };

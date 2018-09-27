@@ -9,11 +9,7 @@ initView = function () {
 };
 
 beginInitialization = function () {
-    initView();
-    $(document).on(OVE.Event.LOADED, function () {
-        if (!window.ove.context.isInitialized) {
-            window.ove.state.load().then(loadSigma);
-        }
+    OVE.Utils.initView(initView, loadSigma, function () {
         const l = window.ove.layout;
         // The network is plotted across the entire canvas and then
         // moved into place based on the client's coordinates.

@@ -48,10 +48,5 @@ setPosition = function () {
 };
 
 beginInitialization = function () {
-    initView();
-    $(document).on(OVE.Event.LOADED, function () {
-        if (!window.ove.context.isInitialized) {
-            window.ove.state.load().then(updateImage);
-        }
-    });
+    OVE.Utils.initView(initView, updateImage);
 };

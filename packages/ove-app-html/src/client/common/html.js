@@ -11,25 +11,27 @@ $(function () {
 updateURL = function () {
     if (!window.ove.context.isInitialized) {
         $('<iframe>', {
-            class: 'html-frame',
+            class: Constants.HTML_FRAME.substring(1),
             frameborder: 0,
             scrolling: 'no'
-        }).css(getCSS()).appendTo('.wrapper');
+        }).css(getCSS()).appendTo(Constants.CONTENT_DIV);
         window.ove.context.isInitialized = true;
     }
     const state = window.ove.state.current;
+
+    // A delayed launch helps browsers pre-load content before displaying page
+    // If there is no launch-delay, there is no point in showing/hiding frame.
     const launchDelay = typeof state.launchDelay !== 'undefined' ? state.launchDelay : 0;
     if (launchDelay > 0) {
-        $('.html-frame').hide();
+        $(Constants.HTML_FRAME).hide();
     }
+
+    // A timed change helps browsers load content precisely at the same time.
+    const timeUntilChange = (state.changeAt || new Date().getTime()) - new Date().getTime();
     setTimeout(function () {
         if (launchDelay > 0) {
-            setTimeout(function () {
-                $('.html-frame').show();
-            // helps browsers pre-load content before displaying page
-            }, launchDelay);
+            setTimeout(function () { $(Constants.HTML_FRAME).show(); }, launchDelay);
         }
-        $('.html-frame').attr('src', state.url);
-        // helps browsers load content precisely at the same time
-    }, (state.changeAt || new Date().getTime()) - new Date().getTime());
+        $(Constants.HTML_FRAME).attr('src', state.url);
+    }, timeUntilChange);
 };
