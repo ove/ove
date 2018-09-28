@@ -76,6 +76,17 @@
           "OVE_HOST": "localhost:8080"
       }
     },
+     {
+      "name": "@ove/ove-app-alignment",
+      "cwd": "./packages/ove-app-alignment",
+      "kill_timeout": 3000,
+      "restart_delay": 3000,
+      "script": "dist/index.js",
+      "env": {
+          "PORT": "8087",
+          "OVE_HOST": "localhost:8080"
+      }
+    },
     {
       "name": "@ove/ove-service-imagetiles",
       "cwd": "./packages/ove-service-imagetiles",
@@ -84,7 +95,7 @@
       "script": "dotnet",
       "args": "dist/OVE.Service.ImageTiles.dll --server.urls=http://0.0.0.0:8087",
       "env": {
-          "PORT": "8087"
+          "PORT": "8181"
       }
     }
   ]

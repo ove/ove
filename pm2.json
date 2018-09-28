@@ -11,6 +11,7 @@
           "PORT": "8080"
       }
     },
+
     {
       "name": "@ove/ove-app-maps",
       "cwd": "./packages/ove-app-maps",
@@ -84,6 +85,19 @@
       }
     },
     {
+      "name": "@ove/ove-app-alignment",
+      "cwd": "./packages/ove-app-alignment",
+      "kill_timeout": 3000,
+      "restart_delay": 3000,
+      "script": "npm",
+      "args": "run start",
+      "env": {
+          "PORT": "8087",
+          "OVE_HOST": "localhost:8080"
+      }
+    },
+
+    {
       "name": "@ove/ove-service-imagetiles",
       "cwd": "./packages/ove-service-imagetiles",
       "kill_timeout": 3000,
@@ -91,7 +105,7 @@
       "script": "npm",
       "args": "run start",
       "env": {
-          "PORT": "8087"
+          "PORT": "8181"
       }
     }
   ]
