@@ -4,6 +4,7 @@ const Constants = {
     **************************************************************/
     DEFAULT_STATE_NAME: 'London',
     OL_MONITORED_EVENTS: ['change:resolution', 'change:zoom', 'change:center'],
+    OL_CHANGE_CENTER_AFTER_UPDATE_WAIT_TIME: 70, // Unit: milliseconds
 
     /**************************************************************
                                 Common

@@ -26,14 +26,18 @@ initControl = function (data) {
             zoom: parseInt(data.zoom),
             enableRotation: false
         });
-        // Handlers for OpenLayers events.
-        for (const e of Constants.OL_MONITORED_EVENTS) {
-            context.map.getView().on(e, changeEvent);
-        }
         // We force the setting of the zoom.
         context.map.getView().setZoom(parseInt(data.zoom));
         uploadMapPosition();
         context.isInitialized = true;
+        // Handlers for OpenLayers events.
+        for (const e of Constants.OL_MONITORED_EVENTS) {
+            if (e === 'change:center') {
+                context.map.getView().on(e, uploadMapPosition);
+            } else {
+                context.map.getView().on(e, changeEvent);
+            }
+        }
     });
 };
 
@@ -72,10 +76,11 @@ uploadMapPosition = function () {
 };
 
 changeEvent = function () {
-    // We attempt to broadcast the position whenever there is a change.
-    if (window.ove.context.isInitialized) {
-        uploadMapPosition();
-    }
+    // We need to reset center if we change zoom-level as the map resizes itself.
+    setTimeout(function () {
+        window.ove.context.map.getView().setCenter(window.ove.context.map.getView().getCenter());
+    }, Constants.OL_CHANGE_CENTER_AFTER_UPDATE_WAIT_TIME);
+    uploadMapPosition();
 };
 
 beginInitialization = function () {
