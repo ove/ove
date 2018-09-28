@@ -8,5 +8,4 @@ setup(name='ove',
       author='James Scott-Brown',
       author_email='j.scott-brown@imperial.ac.uk',
       url='https://github.com/dsi-icl/ove',
-      packages=['ove'], requires=['requests', 'matplotlib']
-      )
+      packages=['ove'], requires=['requests', 'matplotlib', 'six'])

@@ -15,7 +15,10 @@ Download and install with setup.py:
 live into the DO environment. If you wish to interact with the space directly you can **enable online mode** after import.
 
 ````python
+from ove import save_file
 from ove.config import dodev as space
+# alternatively the doprod can be imported for the production environment
+# from ove.config import doprod as space
 
 # enable live mode if you wish to interact with the space directly
 # space.enable_online_mode()
@@ -44,16 +47,15 @@ chart = space.add_section_by_grid(w=1, h=1, r=0, c=0, app_type="charts")
 
 chart.set_specification(spec_url="https://raw.githubusercontent.com/vega/vega/master/docs/examples/bar-chart.vg.json", options={"width": 900-35, "height": 900-35})
 
-space.to_json("test")
+# the state of the space can be saved automatically with the save state file util function
+save_file(json_state=space.to_json(title="Title of the presentation"), filename="my_state.json")
 
 ````
 
 Videos can also be controlled independently:
 
 ```python
-from ove.config import dodev
-
-space = dodev
+from ove.config import dodev as space
 
 space.delete_sections()
 
@@ -79,8 +81,7 @@ import matplotlib.pyplot as plt
 
 from ove.server import Server
 
-from ove.config import dodev
-space = dodev
+from ove.config import dodev as space
 
 s = Server()
 s.start_server()
@@ -99,9 +100,8 @@ image.set_url(url)
 Testing both DODev left and DODev right:
 
 ````python
-from ove.config import dodev
+from ove.config import dodev as space
 
-space = dodev
 space.delete_sections()
 
 space.set_grid(space.geometry["screen_rows"], space.geometry["screen_cols"])
