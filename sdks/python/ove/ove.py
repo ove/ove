@@ -27,7 +27,7 @@ _DEFAULT_PORTS = {
 
 
 class Space:
-    def __init__(self, ove_host, space_name, ports = None, geometry = None, offline = True):
+    def __init__(self, ove_host, space_name, ports=None, geometry=None, offline=True):
         # type (string, string, Dict, Dict, bool) -> None
 
         if not ove_host.startswith("http"):
@@ -191,6 +191,15 @@ class Videos:
         if self.exec_commands:
             self.space.client.get(request_url, params=params)
 
+    def buffer_status(self, params=None):
+        request_url = "%s:%s/operation/bufferStatus" % (self.space.ove_host, self.video_port)
+        if self.exec_commands:
+            try:
+                result = self.space.client.get(request_url, params=params)
+                return json.loads(result.text)['status']
+            except:
+                raise ValueError("Could not retrieve the status")
+
     def seek(self, time, params=None):
         request_url = "%s:%s/operation/seekTo&time=%s" % (self.space.ove_host, self.video_port, time)
         if self.exec_commands:
@@ -319,6 +328,9 @@ class VideoSection(Section):
     def seek(self):
         self.space.videos.seek({"oveSectionId": self.section_id})
 
+    def buffer_status(self):
+        return self.space.videos.buffer_status({"oveSectionId": self.section_id})
+
 
 class MapSection(Section):
     def __init__(self, section_id, section_data, space):
@@ -439,6 +451,7 @@ class RestClient:
             try:
                 r = requests.get(url, params)
                 r.raise_for_status()
+                return r
             except (requests.HTTPError, requests.Timeout, requests.ConnectionError) as e:
                 print("Request failed:", e)
 
