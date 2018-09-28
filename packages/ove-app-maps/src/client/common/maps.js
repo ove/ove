@@ -15,6 +15,12 @@ $(function () {
 initCommon = function () {
     const context = window.ove.context;
     const fetchPromise = fetch('layers.json').then(r => r.text()).then(text => {
+        // The most complex operation in the initialization process is building
+        // the layers of OpenLayers based on the JSON configuration model of the
+        // layers. Tile and Vector layers are supported by the app. There is
+        // special handling for the BingMaps layer as it fails to load at times.
+        // The vector layers are of GeoJSON format. The fill and stroke styles
+        // are configurable.
         $.each(JSON.parse(text), function (i, e) {
             if (e.type === 'ol.layer.Tile') {
                 const TileConfig = {
@@ -54,23 +60,26 @@ initCommon = function () {
                     e.setSource(eval('new window.ol.source.BingMaps(' + JSON.stringify(e.bingMapsSource.config) + ')')); // jshint ignore:line
                 }
             });
-        }, 1000);
-    }, 3000);
+        }, Constants.BING_MAPS_RELOAD_INTERVAL);
+    }, Constants.OL_LOAD_WAIT_TIME);
     return fetchPromise;
 };
 
 initMap = function (view) {
+    // Initialization code for Open Layers
     window.ove.context.map = new window.ol.Map({
         target: 'map',
         controls: [],
         layers: window.ove.context.layers,
+        // Mouse-wheel-zoom, pinch-zoom and drag-zoom interactions are enabled
+        // in addition to the defaults.
         interactions: window.ol.interaction.defaults({
             pinchRotate: false,
-            zoomDuration: 0
+            zoomDuration: Constants.OL_ZOOM_DURATION
         }).extend([
-            new window.ol.interaction.MouseWheelZoom({ duration: 0 }),
-            new window.ol.interaction.PinchZoom({ duration: 0 }),
-            new window.ol.interaction.DragZoom({ duration: 0 })
+            new window.ol.interaction.MouseWheelZoom({ duration: Constants.OL_ZOOM_DURATION }),
+            new window.ol.interaction.PinchZoom({ duration: Constants.OL_ZOOM_DURATION }),
+            new window.ol.interaction.DragZoom({ duration: Constants.OL_ZOOM_DURATION })
         ]),
         view: new window.ol.View(view)
     });

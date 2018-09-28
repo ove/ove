@@ -10,7 +10,7 @@ $(function () {
 
 loadVega = function () {
     if (!window.ove.context.isInitialized) {
-        // no initialization to do
+        // No initialization to do
         window.ove.context.isInitialized = true;
     }
 
@@ -19,12 +19,12 @@ loadVega = function () {
         // TODO: test if window.vegaEmbed works and also whether the .then() can be removed.
         // also check if the repeated initialization makes sense or whether the block below
         // needs to be within the initialization block above.
-        vegaEmbed('#vegaArea', spec, window.ove.state.current.options)
+        vegaEmbed(Constants.CONTENT_DIV, spec, window.ove.state.current.options)
             .then(function (result) { })
             .catch(console.error);
     } else if (window.ove.state.current.spec) {
         let spec = JSON.parse(window.ove.state.current.spec);
-        vegaEmbed('#vegaArea', spec, window.ove.state.current.options)
+        vegaEmbed(Constants.CONTENT_DIV, spec, window.ove.state.current.options)
             .then(function (result) { })
             .catch(console.error);
     }

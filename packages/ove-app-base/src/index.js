@@ -20,24 +20,31 @@ module.exports = function (baseDir, appName) {
     **************************************************************/
     var state = [];
 
+    const sendMessage = function (res, status, msg) {
+        res.status(status).set('Content-Type', 'application/json').send(msg);
+    };
+
+    const sendEmptySuccess = function (res) {
+        sendMessage(res, 200, JSON.stringify({}));
+    };
+
     const createStateByName = function (req, res) {
         module.exports.config.states[req.params.name] = req.body;
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+        sendEmptySuccess();
     };
 
     const readStateByName = function (req, res) {
-        if (!module.exports.config.states[req.params.name]) {
-            res.status(400).set('Content-Type', 'application/json').send(
-                JSON.stringify({ error: 'invalid state name' }));
+        const namedState = module.exports.config.states[req.params.name];
+        if (!namedState) {
+            sendMessage(res, 400, JSON.stringify({ error: 'invalid state name' }));
         } else {
-            res.status(200).set('Content-Type', 'application/json').send(
-                JSON.stringify(module.exports.config.states[req.params.name]));
+            sendMessage(res, 200, JSON.stringify(namedState));
         }
     };
 
     const readState = function (_req, res) {
         if (state.length > 0) {
-            res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state));
+            sendMessage(res, 200, JSON.stringify(state));
         } else {
             res.sendStatus(204);
         }
@@ -45,7 +52,7 @@ module.exports = function (baseDir, appName) {
 
     const readStateOfSection = function (req, res) {
         if (state[req.params.id]) {
-            res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(state[req.params.id]));
+            sendMessage(res, 200, JSON.stringify(state[req.params.id]));
         } else {
             res.sendStatus(204);
         }
@@ -53,13 +60,13 @@ module.exports = function (baseDir, appName) {
 
     const updateStateOfSection = function (req, res) {
         state[req.params.id] = req.body;
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+        sendEmptySuccess();
     };
 
     const flush = function (_req, res) {
         state = [];
         module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+        sendEmptySuccess();
     };
 
     app.post('/state/:name', createStateByName);
@@ -69,6 +76,9 @@ module.exports = function (baseDir, appName) {
     app.post('/:id/state', updateStateOfSection);
     app.post('/flush', flush);
 
+    const swaggerPath = path.join(baseDir, '..', 'node_modules', '@ove', 'ove-app-base', 'lib', 'swagger.yaml');
+    const swaggerExtPath = path.join(baseDir, 'swagger-extensions.yaml');
+    const packagePath = path.join(baseDir, '..', 'package.json');
     // Swagger API documentation
     let swaggerDoc = (function (swagger, pjson) {
         swagger.info.title = swagger.info.title.replace('@NAME', pjson.name);
@@ -77,8 +87,8 @@ module.exports = function (baseDir, appName) {
         swagger.info.contact.email = swagger.info.contact.email.replace('@AUTHOR',
             pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
         return swagger;
-    })(yamljs.load(path.join(baseDir, '..', 'node_modules', '@ove', 'ove-app-base', 'lib', 'swagger.yaml')),
-        require(path.join(baseDir, '..', 'package.json')));
+    })(yamljs.load(swaggerPath), require(packagePath));
+    // App-specific swagger extensions
     (function (swaggerDoc, swaggerExt) {
         if (fs.existsSync(swaggerExt)) {
             let swagger = yamljs.load(swaggerExt);
@@ -89,7 +99,7 @@ module.exports = function (baseDir, appName) {
                 swaggerDoc.paths[e] = swagger.paths[e];
             });
         }
-    })(swaggerDoc, path.join(baseDir, 'swagger-extensions.yaml'));
+    })(swaggerDoc, swaggerExtPath);
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
         swaggerOptions: {
             defaultModelsExpandDepth: -1
@@ -100,6 +110,9 @@ module.exports = function (baseDir, appName) {
                     Static Content and Embedded Data
     **************************************************************/
     app.use('/data', express.static(path.join(baseDir, 'data')));
+    // Each CSS file is combination of {type}/{name}.css and common/{name}.css.
+    // Each JS file is combination of {type}/{name}.js, common/{name}.js and
+    // constants/{name}.js files from the filesystem.
     app.use('/' + appName + '.:type.:fileType(js|css)', function (req, res) {
         let text = '';
         const type = req.params.type === 'control' ? 'control' : 'view';
@@ -123,10 +136,15 @@ module.exports = function (baseDir, appName) {
                 cType = 'text/css';
                 break;
             default:
-                cType = 'text/html';
+                // This should not happen since the fileType is either CSS or JS.
         }
         res.set('Content-Type', cType).send(text);
     });
+    // Each app can serve view, control or index HTML pages. The index.html page or '/' is
+    // redirected to the view.html page. It must also be noted that neither view.html or
+    // control.html exists on the filesystem and the same index.html file is served for
+    // both of these scenarios. The index.html file is therefore a common template for both
+    // viewer and controller.
     app.use('/(:fileName(index|control|view).html)?', function (req, res) {
         res.send(fs.readFileSync(path.join(baseDir, 'client', 'index.html'), 'utf8')
             .replace(/_OVETYPE_/g, req.params.fileName === 'control' ? 'control' : 'view')

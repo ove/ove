@@ -1,9 +1,12 @@
+const { Constants } = require('./client/constants/maps');
 const path = require('path');
-const { express, app, config } = require('@ove/ove-app-base')(__dirname, 'maps');
+const { express, app, config } = require('@ove/ove-app-base')(__dirname, Constants.APP_NAME);
 const request = require('request');
 const server = require('http').createServer(app);
 
-var layers = [];
+let layers = [];
+// The map layers can be provided as an embedded JSON data structure or as a URL pointing
+// to a location at which it is stored externally.
 if (typeof config.layers === 'string') {
     request(config.layers, { json: true }, function (err, _res, body) {
         if (err) {
