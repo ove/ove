@@ -12,7 +12,7 @@ initView = function () {
     // or when the browser is resized.
     const loadFunction = function () {
         if (!window.ove.context.isInitialized) {
-            window.ove.socket.send('core', { action: 'request' });
+            window.ove.socket.send(Constants.APP_NAME, { action: Constants.Action.READ });
         }
     };
     window.addEventListener('resize', function () {
@@ -22,7 +22,7 @@ initView = function () {
     setTimeout(loadFunction, 15000);
 
     window.ove.socket.on(function (appId, message) {
-        if (appId === 'core') {
+        if (appId === Constants.APP_NAME) {
             updateSections(message);
         }
     });
@@ -34,7 +34,7 @@ updateSections = function (m) {
     }
     const id = OVE.Utils.getQueryParam('oveClientId');
     switch (m.action) {
-        case 'create':
+        case Constants.Action.CREATE:
             const client = id.substr(id.lastIndexOf('-') + 1);
             const space = id.substr(0, id.lastIndexOf('-'));
             let layout = (m.clients[space] || [])[client] || {};
@@ -45,7 +45,7 @@ updateSections = function (m) {
             }
             if (layout.h > 0 && layout.w > 0) {
                 $('<iframe>', {
-                    id: 'content-frame-section-' + m.id,
+                    id: Constants.SECTION_FRAME_ID.substring(1) + m.id,
                     frameborder: 0,
                     scrolling: 'no'
                 }).css({
@@ -59,25 +59,27 @@ updateSections = function (m) {
                 }).appendTo('.container');
             }
             break;
-        case 'update':
-            const frame = $('#content-frame-section-' + m.id);
+        case Constants.Action.UPDATE:
+            const frame = $(Constants.SECTION_FRAME_ID + m.id);
             if (frame.length) {
                 if (m.app) {
                     frame.attr('src', m.app.url + '/view.html?oveClientId=' + id + '.' + m.id);
                 } else {
+                    // An app may be un-deployed from a section without deleting the actual section.
                     if (frame.attr('src')) {
                         frame.attr('src', null);
                     }
                 }
             }
             break;
-        case 'delete':
+        case Constants.Action.DELETE:
             if (m.id) {
-                const frame = $('#content-frame-section-' + m.id);
+                const frame = $(Constants.SECTION_FRAME_ID + m.id);
                 if (frame.length) {
                     frame.remove();
                 }
             } else {
+                // All sections can be deleted at once.
                 $('iframe').remove();
             }
             break;

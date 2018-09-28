@@ -2,6 +2,7 @@
     "extends": "standard",
     "globals": {
         "$": true,
+        "Constants": true,
         "DEBUG": true,
         "fetch": true,
         "location": true,

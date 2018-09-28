@@ -59,8 +59,8 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
         if (sectionId) {
             isComplete = !bufferStatus[sectionId] || JSON.stringify(bufferStatus[sectionId]) === JSON.stringify({});
         } else {
-            bufferStatus.some(function (e) {
-                if (e && JSON.stringify(e) !== JSON.stringify({})) {
+            bufferStatus.some(function (s) {
+                if (s && JSON.stringify(s) !== JSON.stringify({})) {
                     isComplete = false;
                     return true;
                 }

@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
+const HttpStatus = require('http-status-codes');
 const app = express();
 const swaggerUi = require('swagger-ui-express');
 const yamljs = require('yamljs');
@@ -24,8 +25,9 @@ module.exports = function (baseDir, appName) {
         res.status(status).set('Content-Type', 'application/json').send(msg);
     };
 
+    // We don't want to see browser errors, so we send an empty success response in some cases.
     const sendEmptySuccess = function (res) {
-        sendMessage(res, 200, JSON.stringify({}));
+        sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
     const createStateByName = function (req, res) {
@@ -36,25 +38,25 @@ module.exports = function (baseDir, appName) {
     const readStateByName = function (req, res) {
         const namedState = module.exports.config.states[req.params.name];
         if (!namedState) {
-            sendMessage(res, 400, JSON.stringify({ error: 'invalid state name' }));
+            sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
         } else {
-            sendMessage(res, 200, JSON.stringify(namedState));
+            sendMessage(res, HttpStatus.OK, JSON.stringify(namedState));
         }
     };
 
     const readState = function (_req, res) {
         if (state.length > 0) {
-            sendMessage(res, 200, JSON.stringify(state));
+            sendMessage(res, HttpStatus.OK, JSON.stringify(state));
         } else {
-            res.sendStatus(204);
+            res.sendStatus(HttpStatus.NO_CONTENT);
         }
     };
 
     const readStateOfSection = function (req, res) {
         if (state[req.params.id]) {
-            sendMessage(res, 200, JSON.stringify(state[req.params.id]));
+            sendMessage(res, HttpStatus.OK, JSON.stringify(state[req.params.id]));
         } else {
-            res.sendStatus(204);
+            res.sendStatus(HttpStatus.NO_CONTENT);
         }
     };
 

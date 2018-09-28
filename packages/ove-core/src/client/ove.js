@@ -7,6 +7,8 @@
  */
 //-- IMPORTANT: all code comments must be in this format. --//
 function OVE () {
+    //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
+    //-- with or without the scheme (useful for opening WebSockets).                             --//
     var getHostName = function (withScheme) {
         var scripts = document.getElementsByTagName('script');
         for (var i = 0; i < scripts.length; i++) {
@@ -22,6 +24,7 @@ function OVE () {
     //--                 Messaging Functions                   --//
     //-----------------------------------------------------------//
     var OVESocket = function (__private) {
+        //-- Default onMessage handler does nothing --//
         var onMessage = function () { return 0; };
 
         //-- Socket init code --//
@@ -36,9 +39,11 @@ function OVE () {
             __private.ws.addEventListener('message', function (m) {
                 var data = JSON.parse(m.data);
                 if (DEBUG) {
-                    //-- We want to print the time corresponding to the local timezone based on the locale --//
+                    //-- We want to print the time corresponding to the local timezone based on the locale  --//
                     console.log(JSON.stringify(Object.assign({ time: new Date().toLocaleString() }, data)));
                 }
+                //-- Apps receive the message if either it was sent to all sections or the specific section --//
+                //-- of the app.                                                                            --//
                 if (data.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
                     onMessage(data.appId, data.message);
                 }
@@ -47,7 +52,8 @@ function OVE () {
                 if (DEBUG) {
                     console.warn('lost websocket connection attempting to reconnect');
                 }
-                setTimeout(function () { getSocket(url); }, 5000);
+                //-- If the socket is closed, we try to refresh it. This fixes frozen pages after a restart --//
+                setTimeout(function () { getSocket(url); }, Constants.SOCKET_REFRESH_DELAY);
             });
         };
         getSocket('ws://' + getHostName(false) + '/');
@@ -57,14 +63,17 @@ function OVE () {
             onMessage = func;
         };
         this.send = function (appId, message) {
+            //-- We always wait for the socket to be ready before broadcast. The same code blocks messages  --//
+            //-- when a socket is temporarily closed.                                                       --//
             new Promise(function (resolve) {
                 var x = setInterval(function () {
                     if (__private.ws.readyState === WebSocket.OPEN) {
                         clearInterval(x);
                         resolve('socket open');
                     }
-                }, 100);
+                }, Constants.SOCKET_READY_DELAY);
             }).then(function () {
+                //-- The same code works for the OVE core viewer (which has no sectionId) and OVE core apps --//
                 if (__private.sectionId) {
                     __private.ws.send(JSON.stringify({ appId: appId, sectionId: __private.sectionId, message: message }));
                 } else {
@@ -93,6 +102,7 @@ function OVE () {
                         if (DEBUG) {
                             console.log('got details from section: ' + section.id);
                         }
+                        //-- We wait for section information to be available before announcing OVE loaded   --//
                         $(document).trigger(OVE.Event.LOADED);
                     });
             }
@@ -127,6 +137,7 @@ function OVE () {
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
     var OVEState = function (__private) {
+        //-- State can be cached/loaded at an app-level --//
         this.cache = function (url) {
             $.ajax({ url: url || (__private.sectionId + '/state'), type: 'POST', data: JSON.stringify(this.current), contentType: 'application/json' });
         };
@@ -146,6 +157,8 @@ function OVE () {
     };
 
     this.context = {
+        //-- A version 4 UUID is available for each OVE instance. This to support intra/inter-app --//
+        //-- messaging and debugging.                                                             --//
         uuid: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = Math.random() * 16 | 0;
             var v = c === 'x' ? r : (r & 0x3 | 0x8);

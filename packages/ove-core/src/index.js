@@ -1,8 +1,10 @@
+const { Constants } = require('./client/utils/constants');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const request = require('request');
+const HttpStatus = require('http-status-codes');
 const uglify = require('uglify-js');
 const app = express();
 const wss = require('express-ws')(app).getWss('/');
@@ -10,7 +12,7 @@ const swaggerUi = require('swagger-ui-express');
 const yamljs = require('yamljs');
 const pjson = require('../package.json'); // this path might have to be fixed based on packaging
 const nodeModules = path.join(__dirname, '..', '..', '..', 'node_modules');
-const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', 'Clients.json')));
+const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
 
 const DEBUG = true;
 
@@ -21,13 +23,25 @@ app.use(express.json());
                         OVE Extensions
 **************************************************************/
 (function (add) {
+    // We get hold of the WebSocket object's prototype within the add method. This is because
+    // WebSockets are created within a module and the only way that we can extend that specific
+    // instantiation of the object is to extend an object that has been created from within the
+    // module. So, first of all we extend the add method to achieve what we want.
     Object.getPrototypeOf(wss.clients).add = function (i) {
+        // Then we check if the object that is being added already has a safeSend method
+        // associated with it's prototype, we add it only if it does not exist. The safeSend
+        // method is introduced by OVE, so it is impossible for the WebSocket to have it unless
+        // OVE introduced it.
         if (!Object.getPrototypeOf(i).safeSend) {
+            // The safeSend method simply wraps the send method with a try-catch. We could avoid
+            // doing this and introduce a try-catch whenever we send a message to introduce a
+            // utility. This approach is a bit neater than that, since the code is easier to
+            // follow as a result.
             Object.getPrototypeOf(i).safeSend = function (msg) {
                 try {
                     this.send(msg);
                 } catch (e) {
-                    if (this.readyState === 1) {
+                    if (this.readyState === Constants.WEBSOCKET_READY) {
                         console.error('error sending message' + e.message);
                     }
                     // ignore all other errors, since there is no value in recording them.
@@ -42,14 +56,19 @@ app.use(express.json());
                       OVE Client Library
 **************************************************************/
 app.get('/:page(ove.js)', function (req, res) {
+    // OVE.js is a combination of client/ove.js client/utils/utils.js and client/utils/constants.js
     let text = fs.readFileSync(path.join(__dirname, 'client', req.params.page), 'utf8');
     for (let file of ['utils', 'constants']) {
         let fp = path.join(__dirname, 'client', 'utils', file + '.js');
         if (fs.existsSync(fp)) {
-            text += fs.readFileSync(fp, 'utf8');
+            text += fs.readFileSync(fp, 'utf8').replace('exports.Constants = Constants;', '');
         }
     }
-    res.set('Content-Type', 'application/javascript').send(uglify.minify(
+    // Important thing to note here is that the output is minified using UglifyJS. This library
+    // only supports ES5. Therefore newer JS capabilities such as let/const does not work. If there
+    // is a newer JS capability in any of the files included in OVE.js, UglifyJS will produce an
+    // empty file. This can be observed by reviewing corresponding errors on the browser.
+    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(
         text.replace(/DEBUG/g, DEBUG)
             .replace(/@VERSION/g, pjson.version)
             .replace(/@LICENSE/g, pjson.license)
@@ -77,15 +96,15 @@ app.use('/core.:type.:fileType(js|css)', function (req, res) {
     let cType;
     switch (req.params.fileType) {
         case 'js':
-            cType = 'application/javascript';
+            cType = Constants.HTTP_CONTENT_TYPE_JS;
             break;
         case 'css':
-            cType = 'text/css';
+            cType = Constants.HTTP_CONTENT_TYPE_CSS;
             break;
         default:
-            cType = 'text/html';
+            // This should not happen since the fileType is either CSS or JS.
     }
-    res.set('Content-Type', cType).send(text);
+    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, cType).send(text);
 });
 app.use('/:fileName(index|control|view).html', function (req, res) {
     res.send(fs.readFileSync(path.join(__dirname, 'client', 'index.html'), 'utf8')
@@ -98,54 +117,89 @@ app.use('/', express.static(path.join(nodeModules, 'jquery', 'dist')));
 **************************************************************/
 var sections = [];
 
+const sendMessage = function (res, status, msg) {
+    res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
+};
+
+// We don't want to see browser errors, so we send an empty success response in some cases.
+const sendEmptySuccess = function (res) {
+    sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+};
+
 const listClients = function (_req, res) {
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(clients));
+    sendMessage(res, HttpStatus.OK, JSON.stringify(clients));
 };
 
 const listClientById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+        sendEmptySuccess();
     } else {
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(sections[sectionId].clients));
+        sendMessage(res, HttpStatus.OK, JSON.stringify(sections[sectionId].clients));
     }
 };
 
 // Creates an individual section
 const createSection = function (req, res) {
     if (!req.body.space || !clients[req.body.space]) {
-        res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid space' }));
+        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
     } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
-        res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid dimensions' }));
+        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
     } else {
         let section = { w: req.body.w, h: req.body.h, clients: {} };
         section.clients[req.body.space] = [];
 
         // Calculate the dimensions on a client-by-client basis
         clients[req.body.space].forEach(function (e) {
+            // Below are the list of conditions evaluated:
+            //     1. Does the section begin at a point before the ending point of the client
+            //        along the horizontal axis.
+            //     2. Does the section end after the starting point of the client along the
+            //        horizontal axis.
+            //     3. Does the section begin at a point before the ending point of the client
+            //        along the vertical axis.
+            //     4. Does the section end after the starting point of the client along the
+            //        vertical axis.
+            // this will tell us whether a client coincides with the dimensions of a section
+            // or not. And, if it does not, we simply discard it.
             if ((e.x + e.w) > req.body.x && (req.body.x + req.body.w) > e.x &&
                 (e.y + e.h) > req.body.y && (req.body.y + req.body.h) > e.y) {
                 let c = Object.assign({}, e);
+                // We generally don't use offsets, but this can be used to move content relative
+                // to top-left both in the positive and negative directions. If the offsets were
+                // not set (the most common case), we initialize it to (0,0).
                 if (!c.offset) {
                     c.offset = { x: 0, y: 0 };
                 }
+                // In here we check if the section started before the starting point of a client
+                // and adjust it accordingly along the horizontal axis. If it wasn't the case, the
+                // section starts within the bounds of a client and therefore the offset is being
+                // set.
                 if (c.x >= req.body.x) {
                     c.x -= req.body.x;
-                } else if (c.x + c.w > req.body.x) {
+                } else {
                     c.offset.x += (req.body.x - c.x);
                     c.x = 0;
                     c.w -= c.offset.x;
                 }
+                // In here we check if the section ends before the ending point of the client and
+                // adjust the width of the frame along the horizontal axis.
                 if (c.x + c.w > req.body.w) {
                     c.w = (req.body.w - c.x);
                 }
+                // In here we check if the section started before the starting point of a client
+                // and adjust it accordingly along the vertical axis. If it wasn't the case, the
+                // section starts within the bounds of a client and therefore the offset is being
+                // set.
                 if (c.y >= req.body.y) {
                     c.y -= req.body.y;
-                } else if (c.y + c.h > req.body.y) {
+                } else {
                     c.offset.y += (req.body.y - c.y);
                     c.y = 0;
                     c.h -= c.offset.y;
                 }
+                // In here we check if the section ends before the ending point of the client and
+                // adjust the width of the frame along the vertical axis.
                 if (c.y + c.h > req.body.h) {
                     c.h = (req.body.h - c.y);
                 }
@@ -160,20 +214,22 @@ const createSection = function (req, res) {
         if (req.body.app) {
             section.app = { 'url': req.body.app.url.replace(/\/$/, '') };
             if (req.body.app.states) {
+                // Cache or load states if they were provided as a part of the create request.
                 if (req.body.app.states.cache) {
                     Object.keys(req.body.app.states.cache).forEach(function (name) {
                         request.post(section.app.url + '/state/' + name, {
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.cache[name]
                         });
                     });
                 }
                 if (req.body.app.states.load) {
+                    // Either a named state or an in-line state configuration can be loaded.
                     if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
                         section.app.state = req.body.app.states.load;
                     } else {
                         request.post(section.app.url + '/' + sectionId + '/state', {
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.load
                         });
                     }
@@ -184,21 +240,23 @@ const createSection = function (req, res) {
 
         // Notify OVE viewers/controllers
         wss.clients.forEach(function (c) {
-            if (c.readyState === 1) {
-                c.safeSend(JSON.stringify({ appId: 'core',
-                    message: { action: 'create', id: sectionId, clients: section.clients } }));
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                // Sections are created on the browser and then the application is deployed after a
+                // short delay. This will ensure proper frame sizes.
+                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
+                    message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
                 if (section.app) {
                     setTimeout(function () {
-                        c.safeSend(JSON.stringify({ appId: 'core',
-                            message: { action: 'update', id: sectionId, app: section.app } }));
-                    }, 150);
+                        c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
+                            message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
+                    }, Constants.SECTION_UPDATE_DELAY);
                 }
             }
         });
         if (DEBUG) {
             console.log('active sections: ' + sections.length);
         }
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+        sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     }
 };
 
@@ -214,24 +272,24 @@ const deleteSections = function (_req, res) {
         console.log('active sections: ' + sections.length);
     }
     wss.clients.forEach(function (c) {
-        if (c.readyState === 1) {
-            c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'delete' } }));
+        if (c.readyState === Constants.WEBSOCKET_READY) {
+            c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
         }
     });
-    res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+    sendEmptySuccess();
 };
 
 // Fetches details of an individual section
 const readSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({}));
+        sendEmptySuccess();
     } else {
         let section = { id: sectionId, w: sections[sectionId].w, h: sections[sectionId].h };
         if (sections[sectionId].app && sections[sectionId].app.state) {
             section.state = sections[sectionId].app.state;
         }
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify(section));
+        sendMessage(res, HttpStatus.OK, JSON.stringify(section));
     }
 };
 
@@ -239,48 +297,50 @@ const readSectionById = function (req, res) {
 const updateSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
-        res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
+        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     } else {
         // Redeploys an App into a section
         let commands = [];
         if (sections[sectionId].app) {
             delete sections[sectionId].app;
-            commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId } }));
+            commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId } }));
         }
         if (req.body.app) {
             sections[sectionId].app = { 'url': req.body.app.url.replace(/\/$/, '') };
             if (req.body.app.states) {
+                // Cache or load states if they were provided as a part of the update request.
                 if (req.body.app.states.cache) {
                     Object.keys(req.body.app.states.cache).forEach(function (name) {
                         request.post(sections[sectionId].app.url + '/state/' + name, {
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.cache[name]
                         });
                     });
                 }
                 if (req.body.app.states.load) {
+                    // Either a named state or an in-line state configuration can be loaded.
                     if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
                         sections[sectionId].app.state = req.body.app.states.load;
                     } else {
                         request.post(sections[sectionId].app.url + '/' + sectionId + '/state', {
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.load
                         });
                     }
                 }
             }
-            commands.push(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId, app: req.body.app } }));
+            commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: req.body.app } }));
         }
 
         // Notify OVE viewers/controllers
         wss.clients.forEach(function (c) {
-            if (c.readyState === 1) {
+            if (c.readyState === Constants.WEBSOCKET_READY) {
                 commands.forEach(function (m) {
                     c.safeSend(m);
                 });
             }
         });
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+        sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     }
 };
 
@@ -288,7 +348,7 @@ const updateSectionById = function (req, res) {
 const deleteSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
-        res.status(400).set('Content-Type', 'application/json').send(JSON.stringify({ error: 'invalid section id' }));
+        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     } else {
         let section = sections[sectionId];
         if (section.app) {
@@ -297,11 +357,11 @@ const deleteSectionById = function (req, res) {
         delete sections[sectionId];
         sections[sectionId] = {};
         wss.clients.forEach(function (c) {
-            if (c.readyState === 1) {
-                c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'delete', id: sectionId } }));
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: sectionId } }));
             }
         });
-        res.status(200).set('Content-Type', 'application/json').send(JSON.stringify({ id: sectionId }));
+        sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     }
 };
 
@@ -336,17 +396,19 @@ app.ws('/', function (s) {
         let m = JSON.parse(msg);
 
         // Method for viewers to request section information, helps browser crash recovery
-        if (m.appId === 'core' && m.message.action === 'request') {
+        if (m.appId === Constants.APP_NAME && m.message.action === Constants.Action.READ) {
             if (m.sectionId === undefined) {
                 sections.forEach(function (section, sectionId) {
                     if (section) {
                         wss.clients.forEach(function (c) {
-                            if (c.readyState === 1) {
-                                c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'create', id: sectionId, clients: section.clients } }));
+                            if (c.readyState === Constants.WEBSOCKET_READY) {
+                                // Sections are created on the browser and then the application is deployed after a
+                                // short delay. This will ensure proper frame sizes.
+                                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
                                 if (section.app) {
                                     setTimeout(function () {
-                                        c.safeSend(JSON.stringify({ appId: 'core', message: { action: 'update', id: sectionId, app: section.app } }));
-                                    }, 150);
+                                        c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
+                                    }, Constants.SECTION_UPDATE_DELAY);
                                 }
                             }
                         });
@@ -355,11 +417,10 @@ app.ws('/', function (s) {
             } else {
                 console.error('section information cannot be requested from within a section.');
             }
-
-            // All other messages
+        // All other messages
         } else {
             wss.clients.forEach(function (c) {
-                if (c !== s && c.readyState === 1) {
+                if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
                     if (DEBUG) {
                         console.log('sending message to socket: ' + c.id);
                     }
