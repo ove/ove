@@ -7,6 +7,8 @@
  */
 //-- IMPORTANT: all code comments must be in this format. --//
 function OVE () {
+    // @CONSTANTS
+
     //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
     //-- with or without the scheme (useful for opening WebSockets).                             --//
     var getHostName = function (withScheme) {
@@ -172,3 +174,10 @@ function OVE () {
     this.state = new OVEState(__private);
     setLayout(this, __private);
 }
+
+//-----------------------------------------------------------//
+//--                   OVE Event Names                     --//
+//-----------------------------------------------------------//
+OVE.Event = {
+    LOADED: 'ove.loaded'
+};

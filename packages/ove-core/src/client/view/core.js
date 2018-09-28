@@ -1,3 +1,5 @@
+// @CONSTANTS
+
 $(function () {
     // This is what happens first. After OVE is loaded, the viewer will be initialized
     $(document).ready(function () {

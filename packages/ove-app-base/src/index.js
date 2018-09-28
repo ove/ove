@@ -32,7 +32,7 @@ module.exports = function (baseDir, appName) {
 
     const createStateByName = function (req, res) {
         module.exports.config.states[req.params.name] = req.body;
-        sendEmptySuccess();
+        sendEmptySuccess(res);
     };
 
     const readStateByName = function (req, res) {
@@ -62,13 +62,13 @@ module.exports = function (baseDir, appName) {
 
     const updateStateOfSection = function (req, res) {
         state[req.params.id] = req.body;
-        sendEmptySuccess();
+        sendEmptySuccess(res);
     };
 
     const flush = function (_req, res) {
         state = [];
         module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
-        sendEmptySuccess();
+        sendEmptySuccess(res);
     };
 
     app.post('/state/:name', createStateByName);

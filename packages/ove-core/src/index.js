@@ -55,21 +55,20 @@ app.use(express.json());
 /**************************************************************
                       OVE Client Library
 **************************************************************/
-app.get('/:page(ove.js)', function (req, res) {
+app.get('/ove.js', function (req, res) {
     // OVE.js is a combination of client/ove.js client/utils/utils.js and client/utils/constants.js
-    let text = fs.readFileSync(path.join(__dirname, 'client', req.params.page), 'utf8');
-    for (let file of ['utils', 'constants']) {
-        let fp = path.join(__dirname, 'client', 'utils', file + '.js');
-        if (fs.existsSync(fp)) {
-            text += fs.readFileSync(fp, 'utf8').replace('exports.Constants = Constants;', '');
-        }
-    }
+    let text = fs.readFileSync(path.join(__dirname, 'client', 'ove.js'), 'utf8');
+    text += fs.readFileSync(path.join(__dirname, 'client', 'utils', 'utils.js'), 'utf8');
+    const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
+    const constants = fs.readFileSync(constantsPath, 'utf8').replace('exports.Constants = Constants;', '');
     // Important thing to note here is that the output is minified using UglifyJS. This library
     // only supports ES5. Therefore newer JS capabilities such as let/const does not work. If there
     // is a newer JS capability in any of the files included in OVE.js, UglifyJS will produce an
     // empty file. This can be observed by reviewing corresponding errors on the browser.
     res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(
-        text.replace(/DEBUG/g, DEBUG)
+        // Inject constants
+        text.replace(/\/\/ @CONSTANTS/, constants)
+            .replace(/DEBUG/g, DEBUG)
             .replace(/@VERSION/g, pjson.version)
             .replace(/@LICENSE/g, pjson.license)
             .replace(/@AUTHOR/g, pjson.author)
@@ -104,7 +103,10 @@ app.use('/core.:type.:fileType(js|css)', function (req, res) {
         default:
             // This should not happen since the fileType is either CSS or JS.
     }
-    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, cType).send(text);
+    // Inject constants
+    const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
+    const constants = fs.readFileSync(constantsPath, 'utf8').replace('exports.Constants = Constants;', '');
+    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, cType).send(text.replace(/\/\/ @CONSTANTS/, constants));
 });
 app.use('/:fileName(index|control|view).html', function (req, res) {
     res.send(fs.readFileSync(path.join(__dirname, 'client', 'index.html'), 'utf8')
@@ -133,7 +135,7 @@ const listClients = function (_req, res) {
 const listClientById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
-        sendEmptySuccess();
+        sendEmptySuccess(res);
     } else {
         sendMessage(res, HttpStatus.OK, JSON.stringify(sections[sectionId].clients));
     }
@@ -276,14 +278,14 @@ const deleteSections = function (_req, res) {
             c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
         }
     });
-    sendEmptySuccess();
+    sendEmptySuccess(res);
 };
 
 // Fetches details of an individual section
 const readSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
-        sendEmptySuccess();
+        sendEmptySuccess(res);
     } else {
         let section = { id: sectionId, w: sections[sectionId].w, h: sections[sectionId].h };
         if (sections[sectionId].app && sections[sectionId].app.state) {
