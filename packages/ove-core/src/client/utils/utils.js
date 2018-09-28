@@ -42,11 +42,12 @@ function OVEUtils () {
     //--        much faster, but we don't want to wait till that finishes to load state. --//
     this.initView = function (initMethod, loadContentMethod, setupCanvasMethod) {
         initMethod();
+        var shouldSetupCanvas = arguments.length > 2;
         $(document).on(OVE.Event.LOADED, function () {
             if (!window.ove.context.isInitialized) {
                 window.ove.state.load().then(loadContentMethod);
             }
-            if (arguments.length > 2) {
+            if (shouldSetupCanvas) {
                 setupCanvasMethod();
             }
         });

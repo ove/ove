@@ -106,7 +106,10 @@ app.use('/core.:type.:fileType(js|css)', function (req, res) {
     // Inject constants
     const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
     const constants = fs.readFileSync(constantsPath, 'utf8').replace('exports.Constants = Constants;', '');
-    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, cType).send(text.replace(/\/\/ @CONSTANTS/, constants));
+    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, cType).send(
+        text.replace(/\/\/ @CONSTANTS/, constants)
+            .replace(/\/\/--(.*?)--\/\//g, '')
+    );
 });
 app.use('/:fileName(index|control|view).html', function (req, res) {
     res.send(fs.readFileSync(path.join(__dirname, 'client', 'index.html'), 'utf8')
