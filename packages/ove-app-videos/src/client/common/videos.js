@@ -113,7 +113,8 @@ handleBufferStatusChange = function (status) {
         context.bufferStatus.clients.push(status.clientId);
     } else if (status.type.update && context.bufferStatus.clients.includes(status.clientId)) {
         // this code is executed when a registered peer sends a buffer status update.
-        if (status.percentage >= Constants.MIN_BUFFERED_PERCENTAGE) {
+        if (status.percentage >= Constants.MIN_BUFFERED_PERCENTAGE ||
+            status.duration >= Constants.MIN_BUFFERED_DURATION) {
             context.bufferStatus.clients.splice(context.bufferStatus.clients.indexOf(status.clientId), 1);
             if (context.bufferStatus.clients.length === 0) {
                 context.player.ready();

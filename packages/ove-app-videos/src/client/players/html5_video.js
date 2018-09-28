@@ -53,4 +53,8 @@ function OVEHTML5VideoPlayer () {
     this.getLoadedPercentage = function () {
         return getPlayer().seekable.end(getPlayer().seekable.length - 1) * 100 / getPlayer().duration;
     };
+
+    this.getLoadedDuration = function () {
+        return getPlayer().duration * this.getLoadedPercentage() / 100;
+    };
 }

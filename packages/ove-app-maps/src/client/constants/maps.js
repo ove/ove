@@ -8,9 +8,9 @@ const Constants = {
     /**************************************************************
                                 Common
     **************************************************************/
-    OL_ZOOM_DURATION: 0,
-    OL_LOAD_WAIT_TIME: 3000,
-    BING_MAPS_RELOAD_INTERVAL: 1000,
+    OL_ZOOM_ANIMATION_DURATION: 0, // Unit: milliseconds. 0 means no animation.
+    OL_LOAD_WAIT_TIME: 3000, // Unit: milliseconds
+    BING_MAPS_RELOAD_INTERVAL: 1000, // Unit: milliseconds
     APP_NAME: 'maps'
 };
 

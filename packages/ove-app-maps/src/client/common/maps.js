@@ -75,11 +75,11 @@ initMap = function (view) {
         // in addition to the defaults.
         interactions: window.ol.interaction.defaults({
             pinchRotate: false,
-            zoomDuration: Constants.OL_ZOOM_DURATION
+            zoomDuration: Constants.OL_ZOOM_ANIMATION_DURATION
         }).extend([
-            new window.ol.interaction.MouseWheelZoom({ duration: Constants.OL_ZOOM_DURATION }),
-            new window.ol.interaction.PinchZoom({ duration: Constants.OL_ZOOM_DURATION }),
-            new window.ol.interaction.DragZoom({ duration: Constants.OL_ZOOM_DURATION })
+            new window.ol.interaction.MouseWheelZoom({ duration: Constants.OL_ZOOM_ANIMATION_DURATION }),
+            new window.ol.interaction.PinchZoom({ duration: Constants.OL_ZOOM_ANIMATION_DURATION }),
+            new window.ol.interaction.DragZoom({ duration: Constants.OL_ZOOM_ANIMATION_DURATION })
         ]),
         view: new window.ol.View(view)
     });

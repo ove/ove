@@ -34,7 +34,8 @@ setTimeout(function () {
                 }
             } else if (status.type.update && !bufferIsEmpty &&
                 bufferStatus[m.sectionId].clients.includes(status.clientId)) {
-                if (status.percentage >= Constants.MIN_BUFFERED_PERCENTAGE) {
+                if (status.percentage >= Constants.MIN_BUFFERED_PERCENTAGE ||
+                    status.duration >= Constants.MIN_BUFFERED_DURATION) {
                     bufferStatus[m.sectionId].clients.splice(bufferStatus[m.sectionId].clients.indexOf(status.clientId), 1);
                     if (bufferStatus[m.sectionId].clients.length === 0) {
                         delete bufferStatus[m.sectionId];

@@ -13,7 +13,8 @@ initView = function () {
                 const status = {
                     type: { update: true },
                     clientId: context.uuid,
-                    percentage: context.player.getLoadedPercentage()
+                    percentage: context.player.getLoadedPercentage(),
+                    duration: context.player.getLoadedDuration()
                 };
                 // If the buffer status does not change compared to the last update
                 // there is no point in broadcasting it - simply ignore and proceed.

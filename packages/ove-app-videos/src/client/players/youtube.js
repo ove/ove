@@ -87,6 +87,10 @@ function OVEYouTubePlayer () {
         return __private.player.getVideoLoadedFraction() * 100;
     };
 
+    this.getLoadedDuration = function () {
+        return __private.player.getDuration() * this.getLoadedPercentage() / 100;
+    };
+
     // This is a callback provided by YouTube to instantiate their Player.
     window.onYouTubeIframeAPIReady = function () {
         __private.player = new window.YT.Player('video_player', {

@@ -13,17 +13,17 @@ const Constants = {
     /**************************************************************
                              Video Player
     **************************************************************/
-    VIDEO_READY_TIMEOUT: 500,
-    STARTING_TIME: 0,
+    VIDEO_READY_TIMEOUT: 500, // Unit: milliseconds
+    STARTING_TIME: 0, // Unit: seconds
     STANDARD_RATE: 1,
-    YOUTUBE_PLAYER_LOADED_TEST_INTERVAL: 1000,
-    YOUTUBE_PLAYBACK_LOOP_TEST_INTERVAL: 100,
+    YOUTUBE_PLAYER_LOADED_TEST_INTERVAL: 1000, // Unit: milliseconds
+    YOUTUBE_PLAYBACK_LOOP_TEST_INTERVAL: 100, // Unit: milliseconds
 
     /**************************************************************
                                Back-end
     **************************************************************/
-    SOCKET_READY_WAIT_TIME: 3000,
-    OPERATION_SYNC_DELAY: 350,
+    SOCKET_READY_WAIT_TIME: 3000, // Unit: milliseconds
+    OPERATION_SYNC_DELAY: 350, // Unit: milliseconds
     HTTP_HEADER_CONTENT_TYPE: 'Content-Type',
     HTTP_CONTENT_TYPE_JSON: 'application/json',
 
@@ -31,6 +31,7 @@ const Constants = {
                                 Common
     **************************************************************/
     MIN_BUFFERED_PERCENTAGE: 15,
+    MIN_BUFFERED_DURATION: 15, // Unit: seconds
     CONTENT_DIV: '#video_player',
     APP_NAME: 'videos'
 };
