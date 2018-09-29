@@ -11,9 +11,9 @@ function OVE (appId) {
 
     //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
     //-- with or without the scheme (useful for opening WebSockets).                             --//
-    var getHostName = function (withScheme) {
-        var scripts = document.getElementsByTagName('script');
-        for (var i = 0; i < scripts.length; i++) {
+    const getHostName = function (withScheme) {
+        let scripts = document.getElementsByTagName('script');
+        for (let i = 0; i < scripts.length; i++) {
             if (scripts[i].src.indexOf('ove.js') > 0) {
                 return scripts[i].src.substr(
                     withScheme ? 0 : scripts[i].src.indexOf('//') + 2,
@@ -25,12 +25,12 @@ function OVE (appId) {
     //-----------------------------------------------------------//
     //--                 Messaging Functions                   --//
     //-----------------------------------------------------------//
-    var OVESocket = function (__private) {
+    const OVESocket = function (__private) {
         //-- Default onMessage handler does nothing --//
-        var onMessage = function () { return 0; };
+        let onMessage = function () { return 0; };
 
         //-- Socket init code --//
-        var getSocket = function (url) {
+        const getSocket = function (url) {
             __private.ws = new WebSocket(url);
             __private.ws.addEventListener('error', console.error);
             __private.ws.addEventListener('open', function () {
@@ -39,7 +39,7 @@ function OVE (appId) {
                 }
             });
             __private.ws.addEventListener('message', function (m) {
-                var data = JSON.parse(m.data);
+                const data = JSON.parse(m.data);
                 if (__DEBUG__) {
                     //-- We want to print the time corresponding to the local timezone based on the locale  --//
                     console.log(JSON.stringify(data));
@@ -66,12 +66,12 @@ function OVE (appId) {
         };
         this.send = function (message, appId) {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
-            var targetAppId = arguments.length > 1 ? appId : __private.appId;
+            const targetAppId = arguments.length > 1 ? appId : __private.appId;
 
             //-- We always wait for the socket to be ready before broadcast. The same code blocks messages  --//
             //-- when a socket is temporarily closed.                                                       --//
             new Promise(function (resolve) {
-                var x = setInterval(function () {
+                const x = setInterval(function () {
                     if (__private.ws.readyState === WebSocket.OPEN) {
                         clearInterval(x);
                         resolve('socket open');
@@ -91,16 +91,16 @@ function OVE (appId) {
     //-----------------------------------------------------------//
     //--                   Layout Variables                    --//
     //-----------------------------------------------------------//
-    var setLayout = function (__self, __private) {
+    const setLayout = function (__self, __private) {
         __self.layout = {};
-        var fetchSection = function (sectionId) {
+        const fetchSection = function (sectionId) {
             if (sectionId) {
                 if (__DEBUG__) {
                     console.log('requesting details of section: ' + sectionId);
                 }
                 fetch(getHostName(true) + '/section/' + sectionId)
                     .then(function (r) { return r.text(); }).then(function (text) {
-                        var section = JSON.parse(text);
+                        const section = JSON.parse(text);
                         __self.layout.section = { w: section.w, h: section.h };
                         __self.state.name = OVE.Utils.getQueryParam('state', section.state);
                         __private.sectionId = section.id;
@@ -112,13 +112,13 @@ function OVE (appId) {
                     });
             }
         };
-        var id = OVE.Utils.getQueryParam('oveClientId');
+        let id = OVE.Utils.getQueryParam('oveClientId');
         //-- clientId will not be provided by a controller --//
         if (!id) {
             fetchSection(OVE.Utils.getQueryParam('oveSectionId'));
             return;
         }
-        var sectionId = id.substr(id.lastIndexOf('.') + 1);
+        let sectionId = id.substr(id.lastIndexOf('.') + 1);
         id = id.substr(0, id.lastIndexOf('.'));
         if (!id && sectionId) {
             //-- sectionId has not been provided as a part of oveClientId  --//
@@ -127,8 +127,8 @@ function OVE (appId) {
             id = sectionId;
             sectionId = OVE.Utils.getQueryParam('oveSectionId');
         }
-        var client = id.substr(id.lastIndexOf('-') + 1);
-        var space = id.substr(0, id.lastIndexOf('-'));
+        const client = id.substr(id.lastIndexOf('-') + 1);
+        const space = id.substr(0, id.lastIndexOf('-'));
 
         //-- call APIs /clients or /client/{sectionId}  --//
         fetch(getHostName(true) + '/client' + (sectionId ? '/' + sectionId : 's'))
@@ -141,13 +141,13 @@ function OVE (appId) {
     //-----------------------------------------------------------//
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
-    var OVEState = function (__private) {
+    const OVEState = function (__private) {
         //-- State can be cached/loaded at an app-level --//
         this.cache = function (url) {
             $.ajax({ url: url || (__private.sectionId + '/state'), type: 'POST', data: JSON.stringify(this.current), contentType: 'application/json' });
         };
         this.load = function (url) {
-            var __self = this;
+            let __self = this;
             return new Promise(function (resolve, reject) {
                 $.get(url || (__private.sectionId + '/state')).done(function (state) {
                     if (state) {
@@ -164,14 +164,14 @@ function OVE (appId) {
     };
 
     //-- holds private data within OVE library --//
-    var __private = { appId: appId };
+    let __private = { appId: appId };
 
     this.context = {
         //-- A version 4 UUID is available for each OVE instance. This to support intra/inter-app --//
         //-- messaging and debugging.                                                             --//
         uuid: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            var r = Math.random() * 16 | 0;
-            var v = c === 'x' ? r : (r & 0x3 | 0x8);
+            let r = Math.random() * 16 | 0;
+            let v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         }),
 

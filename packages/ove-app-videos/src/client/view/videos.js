@@ -19,7 +19,7 @@ initView = function () {
                 // If the buffer status does not change compared to the last update
                 // there is no point in broadcasting it - simply ignore and proceed.
                 if (!OVE.Utils.JSON.equals(status, context.bufferStatus.self)) {
-                    logger.debug('Broadcasting and updating buffer status:', status);
+                    log.debug('Broadcasting and updating buffer status:', status);
 
                     // The status change is handled locally as well.
                     handleBufferStatusChange(status);
@@ -33,7 +33,7 @@ initView = function () {
 };
 
 refresh = function () {
-    logger.debug('Refreshing viewer');
+    log.debug('Refreshing viewer');
 
     // A refresh operation takes place when a player is loaded or when a video is
     // ready to be played. This ensures that proper CSS settings are applied.
@@ -44,7 +44,7 @@ refresh = function () {
 };
 
 requestRegistration = function () {
-    logger.debug('Requesting registration');
+    log.debug('Requesting registration');
 
     // This is when a viewer triggers a registration request.
     const status = { type: { requestRegistration: true } };
@@ -62,12 +62,12 @@ doRegistration = function () {
 
     // The buffer status of this viewer will be reset such that the broadcastBufferStatus
     // function can then kick in.
-    logger.debug('Resetting buffer status of viewer');
+    log.debug('Resetting buffer status of viewer');
     context.bufferStatus.self = {};
 };
 
 beginInitialization = function () {
-    logger.debug('Starting viewer initialization');
+    log.debug('Starting viewer initialization');
     OVE.Utils.initView(initView, loadURL, function () {
         let context = window.ove.context;
         const l = window.ove.layout;
@@ -75,7 +75,7 @@ beginInitialization = function () {
         context.scale = Math.min(l.section.w / l.w, l.section.h / l.h);
         let width = (l.section.w / context.scale) + 'px';
         let height = (l.section.h / context.scale) + 'px';
-        logger.debug('Scaling viewer:', context.scale, 'height:', height, 'width:', width);
+        log.debug('Scaling viewer:', context.scale, ', height:', height, ', width:', width);
         $(Constants.CONTENT_DIV).css({
             zoom: 1,
             transformOrigin: 100 * l.x / (l.section.w - l.section.w / context.scale) + '% ' +

@@ -12,14 +12,14 @@
             "files": [ "**/view/*.js" ],
             "globals": {
                 "initView": true,
-                "logger": true
+                "log": true
             }
         },
         {
             "files": [ "**/control/*.js" ],
             "globals": {
                 "initControl": true,
-                "logger": true
+                "log": true
             }
         },
         {

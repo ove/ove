@@ -1,6 +1,6 @@
 //-- IMPORTANT: all code comments must be in this format. --//
 
-var Constants = {
+const Constants = {
     //-----------------------------------------------------------//
     //--                        Viewer                         --//
     //-----------------------------------------------------------//

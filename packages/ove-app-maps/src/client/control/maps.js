@@ -5,6 +5,10 @@ initControl = function (data) {
     const l = window.ove.layout;
     OVE.Utils.resizeController('.map, .outer');
     initCommon().then(function () {
+        if (context.layers.length === 0) {
+            log.fatal('Map layers not available. Cannot load application');
+            return;
+        }
         const enabledLayers = OVE.Utils.getQueryParam('layers', '0').split(',');
         if (window.ove.state.current.position && enabledLayers !== window.ove.state.current.enabledLayers) {
             // If the layers have changed, clear the cached position to force a broadcast.

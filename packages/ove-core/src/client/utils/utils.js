@@ -2,7 +2,7 @@
 
 OVE.Utils = new OVEUtils();
 function OVEUtils () {
-    var __self = this;
+    let __self = this;
     //-----------------------------------------------------------//
     //--                   Utilities for JSON                  --//
     //-----------------------------------------------------------//
@@ -19,33 +19,58 @@ function OVEUtils () {
     };
 
     function OVELogger (name) {
-        //-- Constants named as var because of ES5 compliance   --//
-        var LogPrefix = {
+        //-- Constants for log labels corresponding to levels.  --//
+        const LogPrefix = {
             TRACE: 'TRACE',
-            INFO: ' INFO', //-- Additional space for alignment  --//
             DEBUG: 'DEBUG',
-            WARN: ' WARN', //-- Additional space for alignment  --//
+            INFO: 'INFO',
+            WARN: 'WARN',
             ERROR: 'ERROR',
             FATAL: 'FATAL'
         };
-        var UNKNOWN_APP_ID = '__UNKNOWN__';
-        var APP_ID_WIDTH = 16;
+
+        const UNKNOWN_APP_ID = '__UNKNOWN__';
+        const APP_ID_WIDTH = 16;
+        const LOG_PREFIX_WIDTH = 9;
 
         //-- The logger name is stored for later use.           --//
-        var __private = { name: name };
+        let __private = { name: name };
+
+        //-- Internal Utility function to get log labels' CSS   --//
+        const getLogLabelCSS = function (logLevel) {
+            const getCSSString = function (background, color) {
+                return 'font-weight: 500; background: ' + background + '; color: ' + color;
+            };
+            switch (logLevel) {
+                case LogPrefix.TRACE:
+                    return getCSSString('#808080', '#FFFAF0');
+                case LogPrefix.DEBUG:
+                    return getCSSString('#1E90FF', '#F8F8FF');
+                case LogPrefix.INFO:
+                    return getCSSString('#2E8B57', '#FFFAFA');
+                case LogPrefix.WARN:
+                    return getCSSString('#DAA520', '#FFFFF0');
+                case LogPrefix.ERROR:
+                    return getCSSString('#B22222', '#FFFAF0');
+                case LogPrefix.FATAL:
+                    return getCSSString('#FF0000', '#FFFFFF');
+                default:
+                    return '';
+            }
+        };
 
         //-- Internal Utility function to get logger arguments. --//
-        var getArgsToLog = function (logLevel, args) {
-            var time = (function (d) {
-                var locale = window.navigator.userLanguage || window.navigator.language;
+        const getArgsToLog = function (logLevel, args) {
+            const time = (function (d) {
+                const locale = window.navigator.userLanguage || window.navigator.language;
                 return d.toLocaleString(locale, { hour12: true }).replace(/([ ]?[aApP][mM])/,
                     '.' + (d.getMilliseconds() + '').padStart(3, '0') + ' $&');
             }(new Date()));
             //-- Each logger can have its own name. If this is  --//
             //-- not provided, ove.context.appId is used. All   --//
             //-- logs in OVE core always use ove.context.appId. --//
-            var loggerName = __private.name || (window.ove ? window.ove.context.appId : UNKNOWN_APP_ID);
-            return ['[' + logLevel + ']', time, '-',
+            const loggerName = __private.name || (window.ove ? window.ove.context.appId : UNKNOWN_APP_ID);
+            return [('%c[' + logLevel + ']').padStart(LOG_PREFIX_WIDTH), getLogLabelCSS(logLevel), time, '-',
                 loggerName.padEnd(APP_ID_WIDTH), ':'].concat(Object.values(args));
         };
 
@@ -105,7 +130,7 @@ function OVEUtils () {
     //-- The difference between the two methods below is that the on-demand option does  --//
     //-- not wait for OVE to load.                                                       --//
     this.initControlOnDemand = function (defaultState, initMethod) {
-        var state = window.ove.state.name || defaultState;
+        const state = window.ove.state.name || defaultState;
         //-- The default state URL is used here. --//
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initMethod);
     };
@@ -123,7 +148,7 @@ function OVEUtils () {
     //--        much faster, but we don't want to wait till that finishes to load state. --//
     this.initView = function (initMethod, loadContentMethod, setupCanvasMethod) {
         initMethod();
-        var shouldSetupCanvas = arguments.length > 2;
+        const shouldSetupCanvas = arguments.length > 2;
         $(document).on(OVE.Event.LOADED, function () {
             if (!window.ove.context.isInitialized) {
                 //-- Ignore promise rejection, as it is expected if no state exists.     --//
@@ -146,12 +171,12 @@ function OVEUtils () {
     };
 
     this.resizeController = function (contentDivName) {
-        var l = window.ove.layout;
+        const l = window.ove.layout;
         //-- The maximum height is limited to the minimum of the two to avoid controller --//
         //-- becoming too large on a given screen.                                       --//
-        var maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
-        var maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
-        var width, height;
+        const maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
+        const maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
+        let width, height;
         //-- The aspect ratio of the controller changes to suit the aspect ratio of the  --//
         //-- section/content.                                                            --//
         if (l.section.w * maxHeight >= maxWidth * l.section.h) {
@@ -164,9 +189,14 @@ function OVEUtils () {
         $(contentDivName).css({ width: width, height: height });
     };
 
-    //-- Log method needs to be something like logger.debug or logger.info.              --//
+    //-- Log methods need to be something like log.debug or log.info.              --//
     this.logThenResolve = function (logMethod, resolve, message) {
         logMethod(message);
         resolve(message);
+    };
+
+    this.logThenReject = function (logMethod, reject, message, exception) {
+        logMethod(message, exception);
+        reject(message);
     };
 }

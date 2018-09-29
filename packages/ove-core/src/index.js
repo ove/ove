@@ -62,8 +62,8 @@ app.get('/ove.js', function (req, res) {
     const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
     const constants = fs.readFileSync(constantsPath, 'utf8').replace('exports.Constants = Constants;', '');
     // Important thing to note here is that the output is minified using UglifyJS. This library
-    // only supports ES5. Therefore newer JS capabilities such as let/const does not work. If there
-    // is a newer JS capability in any of the files included in OVE.js, UglifyJS will produce an
+    // only supports ES5. Therefore some newer JS capabilities may not work. And, if there was a
+    // newer JS capability used in any of the files included in OVE.js, UglifyJS will produce an
     // empty file. This can be observed by reviewing corresponding errors on the browser.
     res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(
         // Inject constants
@@ -72,6 +72,8 @@ app.get('/ove.js', function (req, res) {
             .replace(/@VERSION/g, pjson.version)
             .replace(/@LICENSE/g, pjson.license)
             .replace(/@AUTHOR/g, pjson.author)
+            // Replace all let/const with var for ES5 compliance
+            .replace(/(let|const)/g, 'var')
             // Remove all comments with pattern: //-- {comment} --//
             .replace(/\/\/--(.*?)--\/\//g, ''), { output: { comments: true } }).code
     );

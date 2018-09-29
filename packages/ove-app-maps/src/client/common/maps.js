@@ -1,9 +1,13 @@
+const log = OVE.Utils.Logger(Constants.APP_NAME);
+
 $(function () {
     // This is what happens first. After OVE is loaded, either the viewer or controller
     // will be initialized. The viewer or controller has the freedom to call the initCommon
     // at any point. Application specific context variables are also initialized at this point.
     $(document).ready(function () {
+        log.debug('Starting application');
         window.ove = new OVE(Constants.APP_NAME);
+        log.debug('Completed loading OVE');
         window.ove.context.isInitialized = false;
         window.ove.context.layers = [];
         window.ove.context.map = undefined;
@@ -14,6 +18,7 @@ $(function () {
 // Initialization that is common to viewers and controllers.
 initCommon = function () {
     const context = window.ove.context;
+    log.debug('Starting to fetch map layer configurations');
     const fetchPromise = fetch('layers.json').then(r => r.text()).then(text => {
         // The most complex operation in the initialization process is building
         // the layers of OpenLayers based on the JSON configuration model of the
@@ -21,8 +26,11 @@ initCommon = function () {
         // special handling for the BingMaps layer as it fails to load at times.
         // The vector layers are of GeoJSON format. The fill and stroke styles
         // are configurable.
+        log.debug('Parsing map layer configurations');
         $.each(JSON.parse(text), function (i, e) {
             if (e.type === 'ol.layer.Tile') {
+                log.trace('Loading layer of type:', 'Tile', ', with source:',
+                    e.source.type, ', using config:', e);
                 const TileConfig = {
                     visible: e.visible,
                     source: eval('new window.' + e.source.type + '(' + JSON.stringify(e.source.config) + ')') // jshint ignore:line
@@ -35,6 +43,8 @@ initCommon = function () {
                     context.layers[i].bingMapsSource = { config: e.source.config };
                 }
             } else if (e.type === 'ol.layer.Vector') {
+                log.trace('Loading layer of type:', 'Vector', ', with source:',
+                    e.source.config.url, ', using config:', e);
                 const TileConfig = {
                     visible: e.visible,
                     source: new window.ol.source.Vector({
@@ -55,8 +65,9 @@ initCommon = function () {
     setTimeout(function () {
         // Give some time for the layers to load for the first time, and then keep checking.
         setInterval(function () {
-            context.layers.forEach(function (e) {
+            context.layers.forEach(function (e, i) {
                 if (e.bingMapsSource && e.getSource().getState() !== 'ready') {
+                    log.warn('Reloading BingMaps layer id:', i);
                     e.setSource(eval('new window.ol.source.BingMaps(' + JSON.stringify(e.bingMapsSource.config) + ')')); // jshint ignore:line
                 }
             });
@@ -66,6 +77,7 @@ initCommon = function () {
 };
 
 initMap = function (view) {
+    log.info('Loading OpenLayers with view configuration:', view);
     // Initialization code for Open Layers
     window.ove.context.map = new window.ol.Map({
         target: 'map',
