@@ -3,7 +3,6 @@
     "globals": {
         "$": true,
         "Constants": true,
-        "DEBUG": true,
         "fetch": true,
         "location": true,
         "OVE": true

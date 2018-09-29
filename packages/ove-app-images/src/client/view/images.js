@@ -1,11 +1,6 @@
 initView = function () {
     window.ove.context.isInitialized = false;
-    window.ove.socket.on(function (appId, message) {
-        if (appId === Constants.APP_NAME) {
-            window.ove.state.current = message;
-            updateImage();
-        }
-    });
+    OVE.Utils.setOnStateUpdate(updateImage);
 };
 
 updateImage = function () {

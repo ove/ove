@@ -1,11 +1,6 @@
 initView = function () {
     window.ove.context.isInitialized = false;
-    window.ove.socket.on(function (appId, message) {
-        if (appId === Constants.APP_NAME) {
-            window.ove.state.current = message;
-            loadSigma();
-        }
-    });
+    OVE.Utils.setOnStateUpdate(loadSigma);
 };
 
 beginInitialization = function () {

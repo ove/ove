@@ -3,7 +3,7 @@ $(function () {
     // will be initialized. The viewer or controller has the freedom to call the initCommon
     // at any point. Application specific context variables are also initialized at this point.
     $(document).ready(function () {
-        window.ove = new OVE();
+        window.ove = new OVE(Constants.APP_NAME);
         window.ove.context.isInitialized = false;
         window.ove.context.layers = [];
         window.ove.context.map = undefined;

@@ -1,9 +1,13 @@
+const logger = OVE.Utils.Logger(Constants.APP_NAME);
+
 $(function () {
     // This is what happens first. After OVE is loaded, either the viewer or controller
     // will be initialized. The viewer or controller has the freedom to call the initCommon
     // at any point. Application specific context variables are also initialized at this point.
     $(document).ready(function () {
-        window.ove = new OVE();
+        logger.debug('Starting application');
+        window.ove = new OVE(Constants.APP_NAME);
+        logger.debug('Completed loading OVE');
         window.ove.context.isInitialized = false;
         window.ove.context.bufferStatus = { clients: [] };
         beginInitialization();
@@ -13,42 +17,48 @@ $(function () {
 // Initialization that is common to viewers and controllers.
 initCommon = function () {
     const context = window.ove.context;
-    window.ove.socket.on(function (appId, message) {
-        if (appId === Constants.APP_NAME) {
-            // we can receive a stat update before the application has been initialized.
-            // this happens for controller-initiated flows.
-            if (message.state) {
-                handleStateChange(message.state);
-            } else if (message.bufferStatus && context.isInitialized) {
-                handleBufferStatusChange(message.bufferStatus);
-            } else if (message.operation && context.isInitialized) {
-                const op = message.operation;
-                setTimeout(function () {
-                    switch (op.name) {
-                        case Constants.Operation.PLAY:
-                            context.player.play(op.loop);
-                            break;
-                        case Constants.Operation.PAUSE:
-                            context.player.pause();
-                            break;
-                        case Constants.Operation.STOP:
-                            context.player.stop();
-                            break;
-                        case Constants.Operation.SEEK:
-                            context.player.seekTo(op.time);
-                            break;
-                        default:
-                            console.warn('Ignoring unknown operation: ' + op.name);
-                    }
-                // run operation precisely at the same time
-                }, op.executionTime - new Date().getTime());
-            }
+    window.ove.socket.on(function (message) {
+        // We can receive a stat update before the application has been initialized.
+        // this happens for controller-initiated flows.
+        if (message.state) {
+            logger.debug('Got state change request: ', message.state);
+            handleStateChange(message.state);
+        } else if (message.bufferStatus && context.isInitialized) {
+            logger.debug('Got buffer status change request: ', message.bufferStatus);
+            handleBufferStatusChange(message.bufferStatus);
+        } else if (message.operation && context.isInitialized) {
+            logger.debug('Got invoke operation request: ', message.operation);
+            const op = message.operation;
+
+            setTimeout(function () {
+                switch (op.name) {
+                    case Constants.Operation.PLAY:
+                        logger.info('Starting video playback ' + (op.loop ? 'with' : 'without') + ' loop');
+                        context.player.play(op.loop);
+                        break;
+                    case Constants.Operation.PAUSE:
+                        logger.info('Pausing video playback');
+                        context.player.pause();
+                        break;
+                    case Constants.Operation.STOP:
+                        logger.info('Stopping video playback');
+                        context.player.stop();
+                        break;
+                    case Constants.Operation.SEEK:
+                        logger.info('Seeking to time:', op.time);
+                        context.player.seekTo(op.time);
+                        break;
+                    default:
+                        logger.warn('Ignoring unknown operation:', op.name);
+                }
+            // Run operation precisely at the same time
+            }, op.executionTime - new Date().getTime());
         }
     });
 };
 
 loadURL = function () {
-    // the current state would have been set when this method is called, but there
+    // The current state would have been set when this method is called, but there
     // is no incoming state, as when we receive a message. Therefore, passing null.
     handleStateChange(null);
 };
@@ -56,33 +66,44 @@ loadURL = function () {
 handleStateChange = function (state) {
     let current = {};
     if (!state) {
-        // if incoming state is null, we don't need to care about current state.
+        // If incoming state is null, we don't need to care about current state.
+        logger.debug('Handling first state change - current state does not exist');
         state = window.ove.state.current;
     } else {
+        logger.debug('Handling state change');
         current = window.ove.state.current;
         window.ove.state.current = state;
     }
 
     if (current.url !== state.url) {
+        logger.info('Got new video URL:', state.url);
         let context = window.ove.context;
-        // the way we load the player doesn't change even if the application was
+
+        // The way we load the player doesn't change even if the application was
         // not initialized - the only difference is the need to wait for the
         // initialization to complete.
         const loadPlayer = function () {
+            logger.debug('Hiding video player');
             $(Constants.CONTENT_DIV).hide();
+
             requestRegistration();
+            logger.debug('Reloading video player with new state:', state);
             context.player.load(state);
             refresh();
         };
+
         if (!context.isInitialized) {
-            // the player is decided based on the URL.
+            // The player is decided based on the URL.
             if (state.url.includes('youtube')) {
+                logger.info('Starting YouTube video player');
                 context.player = new window.OVEYouTubePlayer();
             } else {
+                logger.info('Starting HTML5 video player');
                 context.player = new window.OVEHTML5VideoPlayer();
             }
             context.player.initialize().then(function () {
                 window.ove.context.isInitialized = true;
+                logger.debug('Application is initialized:', window.ove.context.isInitialized);
                 loadPlayer();
             });
         } else {
@@ -92,7 +113,7 @@ handleStateChange = function (state) {
 };
 
 handleBufferStatusChange = function (status) {
-    // the handling of the buffer status updates operates in a model as noted below:
+    // The handling of the buffer status updates operates in a model as noted below:
     //   1. One or more peers in a group receives a new video URL
     //   2. They then send a request for registration to all peers belonging to the same
     //      section.
@@ -105,19 +126,32 @@ handleBufferStatusChange = function (status) {
     //      can begin and the video will be displayed.
     const context = window.ove.context;
     if (status.type.requestRegistration) {
-        // this code is executed when this instance of the application receives a
+        // This code is executed when this instance of the application receives a
         // registration request. The controller and the viewer handles this differently.
+        logger.debug('Got request for registration');
         doRegistration();
     } else if (status.type.registration && !context.bufferStatus.clients.includes(status.clientId)) {
-        // this code is executed when a response to a registration request has been received.
+        logger.debug('Got response to registration request. Adding client to status update queue:', status.clientId);
+
+        // This code is executed when a response to a registration request has been received.
         context.bufferStatus.clients.push(status.clientId);
     } else if (status.type.update && context.bufferStatus.clients.includes(status.clientId)) {
-        // this code is executed when a registered peer sends a buffer status update.
+        // This code is executed when a registered peer sends a buffer status update.
+        logger.debug('Got buffer status update from client:', status.clientId,
+            'percentage:', status.percentage, 'duration:', status.duration);
+
         if (status.percentage >= Constants.MIN_BUFFERED_PERCENTAGE ||
             status.duration >= Constants.MIN_BUFFERED_DURATION) {
+            // Clients are dequeued from the status update queue when they have buffered a sufficient
+            // percentage or duration of the video.
+            logger.debug('Removing client from status update queue:', status.clientId);
             context.bufferStatus.clients.splice(context.bufferStatus.clients.indexOf(status.clientId), 1);
+
             if (context.bufferStatus.clients.length === 0) {
+                logger.info('Video buffering complete');
                 context.player.ready();
+
+                logger.debug('Displaying video player');
                 $(Constants.CONTENT_DIV).show();
                 refresh();
             }

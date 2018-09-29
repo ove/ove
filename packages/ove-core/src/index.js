@@ -14,7 +14,7 @@ const pjson = require('../package.json'); // this path might have to be fixed ba
 const nodeModules = path.join(__dirname, '..', '..', '..', 'node_modules');
 const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
 
-const DEBUG = true;
+const __DEBUG__ = true;
 
 app.use(cors());
 app.use(express.json());
@@ -68,7 +68,7 @@ app.get('/ove.js', function (req, res) {
     res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(
         // Inject constants
         text.replace(/\/\/ @CONSTANTS/, constants)
-            .replace(/DEBUG/g, DEBUG)
+            .replace(/__DEBUG__/g, __DEBUG__)
             .replace(/@VERSION/g, pjson.version)
             .replace(/@LICENSE/g, pjson.license)
             .replace(/@AUTHOR/g, pjson.author)
@@ -258,7 +258,7 @@ const createSection = function (req, res) {
                 }
             }
         });
-        if (DEBUG) {
+        if (__DEBUG__) {
             console.log('active sections: ' + sections.length);
         }
         sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
@@ -273,7 +273,7 @@ const deleteSections = function (_req, res) {
             request.post(section.app.url + '/flush');
         }
     }
-    if (DEBUG) {
+    if (__DEBUG__) {
         console.log('active sections: ' + sections.length);
     }
     wss.clients.forEach(function (c) {
@@ -424,7 +424,7 @@ app.ws('/', function (s) {
             wss.clients.forEach(function (c) {
                 // We respond to every socket but not to the sender
                 if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
-                    if (DEBUG) {
+                    if (__DEBUG__) {
                         console.log('sending message to socket: ' + c.id);
                     }
                     c.safeSend(msg);
@@ -432,7 +432,7 @@ app.ws('/', function (s) {
             });
         }
     });
-    if (DEBUG) {
+    if (__DEBUG__) {
         s.id = wss.clients.size;
         console.log('websocket connection established. Clients connected: ' + wss.clients.size);
     }

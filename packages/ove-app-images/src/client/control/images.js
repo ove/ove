@@ -28,7 +28,7 @@ sendViewportDetails = function () {
         if (!window.ove.state.current.viewport ||
             !OVE.Utils.JSON.equals(viewport, window.ove.state.current.viewport)) {
             window.ove.state.current.viewport = viewport;
-            OVE.Utils.broadcastState(Constants.APP_NAME, window.ove.state.current);
+            OVE.Utils.broadcastState();
         }
     }
 };

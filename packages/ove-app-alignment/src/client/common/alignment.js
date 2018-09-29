@@ -4,7 +4,7 @@ $(function () {
     });
 
     $(document).ready(function () {
-        window.ove = new OVE();
+        window.ove = new OVE('alignment');
         window.ove.context.isInitialized = false;
     });
 });

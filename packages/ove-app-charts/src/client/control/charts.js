@@ -4,7 +4,7 @@ initControl = function (data) {
     OVE.Utils.resizeController(Constants.CONTENT_DIV);
     window.ove.state.current = data;
     loadVega();
-    OVE.Utils.broadcastState(Constants.APP_NAME, window.ove.state.current);
+    OVE.Utils.broadcastState();
 };
 
 beginInitialization = function () {

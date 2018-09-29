@@ -2,8 +2,8 @@ function initPage () {
     window.ove.context.isInitialized = false;
     drawView();
 
-    window.ove.socket.on(function (appId, message) {
-        if (appId === 'alignment' && message.hasOwnProperty('monitors')) {
+    window.ove.socket.on(function (message) {
+        if (message.hasOwnProperty('monitors')) {
             const svgEmpty = !document.getElementById('grid-group').innerHTML;
             const patternChanged = (message.patternType && message.patternType !== window.ove.state.current.patternType);
 

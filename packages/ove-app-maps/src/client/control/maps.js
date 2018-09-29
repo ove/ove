@@ -70,7 +70,7 @@ uploadMapPosition = function () {
         if (!window.ove.state.current.position ||
             !OVE.Utils.JSON.equals(position, window.ove.state.current.position)) {
             window.ove.state.current.position = position;
-            OVE.Utils.broadcastState(Constants.APP_NAME, window.ove.state.current);
+            OVE.Utils.broadcastState();
         }
     }
 };

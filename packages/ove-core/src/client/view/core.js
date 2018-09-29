@@ -3,7 +3,7 @@
 $(function () {
     // This is what happens first. After OVE is loaded, the viewer will be initialized
     $(document).ready(function () {
-        window.ove = new OVE();
+        window.ove = new OVE(Constants.APP_NAME);
         window.ove.context.isInitialized = false;
         initView();
     });
@@ -14,7 +14,7 @@ initView = function () {
     // or when the browser is resized.
     const loadFunction = function () {
         if (!window.ove.context.isInitialized) {
-            window.ove.socket.send(Constants.APP_NAME, { action: Constants.Action.READ });
+            window.ove.socket.send({ action: Constants.Action.READ });
         }
     };
     window.addEventListener('resize', function () {
@@ -23,11 +23,7 @@ initView = function () {
     });
     setTimeout(loadFunction, 15000);
 
-    window.ove.socket.on(function (appId, message) {
-        if (appId === Constants.APP_NAME) {
-            updateSections(message);
-        }
-    });
+    window.ove.socket.on(updateSections);
 };
 
 updateSections = function (m) {

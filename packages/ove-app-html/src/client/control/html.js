@@ -10,7 +10,7 @@ initControl = function (data) {
     }
     // The changeAt time helps browsers load content precisely at the same time.
     window.ove.state.current.changeAt = new Date().getTime() + Constants.OPERATION_SYNC_DELAY;
-    OVE.Utils.broadcastState(Constants.APP_NAME, window.ove.state.current);
+    OVE.Utils.broadcastState();
     updateURL();
 };
 

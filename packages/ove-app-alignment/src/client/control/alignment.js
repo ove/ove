@@ -18,7 +18,7 @@ function initPage (data) {
 
     window.ove.state.current = data;
     drawView();
-    window.ove.socket.send('alignment', window.ove.state.current);
+    window.ove.socket.send(window.ove.state.current);
     window.ove.state.cache();
 }
 
@@ -190,7 +190,7 @@ function setIndexMonitorHighlighting() {
 function broadcastMessage() {
     const patternType = document.getElementById('pattern-type').value;
     const monitorData = d3.selectAll('.monitor').data();
-    window.ove.socket.send('alignment', { monitors: monitorData, patternType: patternType });
+    window.ove.socket.send({ monitors: monitorData, patternType: patternType });
 }
 
 function exportJSON () {
