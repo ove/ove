@@ -145,12 +145,14 @@ function OVE () {
         };
         this.load = function (url) {
             var __self = this;
-            return new Promise(function (resolve) {
+            return new Promise(function (resolve, reject) {
                 $.get(url || (__private.sectionId + '/state')).done(function (state) {
                     if (state) {
                         __self.current = state;
+                        resolve('state loaded');
+                    } else {
+                        reject(new Error('state not loaded'));
                     }
-                    resolve('state loaded');
                 });
             });
         };

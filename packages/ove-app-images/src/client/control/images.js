@@ -9,9 +9,9 @@ initControl = function (data) {
         for (const e of Constants.OSD_MONITORED_EVENTS) {
             context.osd.addHandler(e, sendViewportDetails);
         }
-    });
-    context.isInitialized = true;
-    sendViewportDetails();
+        context.isInitialized = true;
+        sendViewportDetails();
+    }).catch(console.error);
 };
 
 sendViewportDetails = function () {

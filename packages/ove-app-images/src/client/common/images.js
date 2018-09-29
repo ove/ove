@@ -11,12 +11,17 @@ $(function () {
 
 loadOSD = function (config) {
     // Returns a promise such that subsequent tasks can happen following this.
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
         config.id = Constants.CONTENT_DIV.substring(1);
         config.prefixUrl = '/images/';
         config.animationTime = 0;
-        window.ove.context.osd = window.OpenSeadragon(config);
-        window.ove.context.osd.clearControls();
-        resolve('OSD loaded');
+        try {
+            window.ove.context.osd = window.OpenSeadragon(config);
+            window.ove.context.osd.clearControls();
+            resolve('OSD loaded');
+        } catch (e) {
+            console.error(e);
+            reject(new Error('OSD failed to load'));
+        }
     });
 };

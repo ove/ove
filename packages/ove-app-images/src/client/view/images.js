@@ -24,7 +24,7 @@ updateImage = function () {
             setTimeout(function () {
                 setInterval(setPosition, Constants.OSD_POSITION_UPDATE_FREQUENCY);
             }, Constants.OSD_POST_LOAD_WAIT_TIME);
-        });
+        }).catch(console.error);
     } else {
         setPosition();
     }

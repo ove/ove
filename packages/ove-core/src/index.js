@@ -404,19 +404,16 @@ app.ws('/', function (s) {
         if (m.appId === Constants.APP_NAME && m.message.action === Constants.Action.READ) {
             if (m.sectionId === undefined) {
                 sections.forEach(function (section, sectionId) {
-                    if (section) {
-                        wss.clients.forEach(function (c) {
-                            if (c.readyState === Constants.WEBSOCKET_READY) {
-                                // Sections are created on the browser and then the application is deployed after a
-                                // short delay. This will ensure proper frame sizes.
-                                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
-                                if (section.app) {
-                                    setTimeout(function () {
-                                        c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
-                                    }, Constants.SECTION_UPDATE_DELAY);
-                                }
-                            }
-                        });
+                    // We respond only to the sender and only if a section exists.
+                    if (section && s.readyState === Constants.WEBSOCKET_READY) {
+                        // Sections are created on the browser and then the application is deployed after a
+                        // short delay. This will ensure proper frame sizes.
+                        s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
+                        if (section.app) {
+                            setTimeout(function () {
+                                s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
+                            }, Constants.SECTION_UPDATE_DELAY);
+                        }
                     }
                 });
             } else {
@@ -425,6 +422,7 @@ app.ws('/', function (s) {
         // All other messages
         } else {
             wss.clients.forEach(function (c) {
+                // We respond to every socket but not to the sender
                 if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
                     if (DEBUG) {
                         console.log('sending message to socket: ' + c.id);

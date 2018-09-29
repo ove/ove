@@ -92,8 +92,12 @@ beginInitialization = function () {
                 const p = window.ove.state.current.position;
                 initControl({ center: p.center, resolution: p.resolution, zoom: p.zoom, scaled: true });
             } else {
+                // There could be a situation where a current state exists but without a position.
                 OVE.Utils.initControlOnDemand(Constants.DEFAULT_STATE_NAME, initControl);
             }
+        }).catch(function () {
+            // If the promise is rejected, that means no current state is existing.
+            OVE.Utils.initControlOnDemand(Constants.DEFAULT_STATE_NAME, initControl);
         });
     });
 };

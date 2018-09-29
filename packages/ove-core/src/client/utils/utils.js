@@ -45,7 +45,8 @@ function OVEUtils () {
         var shouldSetupCanvas = arguments.length > 2;
         $(document).on(OVE.Event.LOADED, function () {
             if (!window.ove.context.isInitialized) {
-                window.ove.state.load().then(loadContentMethod);
+                //-- Ignore promise rejection, as it is expected if no state exists.     --//
+                window.ove.state.load().then(loadContentMethod).catch(function (_err) { });
             }
             if (shouldSetupCanvas) {
                 setupCanvasMethod();
