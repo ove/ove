@@ -1,5 +1,7 @@
 // @CONSTANTS
 
+const log = OVE.Utils.Logger(Constants.APP_NAME);
+
 $(function () {
     // This is what happens first. After OVE is loaded, the viewer will be initialized
     $(document).ready(function () {
@@ -82,6 +84,6 @@ updateSections = function (m) {
             }
             break;
         default:
-            console.warn('Ignoring unknown action: ' + m.action);
+            log.warn('Ignoring unknown action:', m.action);
     }
 };

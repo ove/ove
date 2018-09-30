@@ -1,6 +1,7 @@
 initControl = function (data) {
     const context = window.ove.context;
     context.isInitialized = false;
+    log.debug('Application is initialized:', window.ove.context.isInitialized);
 
     const l = window.ove.layout;
     OVE.Utils.resizeController('.map, .outer');
@@ -17,6 +18,7 @@ initControl = function (data) {
         window.ove.state.current.enabledLayers = enabledLayers;
         // Make enabled layers visible.
         window.ove.state.current.enabledLayers.forEach(function (e) {
+            log.debug('Setting visible for layer:', e);
             context.layers[e].setVisible(true);
         });
         initMap({
@@ -31,7 +33,9 @@ initControl = function (data) {
             enableRotation: false
         });
         // We force the setting of the zoom.
-        context.map.getView().setZoom(parseInt(data.zoom));
+        const zoom = parseInt(data.zoom);
+        log.debug('Setting zoom to:', zoom);
+        context.map.getView().setZoom(zoom);
         uploadMapPosition();
         context.isInitialized = true;
         // Handlers for OpenLayers events.
@@ -41,6 +45,7 @@ initControl = function (data) {
             } else {
                 context.map.getView().on(e, changeEvent);
             }
+            log.debug('Registering OpenLayers handler:', e);
         }
     });
 };
@@ -53,6 +58,7 @@ uploadMapPosition = function () {
     const resolution = +(context.map.getView().getResolution()) /
         Math.sqrt(window.ove.layout.section.w * window.ove.layout.section.h / (size[0] * size[1]));
     if (topLeft === null || bottomRight === null) {
+        log.debug('Waiting to get coordinates from pixels');
         // This method will loop until the top-left and bottom-right can be calculated.
         setTimeout(uploadMapPosition, 70);
     } else {
@@ -74,6 +80,7 @@ uploadMapPosition = function () {
         if (!window.ove.state.current.position ||
             !OVE.Utils.JSON.equals(position, window.ove.state.current.position)) {
             window.ove.state.current.position = position;
+            log.debug('Broadcasting state with position:', position);
             OVE.Utils.broadcastState();
         }
     }
@@ -82,6 +89,7 @@ uploadMapPosition = function () {
 changeEvent = function () {
     // We need to reset center if we change zoom-level as the map resizes itself.
     setTimeout(function () {
+        log.debug('Resetting center of map');
         window.ove.context.map.getView().setCenter(window.ove.context.map.getView().getCenter());
     }, Constants.OL_CHANGE_CENTER_AFTER_UPDATE_WAIT_TIME);
     uploadMapPosition();
@@ -89,17 +97,23 @@ changeEvent = function () {
 
 beginInitialization = function () {
     $(document).on(OVE.Event.LOADED, function () {
+        log.debug('Invoking OVE.Event.Loaded handler');
         // The maps controller can pre-load an existing state and continue navigation
         // from that point onwards and does not reset what's already loaded.
         window.ove.state.load().then(function () {
             if (window.ove.state.current.position) {
                 const p = window.ove.state.current.position;
-                initControl({ center: p.center, resolution: p.resolution, zoom: p.zoom, scaled: true });
+                log.debug('Successfully loaded state and found position');
+                const data = { center: p.center, resolution: p.resolution, zoom: p.zoom, scaled: true };
+                log.debug('Initializing controller with config:', data);
+                initControl(data);
             } else {
+                log.debug('State loaded successfully, but position details not set - loading default state');
                 // There could be a situation where a current state exists but without a position.
                 OVE.Utils.initControlOnDemand(Constants.DEFAULT_STATE_NAME, initControl);
             }
         }).catch(function () {
+            log.debug('State load failed - loading default state');
             // If the promise is rejected, that means no current state is existing.
             OVE.Utils.initControlOnDemand(Constants.DEFAULT_STATE_NAME, initControl);
         });

@@ -9,6 +9,8 @@
 function OVE (appId) {
     // @CONSTANTS
 
+    const log = OVE.Utils.Logger('OVE');
+
     //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
     //-- with or without the scheme (useful for opening WebSockets).                             --//
     const getHostName = function (withScheme) {
@@ -32,28 +34,23 @@ function OVE (appId) {
         //-- Socket init code --//
         const getSocket = function (url) {
             __private.ws = new WebSocket(url);
-            __private.ws.addEventListener('error', console.error);
+            __private.ws.addEventListener('error', log.error);
             __private.ws.addEventListener('open', function () {
-                if (__DEBUG__) {
-                    console.log('websocket connection made with ' + url);
-                }
+                log.debug('Websocket connection made with:', url);
             });
             __private.ws.addEventListener('message', function (m) {
                 const data = JSON.parse(m.data);
-                if (__DEBUG__) {
-                    //-- We want to print the time corresponding to the local timezone based on the locale  --//
-                    console.log(JSON.stringify(data));
-                }
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
                 if (data.appId === __private.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
+                    if (__DEBUG__) {
+                        log.trace('Reading message:', JSON.stringify(data));
+                    }
                     onMessage(data.message);
                 }
             });
             __private.ws.addEventListener('close', function () {
-                if (__DEBUG__) {
-                    console.warn('lost websocket connection attempting to reconnect');
-                }
+                log.warn('Lost websocket connection attempting to reconnect');
                 //-- If the socket is closed, we try to refresh it. This fixes frozen pages after a restart --//
                 setTimeout(function () { getSocket(url); }, Constants.SOCKET_REFRESH_DELAY);
             });
@@ -79,11 +76,14 @@ function OVE (appId) {
                 }, Constants.SOCKET_READY_DELAY);
             }).then(function () {
                 //-- The same code works for the OVE core viewer (which has no sectionId) and OVE core apps --//
+                let data;
                 if (__private.sectionId) {
-                    __private.ws.send(JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message }));
+                    data = JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message });
                 } else {
-                    __private.ws.send(JSON.stringify({ appId: targetAppId, message: message }));
+                    data = JSON.stringify({ appId: targetAppId, message: message });
                 }
+                log.trace('Sending message:', data);
+                __private.ws.send(data);
             });
         };
     };
@@ -95,18 +95,14 @@ function OVE (appId) {
         __self.layout = {};
         const fetchSection = function (sectionId) {
             if (sectionId) {
-                if (__DEBUG__) {
-                    console.log('requesting details of section: ' + sectionId);
-                }
+                log.debug('Requesting details of section:', sectionId);
                 fetch(getHostName(true) + '/section/' + sectionId)
                     .then(function (r) { return r.text(); }).then(function (text) {
                         const section = JSON.parse(text);
                         __self.layout.section = { w: section.w, h: section.h };
                         __self.state.name = OVE.Utils.getQueryParam('state', section.state);
                         __private.sectionId = section.id;
-                        if (__DEBUG__) {
-                            console.log('got details from section: ' + section.id);
-                        }
+                        log.debug('Got details from section:', section.id);
                         //-- We wait for section information to be available before announcing OVE loaded   --//
                         $(document).trigger(OVE.Event.LOADED);
                     });
@@ -129,7 +125,12 @@ function OVE (appId) {
         }
         const client = id.substr(id.lastIndexOf('-') + 1);
         const space = id.substr(0, id.lastIndexOf('-'));
-
+        if (sectionId) {
+            log.info('Running OVE for section:', sectionId, ', client:', client, ', space:', space);
+        } else {
+            log.info('Running OVE for client:', client, ', space:', space);
+        }
+        log.debug('OVE instance UUID:', __self.context.uuid);
         //-- call APIs /clients or /client/{sectionId}  --//
         fetch(getHostName(true) + '/client' + (sectionId ? '/' + sectionId : 's'))
             .then(function (r) { return r.text(); }).then(function (text) {
@@ -144,17 +145,23 @@ function OVE (appId) {
     const OVEState = function (__private) {
         //-- State can be cached/loaded at an app-level --//
         this.cache = function (url) {
-            $.ajax({ url: url || (__private.sectionId + '/state'), type: 'POST', data: JSON.stringify(this.current), contentType: 'application/json' });
+            const endpoint = url || (__private.sectionId + '/state');
+            const currentState = JSON.stringify(this.current);
+            log.debug('Sending request to URL:', endpoint, ', state:', currentState);
+            $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
             let __self = this;
             return new Promise(function (resolve, reject) {
-                $.get(url || (__private.sectionId + '/state')).done(function (state) {
+                const endpoint = url || (__private.sectionId + '/state');
+                $.get(endpoint).done(function (state) {
                     if (state) {
                         __self.current = state;
-                        resolve('state loaded');
+                        log.debug('Got response from URL:', endpoint, ', state:', state);
+                        OVE.Utils.logThenResolve(log.debug, resolve, 'state loaded');
                     } else {
-                        reject(new Error('state not loaded'));
+                        //-- Rejection is handled similar to a resolution, since this is expected --//
+                        OVE.Utils.logThenResolve(log.debug, reject, 'state not loaded');
                     }
                 });
             });
@@ -173,14 +180,7 @@ function OVE (appId) {
             let r = Math.random() * 16 | 0;
             let v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
-        }),
-
-        //-- The identifier that was provided when creating OVE is stored on the context as appId.--//
-        //-- This is used by most utility functions such as logging. This can be overridden after --//
-        //-- initialization of OVE. However, all internal logging within OVE will be using the    --//
-        //-- __private.appId variable, which cannot be overridden without creating a new instance --//
-        //-- of OVE - which is enforced by design.                                                --//
-        appId: __private.appId
+        })
     };
 
     this.socket = new OVESocket(__private);

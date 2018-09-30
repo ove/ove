@@ -11,13 +11,15 @@
         {
             "files": [ "**/view/*.js" ],
             "globals": {
-                "initView": true
+                "initView": true,
+                "log": true
             }
         },
         {
             "files": [ "**/control/*.js" ],
             "globals": {
-                "initControl": true
+                "initControl": true,
+                "log": true
             }
         },
         {

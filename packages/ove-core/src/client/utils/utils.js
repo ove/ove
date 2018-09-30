@@ -17,6 +17,8 @@ function OVEUtils () {
     this.Logger = function (name) {
         return new OVELogger(name);
     };
+    //-- Instance of logger for the use of OVE.Utils            --//
+    const log = this.Logger('OVEUtils');
 
     function OVELogger (name) {
         //-- Constants for log labels corresponding to levels.  --//
@@ -67,14 +69,13 @@ function OVEUtils () {
                     '.' + (d.getMilliseconds() + '').padStart(3, '0') + ' $&');
             }(new Date()));
             //-- Each logger can have its own name. If this is  --//
-            //-- not provided, ove.context.appId is used. All   --//
-            //-- logs in OVE core always use ove.context.appId. --//
-            const loggerName = __private.name || (window.ove ? window.ove.context.appId : UNKNOWN_APP_ID);
+            //-- not provided, it will default to Unknown.      --//
+            const loggerName = __private.name || UNKNOWN_APP_ID;
             return [('%c[' + logLevel + ']').padStart(LOG_PREFIX_WIDTH), getLogLabelCSS(logLevel), time, '-',
                 loggerName.padEnd(APP_ID_WIDTH), ':'].concat(Object.values(args));
         };
 
-        //-- All log functions accept any number of arguments --//
+        //-- All log functions accept any number of arguments   --//
         this.trace = function () {
             if (__DEBUG__) {
                 console.log.apply(console, getArgsToLog(LogPrefix.TRACE, arguments));
@@ -107,8 +108,13 @@ function OVEUtils () {
     //-----------------------------------------------------------//
     //--                     State Updates                     --//
     //-----------------------------------------------------------//
+
+    //-- Debug logs related to State Updates are produced by OVE core and therefore not  --//
+    //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
         if (arguments.length > 0) {
+            //-- Sometimes, state is not the only message that is broadcasted and will   --//
+            //-- therefore the application may want to broadcast it in a specific format.--//
             window.ove.socket.send(message);
         } else {
             window.ove.socket.send(window.ove.state.current);
@@ -131,12 +137,14 @@ function OVEUtils () {
     //-- not wait for OVE to load.                                                       --//
     this.initControlOnDemand = function (defaultState, initMethod) {
         const state = window.ove.state.name || defaultState;
+        log.info('Initializing controller with state:', state);
         //-- The default state URL is used here. --//
-        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initMethod);
+        $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initMethod).catch(log.error);
     };
 
     this.initControl = function (defaultState, initMethod) {
         $(document).on(OVE.Event.LOADED, function () {
+            log.debug('Invoking OVE.Event.Loaded handler');
             __self.initControlOnDemand(defaultState, initMethod);
         });
     };
@@ -150,11 +158,13 @@ function OVEUtils () {
         initMethod();
         const shouldSetupCanvas = arguments.length > 2;
         $(document).on(OVE.Event.LOADED, function () {
+            log.debug('Invoking OVE.Event.Loaded handler');
             if (!window.ove.context.isInitialized) {
                 //-- Ignore promise rejection, as it is expected if no state exists.     --//
                 window.ove.state.load().then(loadContentMethod).catch(function (_err) { });
             }
             if (shouldSetupCanvas) {
+                log.debug('Running post-initialization canvas setup operation');
                 setupCanvasMethod();
             }
         });
@@ -186,10 +196,11 @@ function OVEUtils () {
             height = maxHeight;
             width = maxHeight * l.section.w / l.section.h;
         }
+        log.debug('Resizing controller with height:', height, ', width:', width);
         $(contentDivName).css({ width: width, height: height });
     };
 
-    //-- Log methods need to be something like log.debug or log.info.              --//
+    //-- Log methods need to be something like log.debug or log.info.                    --//
     this.logThenResolve = function (logMethod, resolve, message) {
         logMethod(message);
         resolve(message);

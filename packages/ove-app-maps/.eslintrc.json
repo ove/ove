@@ -12,6 +12,7 @@
             "files": [ "**/view/*.js" ],
             "globals": {
                 "initView": true,
+                "log": true,
                 "updateMap": true
             }
         },
@@ -19,6 +20,7 @@
             "files": [ "**/control/*.js" ],
             "globals": {
                 "initControl": true,
+                "log": true,
                 "uploadMapPosition": true
             }
         },

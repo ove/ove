@@ -12,6 +12,7 @@
             "files": [ "**/view/*.js" ],
             "globals": {
                 "initView": true,
+                "log": true,
                 "OpenSeadragon": true,
                 "setPosition": true,
                 "updateImage": true
@@ -22,6 +23,7 @@
             "globals": {
                 "changeEvent": true,
                 "initControl": true,
+                "log": true,
                 "sendViewportDetails": true
             }
         },
