@@ -1,6 +1,6 @@
 const { Constants } = require('./client/constants/maps');
 const path = require('path');
-const { express, app, config } = require('@ove/ove-app-base')(__dirname, Constants.APP_NAME);
+const { express, app, config } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
 const request = require('request');
 const server = require('http').createServer(app);
 

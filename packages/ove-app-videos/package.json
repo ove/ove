@@ -13,7 +13,7 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "@ove/ove-app-base": "^0.1.0",
+    "@ove/ove-lib-appbase": "^0.1.0",
     "http-status-codes": "1.3.0",
     "ws": "6.0.0"
   }

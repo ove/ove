@@ -1,6 +1,6 @@
 const { Constants } = require('./client/constants/charts');
 const path = require('path');
-const { express, app, nodeModules } = require('@ove/ove-app-base')(__dirname, Constants.APP_NAME);
+const { express, app, nodeModules } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
 const server = require('http').createServer(app);
 
 for (const mod of ['vega', 'vega-lite', 'vega-embed']) {

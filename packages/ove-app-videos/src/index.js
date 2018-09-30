@@ -1,6 +1,6 @@
 const { Constants } = require('./client/constants/videos');
 const HttpStatus = require('http-status-codes');
-const { app } = require('@ove/ove-app-base')(__dirname, Constants.APP_NAME);
+const { app } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
 const server = require('http').createServer(app);
 
 var ws;
