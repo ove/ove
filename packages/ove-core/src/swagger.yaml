@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). The OVE core provides functionality for CRUD operations on sections and obtaining details of clients."
+  description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). The OVE Core provides functionality for CRUD operations on sections and obtaining details of clients."
   version: "@VERSION"
   title: "OVE Core"
   contact:

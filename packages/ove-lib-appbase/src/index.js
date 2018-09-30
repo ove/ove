@@ -12,68 +12,77 @@ module.exports = function (baseDir, appName) {
         constants: path.join(baseDir, 'client', 'constants')
     };
     const { Constants, Utils } = require('@ove/ove-lib-utils')(app, appName, dirs);
+    const log = Utils.Logger(appName);
 
-    app.use(express.json());
+    log.debug('Starting application:', appName);
+    log.debug('Application directories:', JSON.stringify(dirs));
+    log.debug('Using CORS middleware');
     app.use(cors());
+    log.debug('Using Express JSON middleware');
+    app.use(express.json());
 
     module.exports.express = express;
     module.exports.app = app;
     module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), Constants.UTF8));
     module.exports.nodeModules = dirs.nodeModules;
+    module.exports.log = log;
 
     /**************************************************************
                APIs Exposed by all Apps (required by OVE)
     **************************************************************/
     var state = [];
 
-    const sendMessage = function (res, status, msg) {
-        res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
-    };
-
-    // We don't want to see browser errors, so we send an empty success response in some cases.
-    const sendEmptySuccess = function (res) {
-        sendMessage(res, HttpStatus.OK, JSON.stringify({}));
-    };
-
     const createStateByName = function (req, res) {
+        log.info('Creating named state:', req.params.name);
+        if (Constants.Logging.DEBUG) {
+            log.debug('Got state configuration:', JSON.stringify(req.body.app.states));
+        }
         module.exports.config.states[req.params.name] = req.body;
-        sendEmptySuccess(res);
+        Utils.sendEmptySuccess(res);
     };
 
     const readStateByName = function (req, res) {
         const namedState = module.exports.config.states[req.params.name];
         if (!namedState) {
-            sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
+            log.error('Invalid state name:', req.params.name);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
         } else {
-            sendMessage(res, HttpStatus.OK, JSON.stringify(namedState));
+            log.debug('Reading state by name:', req.params.name);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(namedState));
         }
     };
 
     const readState = function (_req, res) {
         if (state.length > 0) {
-            sendMessage(res, HttpStatus.OK, JSON.stringify(state));
+            log.debug('Reading state configuration');
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state));
         } else {
+            log.debug('No state configurations found');
             res.sendStatus(HttpStatus.NO_CONTENT);
         }
     };
 
     const readStateOfSection = function (req, res) {
         if (state[req.params.id]) {
-            sendMessage(res, HttpStatus.OK, JSON.stringify(state[req.params.id]));
+            log.debug('Reading state configuration for section:', req.params.id);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state[req.params.id]));
         } else {
+            log.debug('No state configurations found for section:', req.params.id);
             res.sendStatus(HttpStatus.NO_CONTENT);
         }
     };
 
     const updateStateOfSection = function (req, res) {
+        log.debug('Updating state of section:', req.params.id);
         state[req.params.id] = req.body;
-        sendEmptySuccess(res);
+        Utils.sendEmptySuccess(res);
     };
 
     const flush = function (_req, res) {
+        log.debug('Flushing application');
         state = [];
         module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), Constants.UTF8));
-        sendEmptySuccess(res);
+        Utils.sendEmptySuccess(res);
     };
 
     app.post('/state/:name', createStateByName);

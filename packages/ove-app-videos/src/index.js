@@ -1,11 +1,12 @@
 const { Constants } = require('./client/constants/videos');
 const HttpStatus = require('http-status-codes');
-const { app } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
+const { app, log } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
 const server = require('http').createServer(app);
 
 var ws;
 var bufferStatus = [];
 setTimeout(function () {
+    log.debug('Establishing WebSocket connection with:', 'ws://' + process.env.OVE_HOST);
     ws = new (require('ws'))('ws://' + process.env.OVE_HOST);
     ws.on('message', function (msg) {
         let m = JSON.parse(msg);
@@ -52,6 +53,11 @@ let operationsList = Constants.Operation.PLAY + '|' + Constants.Operation.PAUSE 
 app.get('/operation/:name(' + operationsList + ')', function (req, res) {
     let name = req.params.name;
     let sectionId = req.query.oveSectionId;
+    if (sectionId) {
+        log.info('Performing operation:', name, ', on section:', sectionId);
+    } else {
+        log.info('Performing operation:', name);
+    }
     // If this is a buffer status check and depending on whether a sectionId is provided, below
     // code checks whether buffering is in progress.
     if (name === Constants.Operation.BUFFER_STATUS) {
@@ -92,4 +98,6 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
     }
 });
 
-server.listen(process.env.PORT || 8080);
+const port = process.env.PORT || 8080;
+server.listen(port);
+log.info(Constants.APP_NAME, 'application started, port:', port);

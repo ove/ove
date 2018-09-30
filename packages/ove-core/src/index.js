@@ -15,11 +15,14 @@ const dirs = {
     rootPage: path.join(__dirname, 'blank.html')
 };
 const { Constants, Utils } = require('@ove/ove-lib-utils')(app, 'core', dirs);
+const log = Utils.Logger('OVE');
 const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
 
-const __DEBUG__ = true;
-
+log.debug('Starting OVE Core');
+log.debug('Application directories:', JSON.stringify(dirs));
+log.debug('Using CORS middleware');
 app.use(cors());
+log.debug('Using Express JSON middleware');
 app.use(express.json());
 
 /**************************************************************
@@ -36,6 +39,7 @@ app.use(express.json());
         // method is introduced by OVE, so it is impossible for the WebSocket to have it unless
         // OVE introduced it.
         if (!Object.getPrototypeOf(i).safeSend) {
+            log.debug('Extending Prototype of WebSocket');
             // The safeSend method simply wraps the send method with a try-catch. We could avoid
             // doing this and introduce a try-catch whenever we send a message to introduce a
             // utility. This approach is a bit neater than that, since the code is easier to
@@ -45,7 +49,7 @@ app.use(express.json());
                     this.send(msg);
                 } catch (e) {
                     if (this.readyState === Constants.WEBSOCKET_READY) {
-                        console.error('error sending message' + e.message);
+                        log.error('Error sending message:', e.message);
                     }
                     // ignore all other errors, since there is no value in recording them.
                 }
@@ -58,28 +62,30 @@ app.use(express.json());
 /**************************************************************
                       OVE Client Library
 **************************************************************/
-app.get('/ove.js', function (req, res) {
+const generateOVEClientLibrary = function () {
+    log.debug('Generating OVE.js');
     // OVE.js is a combination of client/ove.js client/utils/utils.js and client/utils/constants.js
     let text = fs.readFileSync(path.join(__dirname, 'client', 'ove.js'), Constants.UTF8);
     text += fs.readFileSync(path.join(__dirname, 'client', 'utils', 'utils.js'), Constants.UTF8);
-    const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
-    const constants = fs.readFileSync(constantsPath, Constants.UTF8).replace('exports.Constants = Constants;', '');
     // Important thing to note here is that the output is minified using UglifyJS. This library
     // only supports ES5. Therefore some newer JS capabilities may not work. And, if there was a
     // newer JS capability used in any of the files included in OVE.js, UglifyJS will produce an
     // empty file. This can be observed by reviewing corresponding errors on the browser.
-    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(text
+    return uglify.minify(text
         // Inject constants
-        .replace(/\/\/ @CONSTANTS/, constants)
-        .replace(Constants.RegExp.DEBUG, __DEBUG__)
+        .replace(/\/\/ @CONSTANTS/g, 'var Constants = ' + JSON.stringify(Constants) + ';')
         .replace(Constants.RegExp.Annotation.VERSION, pjson.version)
         .replace(Constants.RegExp.Annotation.LICENSE, pjson.license)
         .replace(Constants.RegExp.Annotation.AUTHOR, pjson.author)
         // Replace all let/const with var for ES5 compliance
         .replace(/(let|const)/g, 'var')
         // Remove all comments matching pattern
-        .replace(Constants.RegExp.ES5_COMMENT_PATTERN, ''), { output: { comments: true } }).code
-    );
+        .replace(Constants.RegExp.ES5_COMMENT_PATTERN, ''), { output: { comments: true } }).code;
+};
+// Cache OVE.js to avoid overheads in repeatedly generating on a per-request basis.
+const oveJS = generateOVEClientLibrary();
+app.get('/ove.js', function (_req, res) {
+    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(oveJS);
 });
 
 /**************************************************************
@@ -92,34 +98,30 @@ Utils.registerRoutesForContent();
 **************************************************************/
 var sections = [];
 
-const sendMessage = function (res, status, msg) {
-    res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
-};
-
-// We don't want to see browser errors, so we send an empty success response in some cases.
-const sendEmptySuccess = function (res) {
-    sendMessage(res, HttpStatus.OK, JSON.stringify({}));
-};
-
 const listClients = function (_req, res) {
-    sendMessage(res, HttpStatus.OK, JSON.stringify(clients));
+    log.debug('Producing a list of clients');
+    Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(clients));
 };
 
 const listClientById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
-        sendEmptySuccess(res);
+        log.debug('Unable to produce list of clients for section id:', sectionId);
+        Utils.sendEmptySuccess(res);
     } else {
-        sendMessage(res, HttpStatus.OK, JSON.stringify(sections[sectionId].clients));
+        log.debug('Producing a list of clients for section id:', sectionId);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(sections[sectionId].clients));
     }
 };
 
 // Creates an individual section
 const createSection = function (req, res) {
     if (!req.body.space || !clients[req.body.space]) {
-        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+        log.error('Invalid Space', 'request:', JSON.stringify(req.body));
+        Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
     } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
-        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+        log.error('Invalid Dimensions', 'request:', JSON.stringify(req.body));
+        Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
     } else {
         let section = { w: req.body.w, h: req.body.h, clients: {} };
         section.clients[req.body.space] = [];
@@ -183,15 +185,22 @@ const createSection = function (req, res) {
                 section.clients[req.body.space].push({});
             }
         });
+        log.debug('Generated client configuration for new section');
 
         // Deploy an App into a section
         let sectionId = sections.length;
         if (req.body.app) {
-            section.app = { 'url': req.body.app.url.replace(/\/$/, '') };
+            const url = req.body.app.url.replace(/\/$/, '');
+            section.app = { 'url': url };
+            log.debug('Got URL for app:', url);
             if (req.body.app.states) {
+                if (Constants.Logging.DEBUG) {
+                    log.debug('Got state configuration for app:', JSON.stringify(req.body.app.states));
+                }
                 // Cache or load states if they were provided as a part of the create request.
                 if (req.body.app.states.cache) {
                     Object.keys(req.body.app.states.cache).forEach(function (name) {
+                        log.debug('Caching new named state for future use:', name);
                         request.post(section.app.url + '/state/' + name, {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.cache[name]
@@ -202,7 +211,9 @@ const createSection = function (req, res) {
                     // Either a named state or an in-line state configuration can be loaded.
                     if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
                         section.app.state = req.body.app.states.load;
+                        log.debug('Loading existing named state:', section.app.state);
                     } else {
+                        log.debug('Loading state configuration');
                         request.post(section.app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.load
@@ -228,10 +239,9 @@ const createSection = function (req, res) {
                 }
             }
         });
-        if (__DEBUG__) {
-            console.log('active sections: ' + sections.length);
-        }
-        sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
+        log.info('Successfully created new section:', sectionId);
+        log.debug('Existing sections (active/deleted):', sections.length);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     }
 };
 
@@ -240,31 +250,33 @@ const deleteSections = function (_req, res) {
     while (sections.length !== 0) {
         let section = sections.pop();
         if (section.app) {
+            log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/flush');
         }
     }
-    if (__DEBUG__) {
-        console.log('active sections: ' + sections.length);
-    }
+    log.info('Deleting all sections');
+    log.debug('Existing sections (active/deleted):', sections.length);
     wss.clients.forEach(function (c) {
         if (c.readyState === Constants.WEBSOCKET_READY) {
             c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
         }
     });
-    sendEmptySuccess(res);
+    Utils.sendEmptySuccess(res);
 };
 
 // Fetches details of an individual section
 const readSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId]) {
-        sendEmptySuccess(res);
+        log.debug('Unable to read configuration for section id:', sectionId);
+        Utils.sendEmptySuccess(res);
     } else {
         let section = { id: sectionId, w: sections[sectionId].w, h: sections[sectionId].h };
         if (sections[sectionId].app && sections[sectionId].app.state) {
             section.state = sections[sectionId].app.state;
         }
-        sendMessage(res, HttpStatus.OK, JSON.stringify(section));
+        log.debug('Successfully read configuration for section id:', sectionId);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
     }
 };
 
@@ -272,20 +284,28 @@ const readSectionById = function (req, res) {
 const updateSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
-        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        log.error('Invalid Section Id:', sectionId);
+        Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     } else {
         // Redeploys an App into a section
         let commands = [];
         if (sections[sectionId].app) {
+            log.debug('Deleting existing application configuration');
             delete sections[sectionId].app;
             commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId } }));
         }
         if (req.body.app) {
-            sections[sectionId].app = { 'url': req.body.app.url.replace(/\/$/, '') };
+            const url = req.body.app.url.replace(/\/$/, '');
+            sections[sectionId].app = { 'url': url };
+            log.debug('Got URL for app:', url);
             if (req.body.app.states) {
+                if (Constants.Logging.DEBUG) {
+                    log.debug('Got state configuration for app:', JSON.stringify(req.body.app.states));
+                }
                 // Cache or load states if they were provided as a part of the update request.
                 if (req.body.app.states.cache) {
                     Object.keys(req.body.app.states.cache).forEach(function (name) {
+                        log.debug('Caching new named state for future use:', name);
                         request.post(sections[sectionId].app.url + '/state/' + name, {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.cache[name]
@@ -296,7 +316,9 @@ const updateSectionById = function (req, res) {
                     // Either a named state or an in-line state configuration can be loaded.
                     if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
                         sections[sectionId].app.state = req.body.app.states.load;
+                        log.debug('Loading existing named state:', sections[sectionId].app.state);
                     } else {
+                        log.debug('Loading state configuration');
                         request.post(sections[sectionId].app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.load
@@ -315,7 +337,8 @@ const updateSectionById = function (req, res) {
                 });
             }
         });
-        sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
+        log.info('Successfully updated section:', sectionId);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     }
 };
 
@@ -323,10 +346,12 @@ const updateSectionById = function (req, res) {
 const deleteSectionById = function (req, res) {
     let sectionId = req.params.id;
     if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
-        sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        log.error('Invalid Section Id:', sectionId);
+        Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     } else {
         let section = sections[sectionId];
         if (section.app) {
+            log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/flush');
         }
         delete sections[sectionId];
@@ -336,7 +361,8 @@ const deleteSectionById = function (req, res) {
                 c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: sectionId } }));
             }
         });
-        sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
+        log.info('Successfully updated section:', sectionId);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     }
 };
 
@@ -376,26 +402,25 @@ app.ws('/', function (s) {
                     }
                 });
             } else {
-                console.error('section information cannot be requested from within a section.');
+                log.error('Section information cannot be requested from within a section');
             }
         // All other messages
         } else {
             wss.clients.forEach(function (c) {
                 // We respond to every socket but not to the sender
                 if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
-                    if (__DEBUG__) {
-                        console.log('sending message to socket: ' + c.id);
-                    }
+                    log.trace('Sending message to socket:', c.id);
                     c.safeSend(msg);
                 }
             });
         }
     });
-    if (__DEBUG__) {
+    if (Constants.Logging.DEBUG || Constants.Logging.TRACE_SERVER) {
+        // Associate an ID for each WebSocket, which will subsequently be used when logging.
         s.id = wss.clients.size;
-        console.log('websocket connection established. Clients connected: ' + wss.clients.size);
+        log.debug('WebSocket connection established. Clients connected:', wss.clients.size);
     }
 });
 
 app.listen(process.env.PORT || 8080);
-console.log('OVE core started');
+log.info('OVE Core started');

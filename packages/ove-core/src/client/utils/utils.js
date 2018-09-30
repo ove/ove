@@ -2,6 +2,8 @@
 
 OVE.Utils = new OVEUtils();
 function OVEUtils () {
+    // @CONSTANTS
+
     let __self = this;
     //-----------------------------------------------------------//
     //--                   Utilities for JSON                  --//
@@ -57,7 +59,7 @@ function OVEUtils () {
                 case LogPrefix.FATAL:
                     return getCSSString('#FF0000', '#FFFFFF');
                 default:
-                    return '';
+                    //-- This should not happen since we use the enumeration. --//
             }
         };
 
@@ -77,27 +79,33 @@ function OVEUtils () {
 
         //-- All log functions accept any number of arguments   --//
         this.trace = function () {
-            if (__DEBUG__) {
+            if (Constants.Logging.TRACE_BROWSER) {
                 console.log.apply(console, getArgsToLog(LogPrefix.TRACE, arguments));
             }
         };
 
         this.debug = function () {
-            if (__DEBUG__) {
+            if (Constants.Logging.DEBUG) {
                 console.log.apply(console, getArgsToLog(LogPrefix.DEBUG, arguments));
             }
         };
 
         this.info = function () {
-            console.log.apply(console, getArgsToLog(LogPrefix.INFO, arguments));
+            if (Constants.Logging.INFO) {
+                console.log.apply(console, getArgsToLog(LogPrefix.INFO, arguments));
+            }
         };
 
         this.warn = function () {
-            console.warn.apply(console, getArgsToLog(LogPrefix.WARN, arguments));
+            if (Constants.Logging.WARN) {
+                console.warn.apply(console, getArgsToLog(LogPrefix.WARN, arguments));
+            }
         };
 
         this.error = function () {
-            console.error.apply(console, getArgsToLog(LogPrefix.ERROR, arguments));
+            if (Constants.Logging.ERROR) {
+                console.error.apply(console, getArgsToLog(LogPrefix.ERROR, arguments));
+            }
         };
 
         this.fatal = function () {
@@ -109,7 +117,7 @@ function OVEUtils () {
     //--                     State Updates                     --//
     //-----------------------------------------------------------//
 
-    //-- Debug logs related to State Updates are produced by OVE core and therefore not  --//
+    //-- Debug logs related to State Updates are produced by OVE Core and therefore not  --//
     //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
         if (arguments.length > 0 && message) {

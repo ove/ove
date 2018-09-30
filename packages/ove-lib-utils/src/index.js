@@ -3,6 +3,9 @@ const fs = require('fs');
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const yamljs = require('yamljs');
+const chalk = require('chalk');
+const dateFormat = require('dateformat');
+const HttpStatus = require('http-status-codes');
 const { Constants } = require('./constants');
 
 // A collection of utilities for OVE and OVE applications. It is generally
@@ -16,10 +19,116 @@ const { Constants } = require('./constants');
 //        3. The location of additional app-specific constants.js
 //        4. [optional] The location of the page to use as '/'
 function Utils (app, appName, dirs) {
+    /**************************************************************
+                           Utilities for JSON
+    **************************************************************/
+    this.JSON = {};
+    this.JSON.equals = function (param1, param2) {
+        return JSON.stringify(param1) === JSON.stringify(param2);
+    };
+
+    /**************************************************************
+                           Logging Functions
+    **************************************************************/
+    this.Logger = function (name) {
+        return new OVELogger(name);
+    };
+    // Instance of logger for the use of OVE.Utils
+    const log = this.Logger('OVEUtils');
+
+    function OVELogger (name) {
+        // Constants for log labels corresponding to levels.
+        const LogPrefix = {
+            TRACE: 'TRACE',
+            DEBUG: 'DEBUG',
+            INFO: 'INFO',
+            WARN: 'WARN',
+            ERROR: 'ERROR',
+            FATAL: 'FATAL'
+        };
+
+        const UNKNOWN_APP_ID = '__UNKNOWN__';
+        const APP_ID_WIDTH = 16;
+
+        // The logger name is stored for later use.
+        let __private = { name: name };
+
+        // Internal Utility function to get log labels
+        // This does not work on PM2
+        const getLogLabel = function (logLevel) {
+            switch (logLevel) {
+                case LogPrefix.TRACE:
+                    return chalk.bgHex('#808080').hex('#FFFAF0').bold;
+                case LogPrefix.DEBUG:
+                    return chalk.bgHex('#1E90FF').hex('#F8F8FF').bold;
+                case LogPrefix.INFO:
+                    return chalk.bgHex('#2E8B57').hex('#FFFAFA').bold;
+                case LogPrefix.WARN:
+                    return chalk.bgHex('#DAA520').hex('#FFFFF0').bold;
+                case LogPrefix.ERROR:
+                    return chalk.bgHex('#B22222').hex('#FFFAF0').bold;
+                case LogPrefix.FATAL:
+                    return chalk.bgHex('#FF0000').hex('#FFFFFF').bold;
+                default:
+                    // This should not happen since we use the enumeration.
+            }
+        };
+
+        // Internal Utility function to get logger arguments.
+        const getArgsToLog = function (logLevel, args) {
+            const time = dateFormat(new Date(), 'dd/mm/yyyy, h:MM:ss.l tt');
+            // Each logger can have its own name. If this is
+            // not provided, it will default to Unknown.
+            const loggerName = __private.name || UNKNOWN_APP_ID;
+            return [ (logLevel.length === 4 ? ' ' : '') + getLogLabel(logLevel)('[' + logLevel + ']'), time, '-',
+                loggerName.padEnd(APP_ID_WIDTH), ':'].concat(Object.values(args));
+        };
+
+        // All log functions accept any number of arguments
+        this.trace = function () {
+            if (Constants.Logging.TRACE_SERVER) {
+                console.log.apply(console, getArgsToLog(LogPrefix.TRACE, arguments));
+            }
+        };
+
+        this.debug = function () {
+            if (Constants.Logging.DEBUG) {
+                console.log.apply(console, getArgsToLog(LogPrefix.DEBUG, arguments));
+            }
+        };
+
+        this.info = function () {
+            if (Constants.Logging.INFO) {
+                console.log.apply(console, getArgsToLog(LogPrefix.INFO, arguments));
+            }
+        };
+
+        this.warn = function () {
+            if (Constants.Logging.WARN) {
+                console.warn.apply(console, getArgsToLog(LogPrefix.WARN, arguments));
+            }
+        };
+
+        this.error = function () {
+            if (Constants.Logging.ERROR) {
+                console.error.apply(console, getArgsToLog(LogPrefix.ERROR, arguments));
+            }
+        };
+
+        this.fatal = function () {
+            console.error.apply(console, getArgsToLog(LogPrefix.FATAL, arguments));
+        };
+    }
+
+    /**************************************************************
+                     Static Content/Docs Generation
+    **************************************************************/
     this.registerRoutesForContent = function () {
+        log.debug('Registering routes for content pages');
         const showRoot = !!dirs.rootPage;
         // If a rootPage parameter is provided, '/' will redirect to the rootPage.
         if (showRoot) {
+            log.debug('Got root page:', dirs.rootPage);
             app.get('/', function (_req, res) {
                 res.sendFile(dirs.rootPage);
             });
@@ -42,14 +151,6 @@ function Utils (app, appName, dirs) {
             switch (req.params.fileType) {
                 case 'js':
                     text = 'const Constants = ' + JSON.stringify(module.exports.Constants) + ';\n' + text;
-                    /* const fp = path.join(dirs.constants, (appName === 'core' ? 'constants' : appName) + '.js');
-                    if (fs.existsSync(fp)) {
-                        text = fs.readFileSync(fp, Constants.UTF8)
-                            // Remove export statement for use in web-browser.
-                            .replace('exports.Constants = Constants;', '')
-                            // Remove all comments matching pattern
-                            .replace(Constants.RegExp.ES5_COMMENT_PATTERN, '') + text;
-                    } */
                     cType = Constants.HTTP_CONTENT_TYPE_JS;
                     break;
                 case 'css':
@@ -77,6 +178,7 @@ function Utils (app, appName, dirs) {
     };
 
     this.buildAPIDocs = function (swaggerPath, packagePath, swaggerExtPath) {
+        log.debug('Building Swagger API documentation');
         // Swagger API documentation
         let swaggerDoc = (function (swagger, pjson) {
             swagger.info.title = swagger.info.title.replace(Constants.RegExp.Annotation.NAME, pjson.name);
@@ -106,13 +208,29 @@ function Utils (app, appName, dirs) {
         }
 
         app.use(Constants.SWAGGER_API_DOCS_CONTEXT, swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
+
             swaggerOptions: {
                 defaultModelsExpandDepth: -1
             }
         }));
     };
+
+    /**************************************************************
+                        Other Utility Functions
+    **************************************************************/
+    this.sendMessage = function (res, status, msg) {
+        res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
+    };
+
+    // We don't want to see browser errors, so we send an empty success response in some cases.
+    this.sendEmptySuccess = function (res) {
+        this.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    };
 }
 
+/**************************************************************
+                        Module Exports
+**************************************************************/
 module.exports = function (app, appName, dirs) {
     // Constants are defined as follows:
     //    1. System-wide within @ove/ove-lib-utils

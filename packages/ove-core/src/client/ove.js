@@ -36,14 +36,14 @@ function OVE (appId) {
             __private.ws = new WebSocket(url);
             __private.ws.addEventListener('error', log.error);
             __private.ws.addEventListener('open', function () {
-                log.debug('Websocket connection made with:', url);
+                log.debug('WebSocket connection made with:', url);
             });
             __private.ws.addEventListener('message', function (m) {
                 const data = JSON.parse(m.data);
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
                 if (data.appId === __private.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
-                    if (__DEBUG__) {
+                    if (Constants.Logging.TRACE_BROWSER) {
                         log.trace('Reading message:', JSON.stringify(data));
                     }
                     onMessage(data.message);
@@ -75,7 +75,7 @@ function OVE (appId) {
                     }
                 }, Constants.SOCKET_READY_DELAY);
             }).then(function () {
-                //-- The same code works for the OVE core viewer (which has no sectionId) and OVE core apps --//
+                //-- The same code works for the OVE Core viewer (which has no sectionId) and OVE Core Apps --//
                 let data;
                 if (__private.sectionId) {
                     data = JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message });

@@ -21,7 +21,6 @@ const Constants = {
                      Regular Expressions
 **************************************************************/
 Constants.RegExp = {
-    DEBUG: /__DEBUG__/g,
     OVE_TYPE: /__OVETYPE__/g,
     OVE_HOST: /__OVEHOST__/g,
     ES5_COMMENT_PATTERN: /\/\/--(.*?)--\/\//g // Pattern: //-- {comment} --//
@@ -35,6 +34,24 @@ Constants.Action = {
     READ: 'read',
     UPDATE: 'update',
     DELETE: 'delete'
+};
+
+Constants.Logging = {
+    // Enabling TRACE on the server will rapidly fill-up disk-space
+    TRACE_SERVER: (process && process.env && process.env.TRACE_SERVER) || false,
+    // Enabling TRACE on the browser will crowd the logs and may also have a slight impact performance
+    TRACE_BROWSER: (process && process.env && process.env.TRACE_BROWSER) || false,
+    // Enabling DEBUG on the server/browser will increase log volume (not recommended for production systems)
+    DEBUG: (process && process.env && (process.env.DEBUG ||
+        process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || false,
+
+    INFO: (process && process.env && (process.env.INFO || process.env.DEBUG ||
+        process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || true,
+    WARN: (process && process.env && (process.env.WARN || process.env.INFO || process.env.DEBUG ||
+        process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || true,
+    ERROR: (process && process.env && (process.env.ERROR ||
+        process.env.WARN || process.env.INFO || process.env.DEBUG ||
+        process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || true
 };
 
 Constants.RegExp.Annotation = {
