@@ -1,5 +1,3 @@
-// @CONSTANTS
-
 const log = OVE.Utils.Logger('OVE');
 
 $(function () {

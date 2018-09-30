@@ -63,7 +63,7 @@ function OVE (appId) {
         };
         this.send = function (message, appId) {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
-            const targetAppId = arguments.length > 1 ? appId : __private.appId;
+            const targetAppId = (arguments.length > 1 && appId) ? appId : __private.appId;
 
             //-- We always wait for the socket to be ready before broadcast. The same code blocks messages  --//
             //-- when a socket is temporarily closed.                                                       --//

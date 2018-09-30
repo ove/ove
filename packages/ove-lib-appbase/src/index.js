@@ -4,17 +4,22 @@ const express = require('express');
 const cors = require('cors');
 const HttpStatus = require('http-status-codes');
 const app = express();
-const swaggerUi = require('swagger-ui-express');
-const yamljs = require('yamljs');
 
 module.exports = function (baseDir, appName) {
+    const dirs = {
+        base: baseDir,
+        nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
+        constants: path.join(baseDir, 'client', 'constants')
+    };
+    const { Constants, Utils } = require('@ove/ove-lib-utils')(app, appName, dirs);
+
     app.use(express.json());
     app.use(cors());
 
     module.exports.express = express;
     module.exports.app = app;
-    module.exports.nodeModules = path.join(baseDir, '..', '..', '..', 'node_modules');
-    module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
+    module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), Constants.UTF8));
+    module.exports.nodeModules = dirs.nodeModules;
 
     /**************************************************************
                APIs Exposed by all Apps (required by OVE)
@@ -22,7 +27,7 @@ module.exports = function (baseDir, appName) {
     var state = [];
 
     const sendMessage = function (res, status, msg) {
-        res.status(status).set('Content-Type', 'application/json').send(msg);
+        res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
     };
 
     // We don't want to see browser errors, so we send an empty success response in some cases.
@@ -67,7 +72,7 @@ module.exports = function (baseDir, appName) {
 
     const flush = function (_req, res) {
         state = [];
-        module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), 'utf8'));
+        module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), Constants.UTF8));
         sendEmptySuccess(res);
     };
 
@@ -78,82 +83,19 @@ module.exports = function (baseDir, appName) {
     app.post('/:id/state', updateStateOfSection);
     app.post('/flush', flush);
 
-    const swaggerPath = path.join(baseDir, '..', 'node_modules', '@ove', 'ove-lib-appbase', 'lib', 'swagger.yaml');
-    const swaggerExtPath = path.join(baseDir, 'swagger-extensions.yaml');
-    const packagePath = path.join(baseDir, '..', 'package.json');
     // Swagger API documentation
-    let swaggerDoc = (function (swagger, pjson) {
-        swagger.info.title = swagger.info.title.replace('@NAME', pjson.name);
-        swagger.info.version = swagger.info.version.replace('@VERSION', pjson.version);
-        swagger.info.license.name = swagger.info.license.name.replace('@LICENSE', pjson.license);
-        swagger.info.contact.email = swagger.info.contact.email.replace('@AUTHOR',
-            pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
-        return swagger;
-    })(yamljs.load(swaggerPath), require(packagePath));
-    // App-specific swagger extensions
-    (function (swaggerDoc, swaggerExt) {
-        if (fs.existsSync(swaggerExt)) {
-            let swagger = yamljs.load(swaggerExt);
-            swagger.tags.forEach(function (e) {
-                swaggerDoc.tags.push(e);
-            });
-            Object.keys(swagger.paths).forEach(function (e) {
-                swaggerDoc.paths[e] = swagger.paths[e];
-            });
-        }
-    })(swaggerDoc, swaggerExtPath);
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
-        swaggerOptions: {
-            defaultModelsExpandDepth: -1
-        }
-    }));
+    const swaggerPath = path.join(baseDir, '..', 'node_modules', '@ove', 'ove-lib-appbase', 'lib', 'swagger.yaml');
+    const packagePath = path.join(baseDir, '..', 'package.json');
+    const swaggerExtPath = path.join(baseDir, 'swagger-extensions.yaml');
+    Utils.buildAPIDocs(swaggerPath, packagePath, swaggerExtPath);
 
     /**************************************************************
-                    Static Content and Embedded Data
+                    Embedded Data and Static Content
     **************************************************************/
     app.use('/data', express.static(path.join(baseDir, 'data')));
-    // Each CSS file is combination of {type}/{name}.css and common/{name}.css.
-    // Each JS file is combination of {type}/{name}.js, common/{name}.js and
-    // constants/{name}.js files from the filesystem.
-    app.use('/' + appName + '.:type.:fileType(js|css)', function (req, res) {
-        let text = '';
-        const type = req.params.type === 'control' ? 'control' : 'view';
-        const fileName = appName + '.' + req.params.fileType;
-        for (const context of ['common', type]) {
-            const fp = path.join(baseDir, 'client', context, fileName);
-            if (fs.existsSync(fp)) {
-                text += fs.readFileSync(fp, 'utf8');
-            }
-        }
-        let cType;
-        switch (req.params.fileType) {
-            case 'js':
-                const fp = path.join(baseDir, 'client', 'constants', fileName);
-                if (fs.existsSync(fp)) {
-                    text = fs.readFileSync(fp, 'utf8').replace('exports.Constants = Constants;', '') + text;
-                }
-                cType = 'application/javascript';
-                break;
-            case 'css':
-                cType = 'text/css';
-                break;
-            default:
-                // This should not happen since the fileType is either CSS or JS.
-        }
-        res.set('Content-Type', cType).send(text);
-    });
-    // Each app can serve view, control or index HTML pages. The index.html page or '/' is
-    // redirected to the view.html page. It must also be noted that neither view.html or
-    // control.html exists on the filesystem and the same index.html file is served for
-    // both of these scenarios. The index.html file is therefore a common template for both
-    // viewer and controller.
-    app.use('/(:fileName(index|control|view).html)?', function (req, res) {
-        res.send(fs.readFileSync(path.join(baseDir, 'client', 'index.html'), 'utf8')
-            .replace(/_OVETYPE_/g, req.params.fileName === 'control' ? 'control' : 'view')
-            .replace(/_OVEHOST_/g, process.env.OVE_HOST));
-    });
+
+    Utils.registerRoutesForContent();
     app.use('/', express.static(path.join(baseDir, 'client')));
-    app.use('/', express.static(path.join(module.exports.nodeModules, 'jquery', 'dist')));
 
     return module.exports;
 };

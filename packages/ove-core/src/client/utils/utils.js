@@ -112,7 +112,7 @@ function OVEUtils () {
     //-- Debug logs related to State Updates are produced by OVE core and therefore not  --//
     //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
-        if (arguments.length > 0) {
+        if (arguments.length > 0 && message) {
             //-- Sometimes, state is not the only message that is broadcasted and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
             window.ove.socket.send(message);
@@ -156,7 +156,7 @@ function OVEUtils () {
     //--        much faster, but we don't want to wait till that finishes to load state. --//
     this.initView = function (initMethod, loadContentMethod, setupCanvasMethod) {
         initMethod();
-        const shouldSetupCanvas = arguments.length > 2;
+        const shouldSetupCanvas = arguments.length > 2 && setupCanvasMethod;
         $(document).on(OVE.Event.LOADED, function () {
             log.debug('Invoking OVE.Event.Loaded handler');
             if (!window.ove.context.isInitialized) {
@@ -174,7 +174,7 @@ function OVEUtils () {
     //--                    Other Utilities                    --//
     //-----------------------------------------------------------//
     this.getQueryParam = function (name, defaultValue) {
-        if (arguments.length > 1) {
+        if (arguments.length > 1 && defaultValue) {
             return new URLSearchParams(location.search.slice(1)).get(name) || defaultValue;
         }
         return new URLSearchParams(location.search.slice(1)).get(name);

@@ -1,4 +1,3 @@
-const { Constants } = require('./client/utils/constants');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -8,10 +7,14 @@ const HttpStatus = require('http-status-codes');
 const uglify = require('uglify-js');
 const app = express();
 const wss = require('express-ws')(app).getWss('/');
-const swaggerUi = require('swagger-ui-express');
-const yamljs = require('yamljs');
-const pjson = require('../package.json'); // this path might have to be fixed based on packaging
-const nodeModules = path.join(__dirname, '..', '..', '..', 'node_modules');
+const pjson = require(path.join('..', 'package.json')); // this path might have to be fixed based on packaging
+const dirs = {
+    base: __dirname,
+    nodeModules: path.join(__dirname, '..', '..', '..', 'node_modules'),
+    constants: path.join(__dirname, 'client', 'utils'),
+    rootPage: path.join(__dirname, 'blank.html')
+};
+const { Constants, Utils } = require('@ove/ove-lib-utils')(app, 'core', dirs);
 const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
 
 const __DEBUG__ = true;
@@ -57,67 +60,32 @@ app.use(express.json());
 **************************************************************/
 app.get('/ove.js', function (req, res) {
     // OVE.js is a combination of client/ove.js client/utils/utils.js and client/utils/constants.js
-    let text = fs.readFileSync(path.join(__dirname, 'client', 'ove.js'), 'utf8');
-    text += fs.readFileSync(path.join(__dirname, 'client', 'utils', 'utils.js'), 'utf8');
+    let text = fs.readFileSync(path.join(__dirname, 'client', 'ove.js'), Constants.UTF8);
+    text += fs.readFileSync(path.join(__dirname, 'client', 'utils', 'utils.js'), Constants.UTF8);
     const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
-    const constants = fs.readFileSync(constantsPath, 'utf8').replace('exports.Constants = Constants;', '');
+    const constants = fs.readFileSync(constantsPath, Constants.UTF8).replace('exports.Constants = Constants;', '');
     // Important thing to note here is that the output is minified using UglifyJS. This library
     // only supports ES5. Therefore some newer JS capabilities may not work. And, if there was a
     // newer JS capability used in any of the files included in OVE.js, UglifyJS will produce an
     // empty file. This can be observed by reviewing corresponding errors on the browser.
-    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(
+    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(uglify.minify(text
         // Inject constants
-        text.replace(/\/\/ @CONSTANTS/, constants)
-            .replace(/__DEBUG__/g, __DEBUG__)
-            .replace(/@VERSION/g, pjson.version)
-            .replace(/@LICENSE/g, pjson.license)
-            .replace(/@AUTHOR/g, pjson.author)
-            // Replace all let/const with var for ES5 compliance
-            .replace(/(let|const)/g, 'var')
-            // Remove all comments with pattern: //-- {comment} --//
-            .replace(/\/\/--(.*?)--\/\//g, ''), { output: { comments: true } }).code
+        .replace(/\/\/ @CONSTANTS/, constants)
+        .replace(Constants.RegExp.DEBUG, __DEBUG__)
+        .replace(Constants.RegExp.Annotation.VERSION, pjson.version)
+        .replace(Constants.RegExp.Annotation.LICENSE, pjson.license)
+        .replace(Constants.RegExp.Annotation.AUTHOR, pjson.author)
+        // Replace all let/const with var for ES5 compliance
+        .replace(/(let|const)/g, 'var')
+        // Remove all comments matching pattern
+        .replace(Constants.RegExp.ES5_COMMENT_PATTERN, ''), { output: { comments: true } }).code
     );
 });
 
 /**************************************************************
                    Static Content of OVE Core
 **************************************************************/
-app.get('/', function (_req, res) {
-    res.sendFile(path.join(__dirname, 'blank.html'));
-});
-app.use('/core.:type.:fileType(js|css)', function (req, res) {
-    let text = '';
-    let type = req.params.type === 'control' ? 'control' : 'view';
-    for (let context of ['common', type]) {
-        let fp = path.join(__dirname, 'client', context, 'core.' + req.params.fileType);
-        if (fs.existsSync(fp)) {
-            text += fs.readFileSync(fp, 'utf8');
-        }
-    }
-    let cType;
-    switch (req.params.fileType) {
-        case 'js':
-            cType = Constants.HTTP_CONTENT_TYPE_JS;
-            break;
-        case 'css':
-            cType = Constants.HTTP_CONTENT_TYPE_CSS;
-            break;
-        default:
-            // This should not happen since the fileType is either CSS or JS.
-    }
-    // Inject constants
-    const constantsPath = path.join(__dirname, 'client', 'utils', 'constants.js');
-    const constants = fs.readFileSync(constantsPath, 'utf8').replace('exports.Constants = Constants;', '');
-    res.set(Constants.HTTP_HEADER_CONTENT_TYPE, cType).send(
-        text.replace(/\/\/ @CONSTANTS/, constants)
-            .replace(/\/\/--(.*?)--\/\//g, '')
-    );
-});
-app.use('/:fileName(index|control|view).html', function (req, res) {
-    res.send(fs.readFileSync(path.join(__dirname, 'client', 'index.html'), 'utf8')
-        .replace(/_OVETYPE_/g, req.params.fileName === 'control' ? 'control' : 'view'));
-});
-app.use('/', express.static(path.join(nodeModules, 'jquery', 'dist')));
+Utils.registerRoutesForContent();
 
 /**************************************************************
                     APIs Exposed by OVE Core
@@ -381,18 +349,7 @@ app.post('/section/:id', updateSectionById);
 app.delete('/section/:id', deleteSectionById);
 
 // Swagger API documentation
-let swaggerDoc = (function (swagger) {
-    swagger.info.version = swagger.info.version.replace('@VERSION', pjson.version);
-    swagger.info.license.name = swagger.info.license.name.replace('@LICENSE', pjson.license);
-    swagger.info.contact.email = swagger.info.contact.email.replace('@AUTHOR',
-        pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
-    return swagger;
-})(yamljs.load(path.join(__dirname, 'swagger.yaml')));
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc, {
-    swaggerOptions: {
-        defaultModelsExpandDepth: -1
-    }
-}));
+Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join('..', 'package.json'));
 
 /**************************************************************
                    OVE Messaging Middleware

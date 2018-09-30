@@ -10,7 +10,7 @@ const Constants = {
     **************************************************************/
     HTML_FRAME: '.html-frame',
     CONTENT_DIV: '.wrapper',
-    APP_NAME: 'images'
+    APP_NAME: 'html'
 };
 
 exports.Constants = Constants;
