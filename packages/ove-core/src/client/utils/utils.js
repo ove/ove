@@ -200,6 +200,20 @@ function OVEUtils () {
         $(contentDivName).css({ width: width, height: height });
     };
 
+    this.resizeViewer = function (contentDivName) {
+        const l = window.ove.layout;
+        // The view is plotted across the entire canvas and then
+        // moved into place based on the client's coordinates.
+        const css = {
+            transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',
+            width: l.section.w + 'px',
+            height: l.section.h + 'px'
+        };
+        log.debug('Resizing viewer with height:', css.height, ', width:', css.width);
+        log.debug('Performing CSS transform on viewer', css.transform);
+        $(contentDivName).css(css);
+    };
+
     //-- Log methods need to be something like log.debug or log.info.                    --//
     this.logThenResolve = function (logMethod, resolve, message) {
         logMethod(message);

@@ -1,5 +1,6 @@
 initView = function () {
     window.ove.context.isInitialized = false;
+    log.debug('Application is initialized:', window.ove.context.isInitialized);
     initCommon();
     const broadcastBufferStatus = function () {
         try {

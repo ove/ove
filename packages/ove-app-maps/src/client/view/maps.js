@@ -1,5 +1,6 @@
 initView = function () {
     window.ove.context.isInitialized = false;
+    log.debug('Application is initialized:', window.ove.context.isInitialized);
     OVE.Utils.setOnStateUpdate(updateMap);
     initCommon();
 };
@@ -10,6 +11,7 @@ updateMap = function () {
     // This check is required since the state may not be loaded when the viewer
     // receives a state update.
     if (Object.keys(l).length === 0) {
+        log.debug('State not fully loaded - retrying');
         return;
     }
     const p = window.ove.state.current.position;
@@ -18,7 +20,11 @@ updateMap = function () {
     // Unlike in the controller, all layers will be explicitly shown or hidden based
     // on whether they have been enabled.
     context.layers.forEach(function (e, i) {
-        e.setVisible(window.ove.state.current.enabledLayers.includes(i.toString()));
+        const visible = window.ove.state.current.enabledLayers.includes(i.toString());
+        e.setVisible(visible);
+        if (visible) {
+            log.debug('Setting visible for layer:', i);
+        }
     });
     // Initialization of OpenLayers requires center, resolution and a zoom level.
     // If the map has already been initialized what changes is the center and/or the
@@ -31,10 +37,12 @@ updateMap = function () {
             enableRotation: false });
         context.isInitialized = true;
     }
+    log.debug('Updating map with center:', center, ', and resolution:', +(p.resolution));
     context.map.getView().setCenter(center);
     context.map.getView().setResolution(+(p.resolution));
 };
 
 beginInitialization = function () {
+    log.debug('Starting viewer initialization');
     OVE.Utils.initView(initView, updateMap);
 };

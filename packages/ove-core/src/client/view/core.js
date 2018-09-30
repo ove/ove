@@ -1,12 +1,14 @@
 // @CONSTANTS
 
-const log = OVE.Utils.Logger(Constants.APP_NAME);
+const log = OVE.Utils.Logger('OVE');
 
 $(function () {
     // This is what happens first. After OVE is loaded, the viewer will be initialized
     $(document).ready(function () {
         window.ove = new OVE(Constants.APP_NAME);
+        log.debug('Completed loading OVE');
         window.ove.context.isInitialized = false;
+        log.debug('Application is initialized:', window.ove.context.isInitialized);
         initView();
     });
 });
@@ -16,14 +18,15 @@ initView = function () {
     // or when the browser is resized.
     const loadFunction = function () {
         if (!window.ove.context.isInitialized) {
+            log.debug('Requesting an update of state configuration from server');
             window.ove.socket.send({ action: Constants.Action.READ });
         }
     };
     window.addEventListener('resize', function () {
         // We are waiting for a further 5s here to allow Windows to finish resizing the browser.
-        setTimeout(loadFunction, 5000);
+        setTimeout(loadFunction, Constants.BROWSER_RESIZE_WAIT);
     });
-    setTimeout(loadFunction, 15000);
+    setTimeout(loadFunction, Constants.BROWSER_IDLE_WAIT);
 
     window.ove.socket.on(updateSections);
 };
@@ -31,6 +34,7 @@ initView = function () {
 updateSections = function (m) {
     if (!window.ove.context.isInitialized) {
         window.ove.context.isInitialized = true;
+        log.debug('Application is initialized:', window.ove.context.isInitialized);
     }
     const id = OVE.Utils.getQueryParam('oveClientId');
     switch (m.action) {
@@ -38,12 +42,9 @@ updateSections = function (m) {
             const client = id.substr(id.lastIndexOf('-') + 1);
             const space = id.substr(0, id.lastIndexOf('-'));
             let layout = (m.clients[space] || [])[client] || {};
-            if (Object.keys(layout).length === 0) {
-                // This can happen either when the clientId was valid and no layout exists or if the clientId was invalid.
-                // This ensures that a frame is still created but not visible.
-                layout = { h: 0, w: 0, offset: { x: 0, y: 0 } };
-            }
-            if (layout.h > 0 && layout.w > 0) {
+            if (Object.keys(layout).length !== 0 && layout.h > 0 && layout.w > 0) {
+                log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
+                log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
                 $('<iframe>', {
                     id: Constants.SECTION_FRAME_ID.substring(1) + m.id,
                     frameborder: 0,
@@ -62,12 +63,16 @@ updateSections = function (m) {
         case Constants.Action.UPDATE:
             const frame = $(Constants.SECTION_FRAME_ID + m.id);
             if (frame.length) {
+                log.info('Updating section:', m.id);
                 if (m.app) {
-                    frame.attr('src', m.app.url + '/view.html?oveClientId=' + id + '.' + m.id);
+                    const url = m.app.url + '/view.html?oveClientId=' + id + '.' + m.id;
+                    log.info('Setting iFrame source URL:', url);
+                    frame.attr('src', url);
                 } else {
                     // An app may be un-deployed from a section without deleting the actual section.
                     if (frame.attr('src')) {
                         frame.attr('src', null);
+                        log.info('Removing iFrame source URL');
                     }
                 }
             }
@@ -76,9 +81,11 @@ updateSections = function (m) {
             if (m.id) {
                 const frame = $(Constants.SECTION_FRAME_ID + m.id);
                 if (frame.length) {
+                    log.info('Deleting section:', m.id);
                     frame.remove();
                 }
             } else {
+                log.info('Deleting all sections');
                 // All sections can be deleted at once.
                 $('iframe').remove();
             }

@@ -5,6 +5,8 @@ const Constants = {
     //--                        Viewer                         --//
     //-----------------------------------------------------------//
     SECTION_FRAME_ID: '#content-frame-section-',
+    BROWSER_RESIZE_WAIT: 5000,
+    BROWSER_IDLE_WAIT: 15000,
 
     //-----------------------------------------------------------//
     //--                        Back-end                       --//
