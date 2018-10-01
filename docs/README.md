@@ -3,7 +3,9 @@
 ---
 
 Open Visualisation Environment is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/).
-It is a rewrite of the [GDO](https://github.com/bkavuncu/GDO/) Framework.
+It is a rewrite of the [GDO](https://github.com/bkavuncu/GDO/) Framework. 
+
+We welcome collaboration under our [Code of Conduct](https://github.com/dsi-icl/ove/blob/master/CODE_OF_CONDUCT.md)
 
 ---
 
@@ -16,7 +18,7 @@ The build system is based on [Lerna](https://lernajs.io/) using [Babel](http://b
 ### Prerequisites
 
 * [git](https://git-scm.com/downloads)
-* [Node.js](https://nodejs.org/en/) (v4.0+)
+* [Node.js](https://nodejs.org/en/) (v8.0+)
 * [NPM](https://www.npmjs.com/)
 * [NPX](https://www.npmjs.com/package/npx) `npm install -global npx`
 * [PM2](http://pm2.keymetrics.io/) `npm install -global pm2`
