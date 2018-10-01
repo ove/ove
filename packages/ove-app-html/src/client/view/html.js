@@ -6,7 +6,7 @@ initView = function () {
 
 getCSS = function () {
     const l = window.ove.layout;
-    // The webpage is plotted across the entire canvas and then
+    // The webpage is plotted across the entire section and then
     // moved into place based on the client's coordinates.
     const css = {
         transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',

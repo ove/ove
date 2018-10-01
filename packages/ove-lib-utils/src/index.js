@@ -75,8 +75,8 @@ function Utils (app, appName, dirs) {
             }
         };
 
-        // Internal Utility function to get logger arguments.
-        const getArgsToLog = function (logLevel, args) {
+        // Internal Utility function to build log messages.
+        const buildLogMessage = function (logLevel, args) {
             const time = dateFormat(new Date(), 'dd/mm/yyyy, h:MM:ss.l tt');
             // Each logger can have its own name. If this is
             // not provided, it will default to Unknown.
@@ -88,36 +88,36 @@ function Utils (app, appName, dirs) {
         // All log functions accept any number of arguments
         this.trace = function () {
             if (Constants.Logging.TRACE_SERVER) {
-                console.log.apply(console, getArgsToLog(LogPrefix.TRACE, arguments));
+                console.log.apply(console, buildLogMessage(LogPrefix.TRACE, arguments));
             }
         };
 
         this.debug = function () {
             if (Constants.Logging.DEBUG) {
-                console.log.apply(console, getArgsToLog(LogPrefix.DEBUG, arguments));
+                console.log.apply(console, buildLogMessage(LogPrefix.DEBUG, arguments));
             }
         };
 
         this.info = function () {
             if (Constants.Logging.INFO) {
-                console.log.apply(console, getArgsToLog(LogPrefix.INFO, arguments));
+                console.log.apply(console, buildLogMessage(LogPrefix.INFO, arguments));
             }
         };
 
         this.warn = function () {
             if (Constants.Logging.WARN) {
-                console.warn.apply(console, getArgsToLog(LogPrefix.WARN, arguments));
+                console.warn.apply(console, buildLogMessage(LogPrefix.WARN, arguments));
             }
         };
 
         this.error = function () {
             if (Constants.Logging.ERROR) {
-                console.error.apply(console, getArgsToLog(LogPrefix.ERROR, arguments));
+                console.error.apply(console, buildLogMessage(LogPrefix.ERROR, arguments));
             }
         };
 
         this.fatal = function () {
-            console.error.apply(console, getArgsToLog(LogPrefix.FATAL, arguments));
+            console.error.apply(console, buildLogMessage(LogPrefix.FATAL, arguments));
         };
     }
 

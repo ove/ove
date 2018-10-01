@@ -12,7 +12,7 @@ $(function () {
 });
 
 initView = function () {
-    // We will attempt to load content by restoring the existing state either after 15s,
+    // We will attempt to load content by restoring the existing state either after a period of time
     // or when the browser is resized.
     const loadFunction = function () {
         if (!window.ove.context.isInitialized) {
@@ -21,7 +21,7 @@ initView = function () {
         }
     };
     window.addEventListener('resize', function () {
-        // We are waiting for a further 5s here to allow Windows to finish resizing the browser.
+        // We are waiting to allow Windows to finish resizing the browser.
         setTimeout(loadFunction, Constants.BROWSER_RESIZE_WAIT);
     });
     setTimeout(loadFunction, Constants.BROWSER_IDLE_WAIT);
@@ -48,7 +48,7 @@ updateSections = function (m) {
                     frameborder: 0,
                     scrolling: 'no'
                 }).css({
-                    // The height is scaled to suit display ranges in most screens
+                    // The height is scaled to avoid random scrollbars.
                     height: layout.h * 0.999,
                     width: layout.w,
                     zIndex: m.id,
@@ -84,7 +84,6 @@ updateSections = function (m) {
                 }
             } else {
                 log.info('Deleting all sections');
-                // All sections can be deleted at once.
                 $('iframe').remove();
             }
             break;

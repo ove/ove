@@ -63,8 +63,8 @@ function OVEUtils () {
             }
         };
 
-        //-- Internal Utility function to get logger arguments. --//
-        const getArgsToLog = function (logLevel, args) {
+        //-- Internal Utility function to build log messages. --//
+        const buildLogMessage = function (logLevel, args) {
             const time = (function (d) {
                 const locale = window.navigator.userLanguage || window.navigator.language;
                 return d.toLocaleString(locale, { hour12: true }).replace(/([ ]?[aApP][mM])/,
@@ -80,36 +80,36 @@ function OVEUtils () {
         //-- All log functions accept any number of arguments   --//
         this.trace = function () {
             if (Constants.Logging.TRACE_BROWSER) {
-                console.log.apply(console, getArgsToLog(LogPrefix.TRACE, arguments));
+                console.log.apply(console, buildLogMessage(LogPrefix.TRACE, arguments));
             }
         };
 
         this.debug = function () {
             if (Constants.Logging.DEBUG) {
-                console.log.apply(console, getArgsToLog(LogPrefix.DEBUG, arguments));
+                console.log.apply(console, buildLogMessage(LogPrefix.DEBUG, arguments));
             }
         };
 
         this.info = function () {
             if (Constants.Logging.INFO) {
-                console.log.apply(console, getArgsToLog(LogPrefix.INFO, arguments));
+                console.log.apply(console, buildLogMessage(LogPrefix.INFO, arguments));
             }
         };
 
         this.warn = function () {
             if (Constants.Logging.WARN) {
-                console.warn.apply(console, getArgsToLog(LogPrefix.WARN, arguments));
+                console.warn.apply(console, buildLogMessage(LogPrefix.WARN, arguments));
             }
         };
 
         this.error = function () {
             if (Constants.Logging.ERROR) {
-                console.error.apply(console, getArgsToLog(LogPrefix.ERROR, arguments));
+                console.error.apply(console, buildLogMessage(LogPrefix.ERROR, arguments));
             }
         };
 
         this.fatal = function () {
-            console.error.apply(console, getArgsToLog(LogPrefix.FATAL, arguments));
+            console.error.apply(console, buildLogMessage(LogPrefix.FATAL, arguments));
         };
     }
 
@@ -160,20 +160,20 @@ function OVEUtils () {
     //-- The viewer is initialized in three steps:                                       --//
     //--     1. Initial setup before OVE is actually loaded.                             --//
     //--     2. Async loading of state and loading of content after OVE has been loaded. --//
-    //--     3. Setup of canvas in parallel to the loading of state, which should happen --//
+    //--     3. Setup of section in parallel to the loading of state, which should happen --//
     //--        much faster, but we don't want to wait till that finishes to load state. --//
-    this.initView = function (initMethod, loadContentMethod, setupCanvasMethod) {
+    this.initView = function (initMethod, loadContentMethod, setupSectionMethod) {
         initMethod();
-        const shouldSetupCanvas = arguments.length > 2 && setupCanvasMethod;
+        const shouldSetupSection = arguments.length > 2 && setupSectionMethod;
         $(document).on(OVE.Event.LOADED, function () {
             log.debug('Invoking OVE.Event.Loaded handler');
             if (!window.ove.context.isInitialized) {
                 //-- Ignore promise rejection, as it is expected if no state exists.     --//
                 window.ove.state.load().then(loadContentMethod).catch(function (_err) { });
             }
-            if (shouldSetupCanvas) {
-                log.debug('Running post-initialization canvas setup operation');
-                setupCanvasMethod();
+            if (shouldSetupSection) {
+                log.debug('Running post-initialization section setup operation');
+                setupSectionMethod();
             }
         });
     };
@@ -204,13 +204,11 @@ function OVEUtils () {
 
     this.resizeController = function (contentDivName) {
         const l = window.ove.layout;
-        //-- The maximum height is limited to the minimum of the two to avoid controller --//
-        //-- becoming too large on a given screen.                                       --//
+        //-- The element with id contentDivName is scaled to fit inside both the client  --//
+        //-- and window, whilst maintaining the aspect ratio of the section/content.     --//
         const maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
         const maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
         let width, height;
-        //-- The aspect ratio of the controller changes to suit the aspect ratio of the  --//
-        //-- section/content.                                                            --//
         if (l.section.w * maxHeight >= maxWidth * l.section.h) {
             width = maxWidth;
             height = maxWidth * l.section.h / l.section.w;
@@ -224,8 +222,9 @@ function OVEUtils () {
 
     this.resizeViewer = function (contentDivName) {
         const l = window.ove.layout;
-        // The view is plotted across the entire canvas and then
-        // moved into place based on the client's coordinates.
+        //-- The element with id contentDivName is resized to the size of the            --//
+        //-- corresponding section (which may span multiple clients), and then           --//
+        //-- translated based on the client's coordinates.                               --//
         const css = {
             transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',
             width: l.section.w + 'px',
