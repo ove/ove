@@ -16,7 +16,7 @@ The build system is based on [Lerna](https://lernajs.io/) using [Babel](http://b
 ### Prerequisites
 
 * [git](https://git-scm.com/downloads)
-* [Node.js](https://nodejs.org/en/) (v4.0+)
+* [Node.js](https://nodejs.org/en/) (v8.0+)
 * [NPM](https://www.npmjs.com/)
 * [NPX](https://www.npmjs.com/package/npx) `npm install -global npx`
 * [PM2](http://pm2.keymetrics.io/) `npm install -global pm2`
