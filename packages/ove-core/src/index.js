@@ -129,17 +129,12 @@ const createSection = function (req, res) {
 
         // Calculate the dimensions on a client-by-client basis
         clients[req.body.space].forEach(function (e) {
-            // Below are the list of conditions evaluated:
-            //     1. Does the section begin at a point before the ending point of the client
-            //        along the horizontal axis.
-            //     2. Does the section end after the starting point of the client along the
-            //        horizontal axis.
-            //     3. Does the section begin at a point before the ending point of the client
-            //        along the vertical axis.
-            //     4. Does the section end after the starting point of the client along the
-            //        vertical axis.
-            // this will tell us whether a client coincides with the dimensions of a section
-            // or not. And, if it does not, we simply discard it.
+           // A section overlaps with a client if all of these conditions are met:
+           // - the section's left edge is to the left of the client's right edge
+           // - the section's right edge is to the right of the client's left edge
+           // - the section's top edge is above the client's bottom edge
+           // - the section's bottom edge is below the clients top edge
+           // If the section does not overlap with this client we ignore it.
             if ((e.x + e.w) > req.body.x && (req.body.x + req.body.w) > e.x &&
                 (e.y + e.h) > req.body.y && (req.body.y + req.body.h) > e.y) {
                 let c = Object.assign({}, e);
