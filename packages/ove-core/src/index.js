@@ -120,6 +120,7 @@ const createSection = function (req, res) {
         log.error('Invalid Space', 'request:', JSON.stringify(req.body));
         Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
     } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
+        // specifically testing for undefined since '0' is a valid input.
         log.error('Invalid Dimensions', 'request:', JSON.stringify(req.body));
         Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
     } else {
@@ -283,7 +284,7 @@ const readSectionById = function (req, res) {
 // Updates an individual section
 const updateSectionById = function (req, res) {
     let sectionId = req.params.id;
-    if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
+    if (Utils.isNullOrEmpty(sections[sectionId])) {
         log.error('Invalid Section Id:', sectionId);
         Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     } else {
@@ -345,7 +346,7 @@ const updateSectionById = function (req, res) {
 // Deletes an individual section
 const deleteSectionById = function (req, res) {
     let sectionId = req.params.id;
-    if (!sections[sectionId] || JSON.stringify(sections[sectionId]) === JSON.stringify({})) {
+    if (Utils.isNullOrEmpty(sections[sectionId])) {
         log.error('Invalid Section Id:', sectionId);
         Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     } else {
@@ -387,7 +388,7 @@ app.ws('/', function (s) {
 
         // Method for viewers to request section information, helps browser crash recovery
         if (m.appId === Constants.APP_NAME && m.message.action === Constants.Action.READ) {
-            if (m.sectionId === undefined) {
+            if (m.sectionId === undefined) { // specifically testing for undefined since '0' is a valid input.
                 sections.forEach(function (section, sectionId) {
                     // We respond only to the sender and only if a section exists.
                     if (section && s.readyState === Constants.WEBSOCKET_READY) {

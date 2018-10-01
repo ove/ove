@@ -26,6 +26,7 @@ function Utils (app, appName, dirs) {
     this.JSON.equals = function (param1, param2) {
         return JSON.stringify(param1) === JSON.stringify(param2);
     };
+    this.JSON.EMPTY = JSON.stringify({});
 
     /**************************************************************
                            Logging Functions
@@ -225,6 +226,10 @@ function Utils (app, appName, dirs) {
     // We don't want to see browser errors, so we send an empty success response in some cases.
     this.sendEmptySuccess = function (res) {
         this.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    };
+
+    this.isNullOrEmpty = function (input) {
+        return !input || this.JSON.equals(input) === this.JSON.EMPTY;
     };
 }
 

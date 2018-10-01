@@ -1,6 +1,6 @@
 const { Constants } = require('./client/constants/videos');
 const HttpStatus = require('http-status-codes');
-const { app, log } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
+const { app, log, Utils } = require('@ove/ove-lib-appbase')(__dirname, Constants.APP_NAME);
 const server = require('http').createServer(app);
 
 var ws;
@@ -24,8 +24,7 @@ setTimeout(function () {
             //   5. If at least 15% of a video is buffered across all peers synchronized playback
             //      can begin and the video will be displayed.
             let status = m.message.bufferStatus;
-            let bufferIsEmpty = !bufferStatus[m.sectionId] ||
-                JSON.stringify(bufferStatus[m.sectionId]) === JSON.stringify({});
+            let bufferIsEmpty = Utils.isNullOrEmpty(bufferStatus[m.sectionId]);
             if (status.type.registration) {
                 if (bufferIsEmpty) {
                     bufferStatus[m.sectionId] = { clients: [] };
@@ -63,7 +62,7 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
     if (name === Constants.Operation.BUFFER_STATUS) {
         let isComplete = true;
         if (sectionId) {
-            isComplete = !bufferStatus[sectionId] || JSON.stringify(bufferStatus[sectionId]) === JSON.stringify({});
+            isComplete = Utils.isNullOrEmpty(bufferStatus[sectionId]);
         } else {
             bufferStatus.some(function (s) {
                 if (s && JSON.stringify(s) !== JSON.stringify({})) {

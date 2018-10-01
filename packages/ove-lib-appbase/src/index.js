@@ -27,6 +27,14 @@ module.exports = function (baseDir, appName) {
     module.exports.nodeModules = dirs.nodeModules;
     module.exports.log = log;
 
+    // Exported functionality from Utils
+    module.exports.Utils = {
+        JSON: Utils.JSON,
+        sendMessage: Utils.sendMessage,
+        sendEmptySuccess: Utils.sendEmptySuccess,
+        isNullOrEmpty: Utils.isNullOrEmpty
+    };
+
     /**************************************************************
                APIs Exposed by all Apps (required by OVE)
     **************************************************************/
