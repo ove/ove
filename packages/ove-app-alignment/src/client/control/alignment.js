@@ -1,31 +1,22 @@
-function initPage (data) {
+initPage = function (data) {
     let context = window.ove.context;
     context.isInitialized = false;
+    log.debug('Application is initialized:', context.isInitialized);
 
-    let l = window.ove.layout;
-    let maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
-    let maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
-    let width, height;
-    if (l.section.w * maxHeight >= maxWidth * l.section.h) {
-        width = maxWidth;
-        height = maxWidth * l.section.h / l.section.w;
-    } else {
-        height = maxHeight;
-        width = maxHeight * l.section.w / l.section.h;
-    }
-    $('#alignmentArea').css({ width: width, height: height });
+    OVE.Utils.resizeController(Constants.CONTENT_DIV);
 
-
+    log.debug('Restoring state:', data);
     window.ove.state.current = data;
     drawView();
-    window.ove.socket.send(window.ove.state.current);
-    window.ove.state.cache();
-}
+    log.debug('Broadcasting state');
+    OVE.Utils.broadcastState();
+};
 
 function drawView () {
     let context = window.ove.context;
     drawMonitors();
-    context.isInitialized = true; // no initialisation to do
+    context.isInitialized = true;
+    log.debug('Application is initialized:', context.isInitialized);
 }
 
 function clearSelection () {
@@ -33,14 +24,13 @@ function clearSelection () {
     d3.select('.selection').attr('width', 0); // clear rectangular brush
 }
 
-
 function drawMonitors () {
     d3.json(buildClientsURL())
         .then(function (clients) {
             let svg = d3.select('#monitorGrid');
             svg.node().innerHTML = '';
 
-            const id = new URLSearchParams(location.search.slice(1)).get('oveClientId');
+            const id = OVE.Utils.getQueryParam('oveClientId');
             let layout = clients[id];
             layout = layout.map(function (d, i) {
                 d.clientId = i;
@@ -60,27 +50,20 @@ function drawMonitors () {
                 return m.y + m.h;
             }));
 
-
             let scale;
-            if ( (width - margin)/xMax > (height - margin)/yMax ){
-               scale = d3.scaleLinear().range([margin, height - margin]).domain([0, yMax]);
-               svg.attr('width', scale(xMax) + margin)
+            if ((width - margin) / xMax > (height - margin) / yMax) {
+                scale = d3.scaleLinear().range([margin, height - margin]).domain([0, yMax]);
+                svg.attr('width', scale(xMax) + margin)
                     .attr('height', height + margin);
-
             } else {
                 scale = d3.scaleLinear().range([margin, width - margin]).domain([0, xMax]);
                 svg.attr('width', width + margin)
                     .attr('height', scale(yMax) + margin);
             }
-            
 
+            d3.brush().on('brush end', brushed);
 
-            d3.brush()
-                .on('brush end', brushed);
-
-            svg.append('g')
-                .attr('class', 'brush')
-                .call(d3.brush().on('brush', brushed));
+            svg.append('g').attr('class', 'brush').call(d3.brush().on('brush', brushed));
 
             let rects = svg.selectAll('.monitor')
                 .data(layout)
@@ -99,14 +82,14 @@ function drawMonitors () {
                     return scale(d.y + d.h) - scale(d.y);
                 })
                 .classed('monitor', true)
-                .classed('indexMonitor', function(d){ return d.clientId === 0; });
+                .classed('indexMonitor', function (d) { return d.clientId === 0; });
 
             rects.on('click', function () {
                 d3.select('.selection').attr('width', 0); // clear rectangular brush
 
                 // Toggle whether rectangle has class 'selected' (and hence is highlighted)
                 const monitor = d3.select(this);
-                if (!document.getElementById("locked-monitor").checked || monitor.datum().clientId !== 0) {
+                if (!document.getElementById('locked-monitor').checked || monitor.datum().clientId !== 0) {
                     monitor.classed('selected', !monitor.classed('selected'));
                 }
             });
@@ -163,39 +146,36 @@ function drawMonitors () {
                         scale(d.x + d.w) <= s[1][0] &&
                         scale(d.y) >= s[0][1] &&
                         scale(d.y + d.h) <= s[1][1] &&
-                        ( !document.getElementById("locked-monitor").checked || d.clientId !== 0);
+                        (!document.getElementById('locked-monitor').checked || d.clientId !== 0);
                 });
             }
         });
 }
 
-function setIndexMonitorHighlighting() {
-    d3.selectAll('.monitor')
-        .classed('indexMonitor', function (d) {
-            return document.getElementById('locked-monitor').checked && d.clientId === 0;
-        });
+setIndexMonitorHighlighting = function () {
+    let monitorsLocked = document.getElementById('locked-monitor').checked;
 
     // unselect index monitor if necessary
     if (monitorsLocked) {
-        d3.selectAll('.monitor')
-            .filter(function (d) {
-                return d.clientId === 0
-            })
-            .classed("selected", false);
+        d3.selectAll('.indexMonitor')
+            .classed('selected', false);
     }
 
-}
+    d3.selectAll('.monitor')
+        .classed('indexMonitor', function (d) {
+            return monitorsLocked && d.clientId === 0;
+        });
+};
 
-
-function broadcastMessage() {
+function broadcastMessage () {
     const patternType = document.getElementById('pattern-type').value;
     const monitorData = d3.selectAll('.monitor').data();
     window.ove.socket.send({ monitors: monitorData, patternType: patternType });
 }
 
-function exportJSON () {
+displayJSON = function () {
     d3.select('#clients-json').text(exportOffsets());
-}
+};
 
 function exportOffsets () {
     let x = [];
@@ -203,7 +183,7 @@ function exportOffsets () {
         x.push(d);
     });
 
-    let id = new URLSearchParams(location.search.slice(1)).get('oveClientId');
+    let id = OVE.Utils.getQueryParam('oveClientId');
 
     let newLayout = {};
     newLayout[id] = d3.selectAll('.monitor')
@@ -213,15 +193,15 @@ function exportOffsets () {
         });
 
     // Shift screens so no screens have negative x or y coordinates
-    const xOffset = d3.min(newLayout[id].map(function(d){ return d.x; }));
-    newLayout[id].map(function(d){ d.x -= xOffset; });
+    const xOffset = d3.min(newLayout[id].map(function (d) { return d.x; }));
+    newLayout[id].map(function (d) { d.x -= xOffset; });
 
-    const yOffset = d3.min(newLayout[id].map(function(d){ return d.y; }));
-    newLayout[id].map(function(d){ d.y -= yOffset; });
+    const yOffset = d3.min(newLayout[id].map(function (d) { return d.y; }));
+    newLayout[id].map(function (d) { d.y -= yOffset; });
 
-    const spaceWidth = d3.max(newLayout[id].map(function(d){ return d.x + d.w }));
-    const spaceHeight = d3.max(newLayout[id].map(function(d){ return d.y + d.h }));
-    d3.select("#space-size").text("Dimensions of space are w: " + spaceWidth + ", h: " + spaceHeight);
+    const spaceWidth = d3.max(newLayout[id].map(function (d) { return d.x + d.w; }));
+    const spaceHeight = d3.max(newLayout[id].map(function (d) { return d.y + d.h; }));
+    d3.select('#space-size').text('Dimensions of space are w: ' + spaceWidth + ', h: ' + spaceHeight);
 
     const layoutJSON = JSON.stringify(newLayout);
     return layoutJSON.substr(1, layoutJSON.length - 2);

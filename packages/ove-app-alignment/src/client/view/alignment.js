@@ -1,5 +1,6 @@
-function initPage () {
+initPage = function () {
     window.ove.context.isInitialized = false;
+    log.debug('Application is initialized:', window.ove.context.isInitialized);
     drawView();
 
     window.ove.socket.on(function (message) {
@@ -11,40 +12,33 @@ function initPage () {
                 const maxX = d3.max(message.monitors.map(d => d.x));
                 const maxY = d3.max(message.monitors.map(d => d.y));
 
-                let drawingFunctions = {'Grid': createGrid, 'Diagonal': createDiagonal, 'Triangles': createTriangles};
+                let drawingFunctions = { 'Grid': createGrid, 'Diagonal': createDiagonal, 'Triangles': createTriangles };
                 drawingFunctions[message.patternType](maxX, maxY);
             }
-
 
             window.ove.state.current = message;
 
             shiftGrid(message);
         }
     });
-}
+};
 
 beginInitialization = function () {
-    initView();
-    $(document).on(OVE.Event.LOADED, function () {
-        if (!window.ove.context.isInitialized) {
-            window.ove.state.load().then(drawView);
-        }
-    });
+    log.debug('Starting viewer initialization');
+    OVE.Utils.initView(initView, drawView);
 };
 
 function drawView () {
     let context = window.ove.context;
     if (!context.isInitialized) {
-        // no initialization to do
-
         createGrid();
-
         context.isInitialized = true;
+        log.debug('Application is initialized:', context.isInitialized);
     }
 }
 
 function shiftGrid (message) {
-    const data = message.monitors[getClientId()];
+    const data = message.monitors[OVE.Utils.getClient()];
     const xShift = (data.x + data.horizontalShift);
     const yShift = (data.y + data.verticalShift);
 
@@ -65,16 +59,14 @@ function resizeSVG () {
 function createGrid (maxX, maxY) {
     resizeSVG();
 
-    const gridSpacing = 100;
-
     let rows = [];
-    for (let i = 0; i < 2 * (maxY / gridSpacing); i++) {
-        rows.push(i * gridSpacing);
+    for (let i = 0; i < 2 * (maxY / Constants.GRID_SPACING); i++) {
+        rows.push(i * Constants.GRID_SPACING);
     }
 
     let cols = [];
-    for (let j = 0; j < 2 * (maxX / gridSpacing); j++) {
-        cols.push(j * gridSpacing);
+    for (let j = 0; j < 2 * (maxX / Constants.GRID_SPACING); j++) {
+        cols.push(j * Constants.GRID_SPACING);
     }
 
     const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -119,12 +111,11 @@ function createGrid (maxX, maxY) {
 function createDiagonal (maxX, maxY) {
     resizeSVG();
 
-    const gridSpacing = 100;
     const size = Math.max(maxX, maxY);
 
     let lines = [];
-    for (let i = -2 * (size / gridSpacing); i < 2 * (size / gridSpacing); i++) {
-        lines.push(i * gridSpacing);
+    for (let i = -2 * (size / Constants.GRID_SPACING); i < 2 * (size / Constants.GRID_SPACING); i++) {
+        lines.push(i * Constants.GRID_SPACING);
     }
 
     const color = d3.scaleOrdinal(d3.schemeCategory10);
@@ -142,8 +133,8 @@ function createDiagonal (maxX, maxY) {
         .attr('y2', function (d) {
             return d - size;
         })
-        .style('stroke-width', function(d,i){ return (i % 3) === 0 ? '4px' : '1px';})
-        .style('stroke', function (d, i) {
+        .style('stroke-width', function (_d, i) { return (i % 3) === 0 ? '4px' : '1px'; })
+        .style('stroke', function (_d, i) {
             return color(i % 10);
         });
 }
@@ -151,27 +142,28 @@ function createDiagonal (maxX, maxY) {
 function createTriangles () {
     resizeSVG();
 
-    const l = 100;
-
     // get clients.JSON
-    d3.json(buildClientsURL())
-        .then(function (clients) {
+    d3.json(buildClientsURL()).then(function (clients) {
+        const id = OVE.Utils.getSpace();
 
-            const id = getSpaceId();
-
-            let rightMiddlePoints  = clients[id].map(function(d){ return {cx: d.x + d.w,   cy: d.y + d.h/2, l: d.h/2 } });
-            let bottomMiddlePoints = clients[id].map(function(d){ return {cx: d.x + d.w/2, cy: d.y + d.h, l: d.h/2  } });
-            let allPoints = rightMiddlePoints.concat(bottomMiddlePoints);
-
-            d3.select('#grid-group')
-              .selectAll('.triangles')
-              .data(allPoints)
-              .enter()
-              .append('polygon')
-              .attr('points', function(d){
-                  return (d.cx - d.l/2) + "," + (d.cy + d.l/2) + " " + (d.cx- d.l/2) + "," + (d.cy - d.l/2) + " " + (d.cx + d.l/2) + "," + (d.cy + d.l/2);
-              })
-              .classed('triangles', true);
+        let rightMiddlePoints = clients[id].map(function (d) {
+            return { cx: d.x + d.w, cy: d.y + d.h / 2, l: d.h / 2 };
         });
+        let bottomMiddlePoints = clients[id].map(function (d) {
+            return { cx: d.x + d.w / 2, cy: d.y + d.h, l: d.h / 2 };
+        });
+        let allPoints = rightMiddlePoints.concat(bottomMiddlePoints);
 
+        d3.select('#grid-group')
+            .selectAll('.triangles')
+            .data(allPoints)
+            .enter()
+            .append('polygon')
+            .attr('points', function (d) {
+                return (d.cx - d.l / 2) + ',' + (d.cy + d.l / 2) + ' ' +
+                    (d.cx - d.l / 2) + ',' + (d.cy - d.l / 2) + ' ' +
+                    (d.cx + d.l / 2) + ',' + (d.cy + d.l / 2);
+            })
+            .classed('triangles', true);
+    });
 }

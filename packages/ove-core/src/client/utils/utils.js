@@ -179,6 +179,20 @@ function OVEUtils () {
     };
 
     //-----------------------------------------------------------//
+    //--                     Layout Related                    --//
+    //-----------------------------------------------------------//
+    this.getSpace = function () {
+        const clientId = this.getQueryParam('oveClientId');
+        return clientId.substr(0, clientId.lastIndexOf('-'));
+    };
+
+    this.getClient = function () {
+        const clientId = this.getQueryParam('oveClientId');
+        const parts = clientId.split('-');
+        return +parts[parts.length - 1];
+    };
+
+    //-----------------------------------------------------------//
     //--                    Other Utilities                    --//
     //-----------------------------------------------------------//
     this.getQueryParam = function (name, defaultValue) {

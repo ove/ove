@@ -2,26 +2,34 @@
     "extends": "standard",
     "globals": {
         "$": true,
+        "Constants": true,
         "location": true,
+        "log": true,
         "OVE": true
     },
     "overrides": [
         {
             "files": [ "**/view/*.js" ],
             "globals": {
-                "initPage": true
+                "initView": true,
+                "log": true
             }
         },
         {
             "files": [ "**/control/*.js" ],
             "globals": {
-                "initPage": true
+                "displayJSON": true,
+                "log": true,
+                "setIndexMonitorHighlighting": true
             }
         },
         {
             "files": [ "**/*.js" ],
             "globals": {
-                "beginInitialization": true
+                "beginInitialization": true,
+                "buildClientsURL": true,
+                "d3": true,
+                "initPage": true
             }
         }
     ],
