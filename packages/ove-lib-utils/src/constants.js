@@ -43,7 +43,7 @@ Constants.Logging = {
     TRACE_BROWSER: (process && process.env && process.env.TRACE_BROWSER) || false,
     // Enabling DEBUG on the server/browser will increase log volume (not recommended for production systems)
     DEBUG: (process && process.env && (process.env.DEBUG ||
-        process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || false,
+        process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || true,
 
     INFO: (process && process.env && (process.env.INFO || process.env.DEBUG ||
         process.env.TRACE_SERVER || process.env.TRACE_SERVER)) || true,
