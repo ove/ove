@@ -16,18 +16,20 @@ function OVEUtils () {
     //-----------------------------------------------------------//
     //--                   Logging Functions                   --//
     //-----------------------------------------------------------//
-    this.Logger = function (name) {
-        return new OVELogger(name);
+    this.Logger = function (name, logLevel) {
+        return new OVELogger(name, logLevel);
     };
     //-- Instance of logger for the use of OVE.Utils            --//
     const log = this.Logger('OVEUtils');
 
-    function OVELogger (name) {
+    function OVELogger (name, logLevel) {
         //-- Constants for log labels corresponding to levels.  --//
         const LOG_PREFIX_WIDTH = 9;
 
         //-- The logger name is stored for later use.           --//
-        let __private = { name: name };
+        //-- The log level is either what is specified in the   --//
+        //-- constructor or available as a constant.            --//
+        let __private = { name: name, logLevel: (logLevel !== undefined ? logLevel : Constants.LOG_LEVEL) };
 
         //-- Internal Utility function to get log labels' CSS   --//
         const getLogLabel = function (logLevel) {
@@ -52,8 +54,9 @@ function OVEUtils () {
         (function (__self) {
             Constants.LogLevel.forEach(function (level, i) {
                 __self[level.name.toLowerCase()] = function () {
-                    if (Constants.LOG_LEVEL >= i) {
-                        //-- All log functions accept any number of arguments            --//
+                    if (__private.logLevel >= i) {
+                        //-- All log functions accept any number--//
+                        //-- of arguments                       --//
                         console[level.consoleLogger].apply(console, buildLogMessage(level, arguments));
                     }
                 };
@@ -108,7 +111,7 @@ function OVEUtils () {
     //-- The viewer is initialized in three steps:                                       --//
     //--     1. Initial setup before OVE is actually loaded.                             --//
     //--     2. Async loading of state and loading of content after OVE has been loaded. --//
-    //--     3. Setup of section in parallel to the loading of state, which should happen --//
+    //--     3. Setup of section in parallel to the loading of state which should happen --//
     //--        much faster, but we don't want to wait till that finishes to load state. --//
     this.initView = function (initMethod, loadContentMethod, setupSectionMethod) {
         initMethod();

@@ -1,5 +1,5 @@
 function OVEYouTubePlayer () {
-    const log = OVE.Utils.Logger('YouTubePlayer');
+    const log = OVE.Utils.Logger('YouTubePlayer', Constants.LOG_LEVEL);
     let __private = {};
 
     this.initialize = function () {

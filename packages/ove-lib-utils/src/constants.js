@@ -15,7 +15,7 @@ const Constants = {
     **************************************************************/
     LOG_UNKNOWN_APP_ID: '__UNKNOWN__',
     LOG_APP_ID_WIDTH: 16,
-    LOG_LEVEL: process.env.LOG_LEVEL || 5, // Level (from 0 - 6): 3 == DEBUG
+    LOG_LEVEL: +(process.env.LOG_LEVEL || 5), // Level (from 0 - 6): 5 == TRACE
 
     /**************************************************************
                            Other Constants

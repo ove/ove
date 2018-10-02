@@ -1,5 +1,5 @@
 function OVEHTML5VideoPlayer () {
-    const log = OVE.Utils.Logger('HTML5VideoPlayer');
+    const log = OVE.Utils.Logger('HTML5VideoPlayer', Constants.LOG_LEVEL);
     const getPlayer = function () {
         return $('#video')[0];
     };

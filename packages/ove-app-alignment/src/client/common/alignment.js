@@ -1,4 +1,4 @@
-const log = OVE.Utils.Logger(Constants.APP_NAME);
+const log = OVE.Utils.Logger(Constants.APP_NAME, Constants.LOG_LEVEL);
 
 $(function () {
     $(document).on(OVE.Event.LOADED, function () {

@@ -1,4 +1,4 @@
-const log = OVE.Utils.Logger(Constants.APP_NAME);
+const log = OVE.Utils.Logger(Constants.APP_NAME, Constants.LOG_LEVEL);
 
 $(function () {
     // This is what happens first. After OVE is loaded, either the viewer or controller
