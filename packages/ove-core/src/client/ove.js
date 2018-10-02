@@ -1,6 +1,6 @@
 /*
  * ove.js v@VERSION
- * https://github.com/dsi-icl/ove
+ * https://github.com/ove/ove
  *
  * Copyright (c) @AUTHOR
  * Released under @LICENSE License

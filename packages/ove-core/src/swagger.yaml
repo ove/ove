@@ -7,7 +7,7 @@ info:
     email: "@AUTHOR"
   license:
     name: "@LICENSE License"
-    url: "https://raw.githubusercontent.com/dsi-icl/ove/master/LICENSE"
+    url: "https://raw.githubusercontent.com/ove/ove/master/LICENSE"
 basePath: "/"
 tags:
 - name: "clients"

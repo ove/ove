@@ -101,7 +101,7 @@ module.exports = function (baseDir, appName) {
     app.post('/flush', flush);
 
     // Swagger API documentation
-    const swaggerPath = path.join(baseDir, '..', 'node_modules', '@ove', 'ove-lib-appbase', 'lib', 'swagger.yaml');
+    const swaggerPath = path.join(__dirname, 'swagger.yaml');
     const packagePath = path.join(baseDir, '..', 'package.json');
     const swaggerExtPath = path.join(baseDir, 'swagger-extensions.yaml');
     Utils.buildAPIDocs(swaggerPath, packagePath, swaggerExtPath);
