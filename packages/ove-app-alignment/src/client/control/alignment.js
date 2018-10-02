@@ -20,16 +20,26 @@ function drawView () {
 }
 
 function clearSelection () {
+    log.debug('Selection cleared:');
     d3.selectAll('.monitor').classed('selected', false); // clear highlighted rectangles
     d3.select('.selection').attr('width', 0); // clear rectangular brush
 }
 
 function drawMonitors () {
+    log.debug('Drawing Monitors');
+
+    // This function draws a rectangle representing each monitor, and defines the associated interactivity
     d3.json(buildClientsURL())
         .then(function (clients) {
+
+            log.debug('Loaded Clients.json');
+
+            // Ensure the monitorGrid SVG is empty
             let svg = d3.select('#monitorGrid');
             svg.node().innerHTML = '';
 
+            // Use the contents of Clients.json to construct a list recording the id and position of each monitor,
+            // and the horizontal and vertical shifts applied to it.
             const id = OVE.Utils.getQueryParam('oveClientId');
             let layout = clients[id];
             layout = layout.map(function (d, i) {
@@ -39,6 +49,7 @@ function drawMonitors () {
                 return d;
             });
 
+            // Pick a scale which will scale the bounding-box of the monitors to fit inside the browser window
             const margin = 50;
             const width = window.innerWidth - 2 * margin;
             const height = window.innerHeight - 2 * margin;
@@ -61,10 +72,11 @@ function drawMonitors () {
                     .attr('height', scale(yMax) + margin);
             }
 
+            // create a D3 brush, to enable the selection of monitors
             d3.brush().on('brush end', brushed);
-
             svg.append('g').attr('class', 'brush').call(d3.brush().on('brush', brushed));
 
+            // Draw a rectangle for each monitor; apply class indexMonitor to monitor with clientId of 0
             let rects = svg.selectAll('.monitor')
                 .data(layout)
                 .enter()
@@ -84,6 +96,7 @@ function drawMonitors () {
                 .classed('monitor', true)
                 .classed('indexMonitor', function (d) { return d.clientId === 0; });
 
+            // Register a callback that will fire when user clicks on a rectangle
             rects.on('click', function () {
                 d3.select('.selection').attr('width', 0); // clear rectangular brush
 
@@ -94,8 +107,12 @@ function drawMonitors () {
                 }
             });
 
+            // Broadcast an initial message, so that the viewers draw their alignment patterns
             broadcastMessage();
 
+            // When an arrow key is pressed, adjust shifts for monitors accordingly,
+            // and broadcast a message listing new offsets.
+            // When escape key is pressed, clear selection of monitors.
             document.addEventListener('keydown', function (event) {
                 // Note that keys move the pattern, not the screen
 
@@ -138,6 +155,9 @@ function drawMonitors () {
                 broadcastMessage();
             });
 
+            // When the user clicks and drags to brush a rectangular region,
+            // select any rectangles that are completely enclosed
+            // (except the index monitor, if the checkbox locking its position is checked)
             function brushed () {
                 const s = d3.event.selection;
 
@@ -152,15 +172,18 @@ function drawMonitors () {
         });
 }
 
+// This function makes any adjustments required when locked-monitor is checked/unchecked
 setIndexMonitorHighlighting = function () {
     let monitorsLocked = document.getElementById('locked-monitor').checked;
 
-    // unselect index monitor if necessary
+    // unselect index monitor if the checkbox to lock it is checked
     if (monitorsLocked) {
         d3.selectAll('.indexMonitor')
             .classed('selected', false);
     }
 
+    // The rectangle representing the index monitor should have the .indexMonitor class applied
+    // (and hence be styled differently), if and only if the checkbox to lock it is checked
     d3.selectAll('.monitor')
         .classed('indexMonitor', function (d) {
             return monitorsLocked && d.clientId === 0;
@@ -173,18 +196,9 @@ function broadcastMessage () {
     window.ove.socket.send({ monitors: monitorData, patternType: patternType });
 }
 
-displayJSON = function () {
-    d3.select('#clients-json').text(exportOffsets());
-};
-
-function exportOffsets () {
-    let x = [];
-    d3.selectAll('.monitor').each(function (d) {
-        x.push(d);
-    });
-
+function displayJSON () {
+    // Construct array listing the position of each screen after applying shift
     let id = OVE.Utils.getQueryParam('oveClientId');
-
     let newLayout = {};
     newLayout[id] = d3.selectAll('.monitor')
         .data()
@@ -199,10 +213,14 @@ function exportOffsets () {
     const yOffset = d3.min(newLayout[id].map(function (d) { return d.y; }));
     newLayout[id].map(function (d) { d.y -= yOffset; });
 
+    // Display new space dimensions (this will have increased in scrreens have been shifted outwards)
     const spaceWidth = d3.max(newLayout[id].map(function (d) { return d.x + d.w; }));
     const spaceHeight = d3.max(newLayout[id].map(function (d) { return d.y + d.h; }));
     d3.select('#space-size').text('Dimensions of space are w: ' + spaceWidth + ', h: ' + spaceHeight);
 
+    // Display JSON serialization of layout (with initial '{' and final '}' removed)
     const layoutJSON = JSON.stringify(newLayout);
-    return layoutJSON.substr(1, layoutJSON.length - 2);
+
+    d3.select('#clients-json')
+      .text(layoutJSON.substr(1, layoutJSON.length - 2));
 }

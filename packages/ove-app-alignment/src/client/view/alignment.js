@@ -1,10 +1,11 @@
 initPage = function () {
     window.ove.context.isInitialized = false;
     log.debug('Application is initialized:', window.ove.context.isInitialized);
-    drawView();
 
     window.ove.socket.on(function (message) {
         if (message.hasOwnProperty('monitors')) {
+            log.debug('Received message:', message);
+
             const svgEmpty = !document.getElementById('grid-group').innerHTML;
             const patternChanged = (message.patternType && message.patternType !== window.ove.state.current.patternType);
 
@@ -23,41 +24,39 @@ initPage = function () {
     });
 };
 
-beginInitialization = function () {
-    log.debug('Starting viewer initialization');
-    OVE.Utils.initView(initView, drawView);
-};
-
-function drawView () {
-    let context = window.ove.context;
-    if (!context.isInitialized) {
-        createGrid();
-        context.isInitialized = true;
-        log.debug('Application is initialized:', context.isInitialized);
-    }
-}
 
 function shiftGrid (message) {
+    // Set the shift of the pattern by the amount specified for this monitor by message
     const data = message.monitors[OVE.Utils.getClient()];
     const xShift = (data.x + data.horizontalShift);
     const yShift = (data.y + data.verticalShift);
+
+    log.debug('Shifting grid by amount:', '(' , xShift, ',', yShift, ')');
 
     d3.select('#grid-group').style('transform', 'translate(' + (-xShift) + 'px, ' + (-yShift) + 'px)');
 }
 
 function resizeSVG () {
+    // hide the monitorsView element (used by the control page only)
+    log.debug('Resizing SVG');
+
     d3.select('#monitorsView').style('display', 'none');
+
     d3.select('#gridView').style('width', '100%').style('height', '100%').style('display', 'block');
 
+    // Set the size of the SVG to fill the available space
     d3.select('#grid')
         .attr('width', window.innerWidth)
         .attr('height', window.innerHeight);
 
+    // remove any previously drawn pattern
     d3.select('#grid-group').node().innerHTML = '';
 }
 
 function createGrid (maxX, maxY) {
+    // Fill the screen with a grid composed of vertical and horizontal lines
     resizeSVG();
+    log.debug('Drawing grid');
 
     let rows = [];
     for (let i = 0; i < 2 * (maxY / Constants.GRID_SPACING); i++) {
@@ -109,7 +108,10 @@ function createGrid (maxX, maxY) {
 }
 
 function createDiagonal (maxX, maxY) {
+    // Fill the screen with parallel diagonal lines
     resizeSVG();
+
+    log.debug('Drawing diagonal lines');
 
     const size = Math.max(maxX, maxY);
 
@@ -142,13 +144,19 @@ function createDiagonal (maxX, maxY) {
 function createTriangles () {
     resizeSVG();
 
-    // get clients.JSON
+    log.debug('Drawing triangles');
+
+    // We need to load Clients.JSON, as we want to position right-angled triangles so that they cross each screen's edge
     d3.json(buildClientsURL()).then(function (clients) {
         const id = OVE.Utils.getSpace();
 
+        // Construct list of points at the midpoint of the right edge of each screen
+        // l is a parameter that sets the size of triangle that will be drawn on each edge
         let rightMiddlePoints = clients[id].map(function (d) {
             return { cx: d.x + d.w, cy: d.y + d.h / 2, l: d.h / 2 };
         });
+        
+        // Construct list of points at the midpoint of the bottom edge of each screen 
         let bottomMiddlePoints = clients[id].map(function (d) {
             return { cx: d.x + d.w / 2, cy: d.y + d.h, l: d.h / 2 };
         });
@@ -160,9 +168,11 @@ function createTriangles () {
             .enter()
             .append('polygon')
             .attr('points', function (d) {
-                return (d.cx - d.l / 2) + ',' + (d.cy + d.l / 2) + ' ' +
-                    (d.cx - d.l / 2) + ',' + (d.cy - d.l / 2) + ' ' +
-                    (d.cx + d.l / 2) + ',' + (d.cy + d.l / 2);
+                const vertex1 = (d.cx - d.l / 2) + ',' + (d.cy + d.l / 2);
+                const vertex2 = (d.cx - d.l / 2) + ',' + (d.cy - d.l / 2);
+                const vertex3 = (d.cx + d.l / 2) + ',' + (d.cy + d.l / 2);
+                
+                return vertex1 + ' ' + vertex2  + ' ' + vertex3;
             })
             .classed('triangles', true);
     });

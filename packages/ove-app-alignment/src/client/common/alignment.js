@@ -14,6 +14,7 @@ $(function () {
     });
 });
 
+// This function constructs the URL (served by OVe-core) that will return the contents of the Clients.json file
 buildClientsURL = function () {
     let serverURL = '';
     const scripts = document.getElementsByTagName('script');
