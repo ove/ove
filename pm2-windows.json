@@ -88,6 +88,17 @@
       }
     },
     {
+      "name": "@ove/ove-app-audio",
+      "cwd": "./packages/ove-app-audio",
+      "kill_timeout": 3000,
+      "restart_delay": 3000,
+      "script": "dist/index.js",
+      "env": {
+          "PORT": "8088",
+          "OVE_HOST": "localhost:8080"
+      }
+    },
+    {
       "name": "@ove/ove-service-imagetiles",
       "cwd": "./packages/ove-service-imagetiles",
       "kill_timeout": 3000,
