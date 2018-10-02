@@ -43,7 +43,7 @@ function OVE (appId) {
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
                 if (data.appId === __private.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
-                    if (Constants.Logging.TRACE_BROWSER) {
+                    if (Constants.Logging.TRACE) {
                         log.trace('Reading message:', JSON.stringify(data));
                     }
                     onMessage(data.message);
@@ -161,7 +161,8 @@ function OVE (appId) {
                         OVE.Utils.logThenResolve(log.debug, resolve, 'state loaded');
                     } else {
                         //-- Rejection is handled similar to a resolution, since this is expected --//
-                        OVE.Utils.logThenResolve(log.debug, reject, 'state not loaded');
+                        OVE.Utils.logThenResolve(log.debug, reject,
+                            'state not pre-loaded, please load using controller');
                     }
                 });
             });

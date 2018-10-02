@@ -65,7 +65,7 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
             isComplete = Utils.isNullOrEmpty(bufferStatus[sectionId]);
         } else {
             bufferStatus.some(function (s) {
-                if (s && JSON.stringify(s) !== JSON.stringify({})) {
+                if (s && JSON.stringify(s) !== Utils.JSON.EMPTY) {
                     isComplete = false;
                     return true;
                 }
@@ -93,7 +93,7 @@ app.get('/operation/:name(' + operationsList + ')', function (req, res) {
             ws.send(JSON.stringify({ appId: Constants.APP_NAME, message: message }));
         }
         res.status(HttpStatus.OK).set(Constants.HTTP_HEADER_CONTENT_TYPE,
-            Constants.HTTP_CONTENT_TYPE_JSON).send(JSON.stringify({}));
+            Constants.HTTP_CONTENT_TYPE_JSON).send(Utils.JSON.EMPTY);
     }
 });
 

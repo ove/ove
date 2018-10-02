@@ -24,43 +24,14 @@ function OVEUtils () {
 
     function OVELogger (name) {
         //-- Constants for log labels corresponding to levels.  --//
-        const LogPrefix = {
-            TRACE: 'TRACE',
-            DEBUG: 'DEBUG',
-            INFO: 'INFO',
-            WARN: 'WARN',
-            ERROR: 'ERROR',
-            FATAL: 'FATAL'
-        };
-
-        const UNKNOWN_APP_ID = '__UNKNOWN__';
-        const APP_ID_WIDTH = 16;
         const LOG_PREFIX_WIDTH = 9;
 
         //-- The logger name is stored for later use.           --//
         let __private = { name: name };
 
         //-- Internal Utility function to get log labels' CSS   --//
-        const getLogLabelCSS = function (logLevel) {
-            const getCSSString = function (background, color) {
-                return 'font-weight: 500; background: ' + background + '; color: ' + color;
-            };
-            switch (logLevel) {
-                case LogPrefix.TRACE:
-                    return getCSSString('#808080', '#FFFAF0');
-                case LogPrefix.DEBUG:
-                    return getCSSString('#1E90FF', '#F8F8FF');
-                case LogPrefix.INFO:
-                    return getCSSString('#2E8B57', '#FFFAFA');
-                case LogPrefix.WARN:
-                    return getCSSString('#DAA520', '#FFFFF0');
-                case LogPrefix.ERROR:
-                    return getCSSString('#B22222', '#FFFAF0');
-                case LogPrefix.FATAL:
-                    return getCSSString('#FF0000', '#FFFFFF');
-                default:
-                    //-- This should not happen since we use the enumeration. --//
-            }
+        const getLogLabel = function (logLevel) {
+            return 'font-weight: 500; background: ' + logLevel.label.bgColor + '; color: ' + logLevel.label.color;
         };
 
         //-- Internal Utility function to build log messages. --//
@@ -72,45 +43,22 @@ function OVEUtils () {
             }(new Date()));
             //-- Each logger can have its own name. If this is  --//
             //-- not provided, it will default to Unknown.      --//
-            const loggerName = __private.name || UNKNOWN_APP_ID;
-            return [('%c[' + logLevel + ']').padStart(LOG_PREFIX_WIDTH), getLogLabelCSS(logLevel), time, '-',
-                loggerName.padEnd(APP_ID_WIDTH), ':'].concat(Object.values(args));
+            const loggerName = __private.name || Constants.LOG_UNKNOWN_APP_ID;
+            return [('%c[' + logLevel.name + ']').padStart(LOG_PREFIX_WIDTH), getLogLabel(logLevel), time, '-',
+                loggerName.padEnd(Constants.LOG_APP_ID_WIDTH), ':'].concat(Object.values(args));
         };
 
-        //-- All log functions accept any number of arguments   --//
-        this.trace = function () {
-            if (Constants.Logging.TRACE_BROWSER) {
-                console.log.apply(console, buildLogMessage(LogPrefix.TRACE, arguments));
-            }
-        };
-
-        this.debug = function () {
-            if (Constants.Logging.DEBUG) {
-                console.log.apply(console, buildLogMessage(LogPrefix.DEBUG, arguments));
-            }
-        };
-
-        this.info = function () {
-            if (Constants.Logging.INFO) {
-                console.log.apply(console, buildLogMessage(LogPrefix.INFO, arguments));
-            }
-        };
-
-        this.warn = function () {
-            if (Constants.Logging.WARN) {
-                console.warn.apply(console, buildLogMessage(LogPrefix.WARN, arguments));
-            }
-        };
-
-        this.error = function () {
-            if (Constants.Logging.ERROR) {
-                console.error.apply(console, buildLogMessage(LogPrefix.ERROR, arguments));
-            }
-        };
-
-        this.fatal = function () {
-            console.error.apply(console, buildLogMessage(LogPrefix.FATAL, arguments));
-        };
+        //-- Expose a function for each log-level               --//
+        (function (__self) {
+            Constants.LogLevel.forEach(function (level, i) {
+                __self[level.name.toLowerCase()] = function () {
+                    if (Constants.LOG_LEVEL >= i) {
+                        //-- All log functions accept any number of arguments            --//
+                        console[level.consoleLogger].apply(console, buildLogMessage(level, arguments));
+                    }
+                };
+            });
+        })(this);
     }
 
     //-----------------------------------------------------------//

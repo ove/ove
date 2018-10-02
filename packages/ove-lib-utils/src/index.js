@@ -38,41 +38,12 @@ function Utils (app, appName, dirs) {
     const log = this.Logger('OVEUtils');
 
     function OVELogger (name) {
-        // Constants for log labels corresponding to levels.
-        const LogPrefix = {
-            TRACE: 'TRACE',
-            DEBUG: 'DEBUG',
-            INFO: 'INFO',
-            WARN: 'WARN',
-            ERROR: 'ERROR',
-            FATAL: 'FATAL'
-        };
-
-        const UNKNOWN_APP_ID = '__UNKNOWN__';
-        const APP_ID_WIDTH = 16;
-
         // The logger name is stored for later use.
         let __private = { name: name };
 
         // Internal Utility function to get log labels
-        // This does not work on PM2
         const getLogLabel = function (logLevel) {
-            switch (logLevel) {
-                case LogPrefix.TRACE:
-                    return chalk.bgHex('#808080').hex('#FFFAF0').bold;
-                case LogPrefix.DEBUG:
-                    return chalk.bgHex('#1E90FF').hex('#F8F8FF').bold;
-                case LogPrefix.INFO:
-                    return chalk.bgHex('#2E8B57').hex('#FFFAFA').bold;
-                case LogPrefix.WARN:
-                    return chalk.bgHex('#DAA520').hex('#FFFFF0').bold;
-                case LogPrefix.ERROR:
-                    return chalk.bgHex('#B22222').hex('#FFFAF0').bold;
-                case LogPrefix.FATAL:
-                    return chalk.bgHex('#FF0000').hex('#FFFFFF').bold;
-                default:
-                    // This should not happen since we use the enumeration.
-            }
+            return chalk.bgHex(logLevel.label.bgColor).hex(logLevel.label.color).bold;
         };
 
         // Internal Utility function to build log messages.
@@ -80,45 +51,23 @@ function Utils (app, appName, dirs) {
             const time = dateFormat(new Date(), 'dd/mm/yyyy, h:MM:ss.l tt');
             // Each logger can have its own name. If this is
             // not provided, it will default to Unknown.
-            const loggerName = __private.name || UNKNOWN_APP_ID;
-            return [ (logLevel.length === 4 ? ' ' : '') + getLogLabel(logLevel)('[' + logLevel + ']'), time, '-',
-                loggerName.padEnd(APP_ID_WIDTH), ':'].concat(Object.values(args));
+            const loggerName = __private.name || Constants.LOG_UNKNOWN_APP_ID;
+            return [ (logLevel.name.length === 4 ? ' ' : '') +
+                getLogLabel(logLevel)('[' + logLevel.name + ']'), time, '-',
+            loggerName.padEnd(Constants.LOG_APP_ID_WIDTH), ':'].concat(Object.values(args));
         };
 
-        // All log functions accept any number of arguments
-        this.trace = function () {
-            if (Constants.Logging.TRACE_SERVER) {
-                console.log.apply(console, buildLogMessage(LogPrefix.TRACE, arguments));
-            }
-        };
-
-        this.debug = function () {
-            if (Constants.Logging.DEBUG) {
-                console.log.apply(console, buildLogMessage(LogPrefix.DEBUG, arguments));
-            }
-        };
-
-        this.info = function () {
-            if (Constants.Logging.INFO) {
-                console.log.apply(console, buildLogMessage(LogPrefix.INFO, arguments));
-            }
-        };
-
-        this.warn = function () {
-            if (Constants.Logging.WARN) {
-                console.warn.apply(console, buildLogMessage(LogPrefix.WARN, arguments));
-            }
-        };
-
-        this.error = function () {
-            if (Constants.Logging.ERROR) {
-                console.error.apply(console, buildLogMessage(LogPrefix.ERROR, arguments));
-            }
-        };
-
-        this.fatal = function () {
-            console.error.apply(console, buildLogMessage(LogPrefix.FATAL, arguments));
-        };
+        // Expose a function for each log-level
+        (function (__self) {
+            Constants.LogLevel.forEach(function (level, i) {
+                __self[level.name.toLowerCase()] = function () {
+                    if (Constants.LOG_LEVEL >= i) {
+                        // All log functions accept any number of arguments
+                        console[level.consoleLogger].apply(console, buildLogMessage(level, arguments));
+                    }
+                };
+            });
+        })(this);
     }
 
     /**************************************************************
@@ -225,11 +174,11 @@ function Utils (app, appName, dirs) {
 
     // We don't want to see browser errors, so we send an empty success response in some cases.
     this.sendEmptySuccess = function (res) {
-        this.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+        this.sendMessage(res, HttpStatus.OK, this.JSON.EMPTY);
     };
 
     this.isNullOrEmpty = function (input) {
-        return !input || this.JSON.equals(input) === this.JSON.EMPTY;
+        return !input || this.JSON.equals(input, {});
     };
 }
 

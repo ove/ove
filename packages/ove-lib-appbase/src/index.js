@@ -43,7 +43,7 @@ module.exports = function (baseDir, appName) {
     const createStateByName = function (req, res) {
         log.info('Creating named state:', req.params.name);
         if (Constants.Logging.DEBUG) {
-            log.debug('Got state configuration:', JSON.stringify(req.body.app.states));
+            log.debug('Got state configuration:', JSON.stringify(req.body));
         }
         module.exports.config.states[req.params.name] = req.body;
         Utils.sendEmptySuccess(res);

@@ -99,7 +99,7 @@ Utils.registerRoutesForContent();
 var sections = [];
 
 const listClients = function (_req, res) {
-    log.debug('Producing a list of clients');
+    log.debug('Returning parsed result of Clients.json');
     Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(clients));
 };
 
@@ -109,7 +109,7 @@ const listClientById = function (req, res) {
         log.debug('Unable to produce list of clients for section id:', sectionId);
         Utils.sendEmptySuccess(res);
     } else {
-        log.debug('Producing a list of clients for section id:', sectionId);
+        log.debug('Returning parsed result of Clients.json for section id:', sectionId);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(sections[sectionId].clients));
     }
 };
@@ -405,13 +405,15 @@ app.ws('/', function (s) {
             wss.clients.forEach(function (c) {
                 // We respond to every socket but not to the sender
                 if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
-                    log.trace('Sending message to socket:', c.id);
+                    if (Constants.Logging.TRACE_SERVER) {
+                        log.trace('Sending to socket:', c.id, ', message:', msg);
+                    }
                     c.safeSend(msg);
                 }
             });
         }
     });
-    if (Constants.Logging.DEBUG || Constants.Logging.TRACE_SERVER) {
+    if (Constants.Logging.DEBUG) {
         // Associate an ID for each WebSocket, which will subsequently be used when logging.
         s.id = wss.clients.size;
         log.debug('WebSocket connection established. Clients connected:', wss.clients.size);
