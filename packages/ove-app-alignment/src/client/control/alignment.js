@@ -31,7 +31,6 @@ function drawMonitors () {
     // This function draws a rectangle representing each monitor, and defines the associated interactivity
     d3.json(buildClientsURL())
         .then(function (clients) {
-
             log.debug('Loaded Clients.json');
 
             // Ensure the monitorGrid SVG is empty
@@ -196,7 +195,7 @@ function broadcastMessage () {
     window.ove.socket.send({ monitors: monitorData, patternType: patternType });
 }
 
-function displayJSON () {
+displayJSON = function () {
     // Construct array listing the position of each screen after applying shift
     let id = OVE.Utils.getQueryParam('oveClientId');
     let newLayout = {};
@@ -222,5 +221,5 @@ function displayJSON () {
     const layoutJSON = JSON.stringify(newLayout);
 
     d3.select('#clients-json')
-      .text(layoutJSON.substr(1, layoutJSON.length - 2));
-}
+        .text(layoutJSON.substr(1, layoutJSON.length - 2));
+};

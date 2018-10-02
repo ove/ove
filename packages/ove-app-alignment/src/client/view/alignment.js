@@ -24,14 +24,13 @@ initPage = function () {
     });
 };
 
-
 function shiftGrid (message) {
     // Set the shift of the pattern by the amount specified for this monitor by message
     const data = message.monitors[OVE.Utils.getClient()];
     const xShift = (data.x + data.horizontalShift);
     const yShift = (data.y + data.verticalShift);
 
-    log.debug('Shifting grid by amount:', '(' , xShift, ',', yShift, ')');
+    log.debug('Shifting grid by amount:', '(', xShift, ',', yShift, ')');
 
     d3.select('#grid-group').style('transform', 'translate(' + (-xShift) + 'px, ' + (-yShift) + 'px)');
 }
@@ -155,8 +154,8 @@ function createTriangles () {
         let rightMiddlePoints = clients[id].map(function (d) {
             return { cx: d.x + d.w, cy: d.y + d.h / 2, l: d.h / 2 };
         });
-        
-        // Construct list of points at the midpoint of the bottom edge of each screen 
+
+        // Construct list of points at the midpoint of the bottom edge of each screen
         let bottomMiddlePoints = clients[id].map(function (d) {
             return { cx: d.x + d.w / 2, cy: d.y + d.h, l: d.h / 2 };
         });
@@ -171,8 +170,7 @@ function createTriangles () {
                 const vertex1 = (d.cx - d.l / 2) + ',' + (d.cy + d.l / 2);
                 const vertex2 = (d.cx - d.l / 2) + ',' + (d.cy - d.l / 2);
                 const vertex3 = (d.cx + d.l / 2) + ',' + (d.cy + d.l / 2);
-                
-                return vertex1 + ' ' + vertex2  + ' ' + vertex3;
+                return vertex1 + ' ' + vertex2 + ' ' + vertex3;
             })
             .classed('triangles', true);
     });
