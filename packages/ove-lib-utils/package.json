@@ -7,8 +7,12 @@
     "clean": "npx rimraf lib",
     "build": "npx babel-cli src --out-dir lib --copy-files"
   },
-  "files": ["lib/*"],
-  "keywords": ["OVE"],
+  "files": [
+    "lib/*"
+  ],
+  "keywords": [
+    "OVE"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -20,12 +24,12 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "express": "4.16.3",
-    "swagger-ui-express": "4.0.1",
-    "yamljs": "0.3.0",
     "chalk": "2.4.1",
     "dateformat": "3.0.3",
+    "express": "4.16.3",
     "http-status-codes": "1.3.0",
-    "jquery": "3.3.1"
+    "jquery": "3.3.1",
+    "swagger-ui-express": "4.0.1",
+    "yamljs": "0.3.0"
   }
 }
