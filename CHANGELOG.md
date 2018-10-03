@@ -7,4 +7,4 @@ All notable changes to this project will be documented in this file. See [Conven
 
 ### Features
 
-Initial Release of [Open Visualization Environment (OVE)](https://github.com/ove/ove).
+**feat:** Initial Release of [Open Visualization Environment (OVE)](https://github.com/ove/ove).
