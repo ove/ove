@@ -187,7 +187,7 @@ function Utils (app, appName, dirs) {
 **************************************************************/
 module.exports = function (app, appName, dirs) {
     // Constants are defined as follows:
-    //    1. System-wide within @ove/ove-lib-utils
+    //    1. System-wide within @ove-lib/utils
     //    2. Within OVE Core as a part of client utilities
     //    3. Within each app as a part of client constants
     // But, some apps may not be having specific constants of their own, and simply depend on the

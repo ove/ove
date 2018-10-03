@@ -1,5 +1,5 @@
 {
-  "name": "@ove/ove-lib-utils",
+  "name": "@ove-lib/utils",
   "version": "0.1.0",
   "main": "lib/index.js",
   "scripts": {
@@ -7,7 +7,16 @@
     "clean": "npx rimraf lib",
     "build": "npx babel-cli src --out-dir lib --copy-files"
   },
-  "keywords": [],
+  "files": ["lib/*"],
+  "keywords": ["OVE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/ove/ove",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ove/ove.git"
+  },
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
@@ -16,6 +25,7 @@
     "yamljs": "0.3.0",
     "chalk": "2.4.1",
     "dateformat": "3.0.3",
-    "http-status-codes": "1.3.0"
+    "http-status-codes": "1.3.0",
+    "jquery": "3.3.1"
   }
 }

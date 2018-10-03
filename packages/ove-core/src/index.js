@@ -14,7 +14,7 @@ const dirs = {
     constants: path.join(__dirname, 'client', 'utils'),
     rootPage: path.join(__dirname, 'blank.html')
 };
-const { Constants, Utils } = require('@ove/ove-lib-utils')(app, 'core', dirs);
+const { Constants, Utils } = require('@ove-lib/utils')(app, 'core', dirs);
 const log = Utils.Logger('OVE');
 const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
 
