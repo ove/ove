@@ -11,7 +11,7 @@ module.exports = function (baseDir, appName) {
         nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
         constants: path.join(baseDir, 'client', 'constants')
     };
-    const { Constants, Utils } = require('@ove/ove-lib-utils')(app, appName, dirs);
+    const { Constants, Utils } = require('@ove-lib/utils')(app, appName, dirs);
     const log = Utils.Logger(appName);
 
     log.debug('Starting application:', appName);
