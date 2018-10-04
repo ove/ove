@@ -11,15 +11,14 @@ npm install @ove-lib/appbase --save
 ## Usage
 
 ```js
-const express = require('express');
-const app = express();
-const dirs = {
-    base: __dirname,
-    nodeModules: path.join(__dirname, '..', 'node_modules'),
-    constants: path.join(__dirname, 'constants'),
-    rootPage: path.join(__dirname, 'client', 'blank.html')
-};
-const { Constants, Utils } = require('@ove-lib/utils')(app, 'myapp', dirs);
-const log = Utils.Logger('myapp');
-log.debug('Starting application:', 'myapp');
+const path = require('path');
+const { express, app, log, nodeModules } = require('@ove-lib/appbase')(__dirname, 'myapp');
+const server = require('http').createServer(app);
+
+log.debug('Using module:', 'some_module');
+app.use('/', express.static(path.join(nodeModules, 'some_module', 'build')));
+
+const port = process.env.PORT || 8080;
+server.listen(port);
+log.info('application started, port:', port);
 ```
