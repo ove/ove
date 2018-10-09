@@ -45,6 +45,7 @@ updateSections = function (m) {
                 log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
                 $('<iframe>', {
                     id: Constants.SECTION_FRAME_ID.substring(1) + m.id,
+                    allowtransparency: true,
                     frameborder: 0,
                     scrolling: 'no'
                 }).css({
