@@ -101,9 +101,12 @@ function OVE (appId) {
                         const section = JSON.parse(text);
                         __self.layout.section = { w: section.w, h: section.h };
                         __self.state.name = OVE.Utils.getQueryParam('state', section.state);
-                        __private.sectionId = section.id;
-                        log.debug('Got details from section:', section.id);
-                        //-- We wait for section information to be available before announcing OVE loaded   --//
+                        //-- Always store section id as a string to avoid if-checks      --//
+                        //-- failing on '0'                                              --//
+                        __private.sectionId = (section.id).toString();
+                        log.debug('Got details from section:', __private.sectionId);
+                        //-- We wait for section information to be available before      --//
+                        //-- announcing OVE loaded                                       --//
                         $(document).trigger(OVE.Event.LOADED);
                     });
             }

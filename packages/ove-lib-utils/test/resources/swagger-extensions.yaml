@@ -1,0 +1,11 @@
+tags:
+- name: "operation"
+  description: "A collection of operations"
+paths:
+  /operation/dummy:
+    get:
+      tags:
+      - "operation"
+      summary: "Some dummy operation"
+      produces:
+      - "application/json"

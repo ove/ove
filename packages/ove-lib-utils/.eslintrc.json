@@ -1,5 +1,18 @@
 {
+    "env": {
+        "jest/globals": true
+    },
     "extends": "standard",
+    "overrides": [
+        {
+            "files": [ "**/test/resources/**/*.js" ],
+            "globals": {
+                "initCommon": true,
+                "initControl": true,
+                "initView": true
+            }
+        }
+    ],
     "rules": {
         "indent": ["error", 4, {
             "SwitchCase": 1,
@@ -16,5 +29,6 @@
             "ignoreComments": false
         }],
         "semi": ["error", "always"]
-    }
+    },
+    "plugins": ["jest"]
 }

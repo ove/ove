@@ -1,0 +1,17 @@
+swagger: "2.0"
+info:
+  version: "@VERSION"
+  title: "Test Swagger"
+  contact:
+    email: "@AUTHOR"
+  license:
+    name: "@LICENSE License"
+    url: "https://raw.githubusercontent.com/ove/ove/master/LICENSE"
+basePath: "/"
+tags:
+- name: "dummy"
+  description: "A dummy tag"
+paths:
+  dummy:
+schemes:
+- "http"

@@ -1,4 +1,7 @@
 {
+    "env": {
+        "jest/globals": true
+    },
     "extends": "standard",
     "rules": {
         "indent": ["error", 4, {
@@ -16,5 +19,6 @@
             "ignoreComments": false
         }],
         "semi": ["error", "always"]
-    }
+    },
+    "plugins": ["jest"]
 }
