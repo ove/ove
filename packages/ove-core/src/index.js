@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -20,7 +21,8 @@ app.use(cors());
 log.debug('Using Express JSON middleware');
 app.use(express.json());
 
-server(app, wss, log, Utils, Constants);
+const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
+server(app, wss, clients, log, Utils, Constants);
 
 app.listen(process.env.PORT || 8080);
 log.info('OVE Core started');

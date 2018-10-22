@@ -5,9 +5,7 @@ const HttpStatus = require('http-status-codes');
 const uglify = require('uglify-js');
 const pjson = require(path.join('..', 'package.json')); // this path might have to be fixed based on packaging
 
-module.exports = function (app, wss, log, Utils, Constants) {
-    const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
-
+module.exports = function (app, wss, clients, log, Utils, Constants) {
     /**************************************************************
                             OVE Extensions
     **************************************************************/
