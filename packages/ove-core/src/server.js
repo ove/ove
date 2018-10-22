@@ -5,15 +5,12 @@ const HttpStatus = require('http-status-codes');
 const uglify = require('uglify-js');
 const pjson = require(path.join('..', 'package.json')); // this path might have to be fixed based on packaging
 
-module.exports = function (app, log, Utils, Constants) {
-    const wss = require('express-ws')(app).getWss('/');
+module.exports = function (app, wss, log, Utils, Constants) {
     const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
 
     /**************************************************************
                             OVE Extensions
     **************************************************************/
-    /* istanbul ignore next */
-    // Unable to test WSS using Jest due to single-threaded model.
     (function (add) {
         // We get hold of the WebSocket object's prototype within the add method. This is because
         // WebSockets are created within a module and the only way that we can extend that specific
@@ -210,8 +207,6 @@ module.exports = function (app, log, Utils, Constants) {
             sections[sectionId] = section;
 
             // Notify OVE viewers/controllers
-            /* istanbul ignore next */
-            // Unable to test WSS using Jest due to single-threaded model.
             wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     // Sections are created on the browser and then the application is deployed after a
@@ -244,8 +239,6 @@ module.exports = function (app, log, Utils, Constants) {
         log.info('Deleting all sections');
         log.debug('Existing sections (active/deleted):', sections.length);
 
-        /* istanbul ignore next */
-        // Unable to test WSS using Jest due to single-threaded model.
         wss.clients.forEach(function (c) {
             if (c.readyState === Constants.WEBSOCKET_READY) {
                 c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
@@ -284,7 +277,7 @@ module.exports = function (app, log, Utils, Constants) {
                 oldURL = sections[sectionId].app.url;
                 log.debug('Deleting existing application configuration');
                 delete sections[sectionId].app;
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId } }));
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId) } }));
             }
             if (req.body.app) {
                 const url = req.body.app.url.replace(/\/$/, '');
@@ -325,15 +318,13 @@ module.exports = function (app, log, Utils, Constants) {
                         }
                     }
                 }
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: req.body.app } }));
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId), app: req.body.app } }));
             } else if (oldURL) {
                 log.debug('Flushing application at URL:', oldURL);
                 request.post(oldURL + '/flush');
             }
 
             // Notify OVE viewers/controllers
-            /* istanbul ignore next */
-            // Unable to test WSS using Jest due to single-threaded model.
             wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     commands.forEach(function (m) {
@@ -361,11 +352,9 @@ module.exports = function (app, log, Utils, Constants) {
             delete sections[sectionId];
             sections[sectionId] = {};
 
-            /* istanbul ignore next */
-            // Unable to test WSS using Jest due to single-threaded model.
             wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
-                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: sectionId } }));
+                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId) } }));
                 }
             });
             log.info('Successfully deleted section:', sectionId);

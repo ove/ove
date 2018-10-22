@@ -2,6 +2,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const app = express();
+const wss = require('express-ws')(app).getWss('/');
 const dirs = {
     base: __dirname,
     nodeModules: path.join(__dirname, '..', '..', '..', 'node_modules'),
@@ -19,7 +20,7 @@ app.use(cors());
 log.debug('Using Express JSON middleware');
 app.use(express.json());
 
-server(app, log, Utils, Constants);
+server(app, wss, log, Utils, Constants);
 
 app.listen(process.env.PORT || 8080);
 log.info('OVE Core started');
