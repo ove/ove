@@ -103,8 +103,10 @@ function OVE (appId) {
                         __self.state.name = OVE.Utils.getQueryParam('state', section.state);
                         //-- Always store section id as a string to avoid if-checks      --//
                         //-- failing on '0'                                              --//
-                        __private.sectionId = (section.id).toString();
-                        log.debug('Got details from section:', __private.sectionId);
+                        if (section.id !== undefined) {
+                            __private.sectionId = section.id.toString();
+                            log.debug('Got details from section:', __private.sectionId);
+                        }
                         //-- We wait for section information to be available before      --//
                         //-- announcing OVE loaded                                       --//
                         $(document).trigger(OVE.Event.LOADED);

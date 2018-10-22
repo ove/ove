@@ -1,103 +1,27 @@
 const path = require('path');
-const fs = require('fs');
 const request = require('request');
 const HttpStatus = require('http-status-codes');
-const uglify = require('uglify-js');
-const pjson = require(path.join('..', 'package.json')); // this path might have to be fixed based on packaging
 
-module.exports = function (app, wss, clients, log, Utils, Constants) {
-    /**************************************************************
-                            OVE Extensions
-    **************************************************************/
-    (function (add) {
-        // We get hold of the WebSocket object's prototype within the add method. This is because
-        // WebSockets are created within a module and the only way that we can extend that specific
-        // instantiation of the object is to extend an object that has been created from within the
-        // module. So, first of all we extend the add method to achieve what we want.
-        Object.getPrototypeOf(wss.clients).add = function (i) {
-            // Then we check if the object that is being added already has a safeSend method
-            // associated with it's prototype, we add it only if it does not exist. The safeSend
-            // method is introduced by OVE, so it is impossible for the WebSocket to have it unless
-            // OVE introduced it.
-            if (!Object.getPrototypeOf(i).safeSend) {
-                log.debug('Extending Prototype of WebSocket');
-                // The safeSend method simply wraps the send method with a try-catch. We could avoid
-                // doing this and introduce a try-catch whenever we send a message to introduce a
-                // utility. This approach is a bit neater than that, since the code is easier to
-                // follow as a result.
-                Object.getPrototypeOf(i).safeSend = function (msg) {
-                    try {
-                        this.send(msg);
-                    } catch (e) {
-                        if (this.readyState === Constants.WEBSOCKET_READY) {
-                            log.error('Error sending message:', e.message);
-                        }
-                        // ignore all other errors, since there is no value in recording them.
-                    }
-                };
-            }
-            add.bind(wss.clients)(i);
-        };
-    }(Object.getPrototypeOf(wss.clients).add));
-
-    /**************************************************************
-                         OVE Client Library
-    **************************************************************/
-    const generateOVEClientLibrary = function () {
-        log.debug('Generating OVE.js');
-        // OVE.js is a combination of client/ove.js client/utils/utils.js and client/utils/constants.js
-        let text = fs.readFileSync(path.join(__dirname, 'client', 'ove.js'), Constants.UTF8);
-        text += fs.readFileSync(path.join(__dirname, 'client', 'utils', 'utils.js'), Constants.UTF8);
-        // Important thing to note here is that the output is minified using UglifyJS. This library
-        // only supports ES5. Therefore some newer JS capabilities may not work. And, if there was a
-        // newer JS capability used in any of the files included in OVE.js, UglifyJS will produce an
-        // empty file. This can be observed by reviewing corresponding errors on the browser.
-        return uglify.minify(text
-            // Inject constants
-            .replace(/\/\/ @CONSTANTS/g, 'var Constants = ' + JSON.stringify(Constants) + ';')
-            .replace(Constants.RegExp.Annotation.VERSION, pjson.version)
-            .replace(Constants.RegExp.Annotation.LICENSE, pjson.license)
-            .replace(Constants.RegExp.Annotation.AUTHOR, pjson.author)
-            // Replace all let/const with var for ES5 compliance
-            .replace(/(let|const)/g, 'var')
-            // Remove all comments matching pattern
-            .replace(Constants.RegExp.ES5_COMMENT_PATTERN, ''), { output: { comments: true } }).code;
-    };
-    // Cache OVE.js to avoid overheads in repeatedly generating on a per-request basis.
-    const oveJS = generateOVEClientLibrary();
-    app.get('/ove.js', function (_req, res) {
-        res.set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JS).send(oveJS);
-    });
-
-    /**************************************************************
-                     Static Content of OVE Core
-    **************************************************************/
-    Utils.registerRoutesForContent();
-
-    /**************************************************************
-                        APIs Exposed by OVE Core
-    **************************************************************/
-    var sections = [];
-
+module.exports = function (server, log, Utils, Constants) {
     const listClients = function (_req, res) {
         log.debug('Returning parsed result of Clients.json');
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(clients));
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.clients));
     };
 
     const listClientById = function (req, res) {
         let sectionId = req.params.id;
-        if (!sections[sectionId]) {
+        if (!server.sections[sectionId]) {
             log.debug('Unable to produce list of clients for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
             log.debug('Returning parsed result of Clients.json for section id:', sectionId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(sections[sectionId].clients));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.sections[sectionId].clients));
         }
     };
 
     // Creates an individual section
     const createSection = function (req, res) {
-        if (!req.body.space || !clients[req.body.space]) {
+        if (!req.body.space || !server.clients[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
         } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
@@ -109,7 +33,7 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
             section.clients[req.body.space] = [];
 
             // Calculate the dimensions on a client-by-client basis
-            clients[req.body.space].forEach(function (e) {
+            server.clients[req.body.space].forEach(function (e) {
                 // A section overlaps with a client if all of these conditions are met:
                 // - the section's left edge is to the left of the client's right edge
                 // - the section's right edge is to the right of the client's left edge
@@ -165,7 +89,7 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
             log.debug('Generated client configuration for new section');
 
             // Deploy an App into a section
-            let sectionId = sections.length;
+            let sectionId = server.sections.length;
             if (req.body.app) {
                 const url = req.body.app.url.replace(/\/$/, '');
                 section.app = { 'url': url };
@@ -202,10 +126,10 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
                     }
                 }
             }
-            sections[sectionId] = section;
+            server.sections[sectionId] = section;
 
             // Notify OVE viewers/controllers
-            wss.clients.forEach(function (c) {
+            server.wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     // Sections are created on the browser and then the application is deployed after a
                     // short delay. This will ensure proper frame sizes.
@@ -220,24 +144,24 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
                 }
             });
             log.info('Successfully created new section:', sectionId);
-            log.debug('Existing sections (active/deleted):', sections.length);
+            log.debug('Existing sections (active/deleted):', server.sections.length);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
         }
     };
 
     // Deletes all sections
     const deleteSections = function (_req, res) {
-        while (sections.length !== 0) {
-            let section = sections.pop();
+        while (server.sections.length !== 0) {
+            let section = server.sections.pop();
             if (section.app) {
                 log.debug('Flushing application at URL:', section.app.url);
                 request.post(section.app.url + '/flush');
             }
         }
         log.info('Deleting all sections');
-        log.debug('Existing sections (active/deleted):', sections.length);
+        log.debug('Existing sections (active/deleted):', server.sections.length);
 
-        wss.clients.forEach(function (c) {
+        server.wss.clients.forEach(function (c) {
             if (c.readyState === Constants.WEBSOCKET_READY) {
                 c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
             }
@@ -248,13 +172,13 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
     // Fetches details of an individual section
     const readSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (!sections[sectionId]) {
+        if (!server.sections[sectionId]) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
-            let section = { id: parseInt(sectionId, 10), w: sections[sectionId].w, h: sections[sectionId].h };
-            if (sections[sectionId].app && sections[sectionId].app.state) {
-                section.state = sections[sectionId].app.state;
+            let section = { id: parseInt(sectionId, 10), w: server.sections[sectionId].w, h: server.sections[sectionId].h };
+            if (server.sections[sectionId].app && server.sections[sectionId].app.state) {
+                section.state = server.sections[sectionId].app.state;
             }
             log.debug('Successfully read configuration for section id:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
@@ -264,17 +188,17 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
     // Updates an app associated with a section
     const updateSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (Utils.isNullOrEmpty(sections[sectionId])) {
+        if (Utils.isNullOrEmpty(server.sections[sectionId])) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
             // Redeploys an App into a section
             let commands = [];
             let oldURL = null;
-            if (sections[sectionId].app) {
-                oldURL = sections[sectionId].app.url;
+            if (server.sections[sectionId].app) {
+                oldURL = server.sections[sectionId].app.url;
                 log.debug('Deleting existing application configuration');
-                delete sections[sectionId].app;
+                delete server.sections[sectionId].app;
                 commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
             }
             if (req.body.app) {
@@ -283,7 +207,7 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
                     log.debug('Flushing application at URL:', oldURL);
                     request.post(oldURL + '/flush');
                 }
-                sections[sectionId].app = { 'url': url };
+                server.sections[sectionId].app = { 'url': url };
                 log.debug('Got URL for app:', url);
                 if (req.body.app.states) {
                     /* istanbul ignore else */
@@ -296,7 +220,7 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
                     if (req.body.app.states.cache) {
                         Object.keys(req.body.app.states.cache).forEach(function (name) {
                             log.debug('Caching new named state for future use:', name);
-                            request.post(sections[sectionId].app.url + '/state/' + name, {
+                            request.post(server.sections[sectionId].app.url + '/state/' + name, {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: req.body.app.states.cache[name]
                             });
@@ -305,11 +229,11 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
                     if (req.body.app.states.load) {
                         // Either a named state or an in-line state configuration can be loaded.
                         if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
-                            sections[sectionId].app.state = req.body.app.states.load;
-                            log.debug('Loading existing named state:', sections[sectionId].app.state);
+                            server.sections[sectionId].app.state = req.body.app.states.load;
+                            log.debug('Loading existing named state:', server.sections[sectionId].app.state);
                         } else {
                             log.debug('Loading state configuration');
-                            request.post(sections[sectionId].app.url + '/' + sectionId + '/state', {
+                            request.post(server.sections[sectionId].app.url + '/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: req.body.app.states.load
                             });
@@ -323,7 +247,7 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
             }
 
             // Notify OVE viewers/controllers
-            wss.clients.forEach(function (c) {
+            server.wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     commands.forEach(function (m) {
                         c.safeSend(m);
@@ -338,19 +262,19 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
     // Deletes an individual section
     const deleteSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (Utils.isNullOrEmpty(sections[sectionId])) {
+        if (Utils.isNullOrEmpty(server.sections[sectionId])) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
-            let section = sections[sectionId];
+            let section = server.sections[sectionId];
             if (section.app) {
                 log.debug('Flushing application at URL:', section.app.url);
                 request.post(section.app.url + '/flush');
             }
-            delete sections[sectionId];
-            sections[sectionId] = {};
+            delete server.sections[sectionId];
+            server.sections[sectionId] = {};
 
-            wss.clients.forEach(function (c) {
+            server.wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId, 10) } }));
                 }
@@ -360,63 +284,14 @@ module.exports = function (app, wss, clients, log, Utils, Constants) {
         }
     };
 
-    app.get('/clients', listClients);
-    app.get('/client/:id', listClientById);
-    app.delete('/sections', deleteSections);
-    app.post('/section', createSection);
-    app.get('/section/:id', readSectionById);
-    app.post('/section/:id', updateSectionById);
-    app.delete('/section/:id', deleteSectionById);
+    server.app.get('/clients', listClients);
+    server.app.get('/client/:id', listClientById);
+    server.app.delete('/sections', deleteSections);
+    server.app.post('/section', createSection);
+    server.app.get('/section/:id', readSectionById);
+    server.app.post('/section/:id', updateSectionById);
+    server.app.delete('/section/:id', deleteSectionById);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join('..', 'package.json'));
-
-    /**************************************************************
-                     OVE Messaging Middleware
-    **************************************************************/
-    /* istanbul ignore next */
-    // Unable to test WSS using Jest due to single-threaded model.
-    app.ws('/', function (s) {
-        s.safeSend(JSON.stringify({ func: 'connect' }));
-        s.on('message', function (msg) {
-            let m = JSON.parse(msg);
-
-            // Method for viewers to request section information, helps browser crash recovery
-            if (m.appId === Constants.APP_NAME && m.message.action === Constants.Action.READ) {
-                if (m.sectionId === undefined) { // specifically testing for undefined since '0' is a valid input.
-                    sections.forEach(function (section, sectionId) {
-                        // We respond only to the sender and only if a section exists.
-                        if (section && s.readyState === Constants.WEBSOCKET_READY) {
-                            // Sections are created on the browser and then the application is deployed after a
-                            // short delay. This will ensure proper frame sizes.
-                            s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
-                            if (section.app) {
-                                setTimeout(function () {
-                                    s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
-                                }, Constants.SECTION_UPDATE_DELAY);
-                            }
-                        }
-                    });
-                } else {
-                    log.error('Section information cannot be requested from within a section');
-                }
-            // All other messages
-            } else {
-                wss.clients.forEach(function (c) {
-                    // We respond to every socket but not to the sender
-                    if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
-                        if (Constants.Logging.TRACE_SERVER) {
-                            log.trace('Sending to socket:', c.id, ', message:', msg);
-                        }
-                        c.safeSend(msg);
-                    }
-                });
-            }
-        });
-        if (Constants.Logging.DEBUG) {
-            // Associate an ID for each WebSocket, which will subsequently be used when logging.
-            s.id = wss.clients.size;
-            log.debug('WebSocket connection established. Clients connected:', wss.clients.size);
-        }
-    });
 };

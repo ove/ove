@@ -12,7 +12,7 @@ const dirs = {
 };
 const { Constants, Utils } = require('@ove-lib/utils')(app, 'core', dirs);
 const log = Utils.Logger('OVE');
-const server = require(path.join(__dirname, 'server'));
+const server = require(path.join(__dirname, 'server', 'main'));
 
 log.debug('Starting OVE Core');
 log.debug('Application directories:', JSON.stringify(dirs));

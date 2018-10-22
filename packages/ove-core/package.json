@@ -30,8 +30,7 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "src/*.js",
-      "!src/index.js"
+      "src/server/*.js"
     ],
     "coverageReporters": [
       "json-summary",
