@@ -24,11 +24,12 @@ app.use(cors());
 app.use(express.json());
 
 const clients = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.CLIENTS_JSON_FILENAME)));
-const server = require(path.join(srcDir, 'server'))(app, wss, clients, log, Utils, Constants);
+const server = require(path.join(srcDir, 'server', 'main'))(app, wss, clients, log, Utils, Constants);
 
+// Basic tests to ensure initialisation is fine.
 describe('The OVE Core server', () => {
     it('should initialize successfully', () => {
-        expect(server).toBeUndefined();
+        expect(server).not.toBeUndefined();
     });
 
     /* jshint ignore:start */
@@ -37,15 +38,20 @@ describe('The OVE Core server', () => {
         await request(app).get('/')
             .expect('Access-Control-Allow-Origin', '*');
     });
+    /* jshint ignore:end */
+});
 
-    it('should return a list of clients', async () => {
+// Tests for Clients.json
+describe('The OVE Core server', () => {
+    beforeAll(() => {
         // We should test with the actual clients.json in this scenario.
-        const appNew = express();
-        const wssNew = require('express-ws')(appNew).getWss('/');
-        const clientsNew = JSON.parse(fs.readFileSync(path.join(srcDir, 'client', Constants.CLIENTS_JSON_FILENAME)));
-        require(path.join(srcDir, 'server'))(appNew, wssNew, clientsNew, log, Utils, Constants);
+        server.clients = JSON.parse(fs.readFileSync(path.join(srcDir, 'client', Constants.CLIENTS_JSON_FILENAME)));
+    });
 
-        let res = await request(appNew).get('/clients');
+    /* jshint ignore:start */
+    // current version of JSHint does not support async/await
+    it('should return a list of clients', async () => {
+        let res = await request(app).get('/clients');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // It is important to compare the JSON on both side since the ordering of
         // elements changes depending on how it was stringified.
@@ -56,7 +62,18 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify(JSON.parse(fs.readFileSync(
             path.join(srcDir, 'client', Constants.CLIENTS_JSON_FILENAME)))));
     });
+    /* jshint ignore:end */
 
+    afterAll(() => {
+        // We should test with the actual clients.json in this scenario.
+        server.clients = clients;
+    });
+});
+
+// Core functionality tests.
+describe('The OVE Core server', () => {
+    /* jshint ignore:start */
+    // current version of JSHint does not support async/await
     it('should return an empty list of clients by id before a section is created', async () => {
         let res = await request(app).get('/client/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -555,6 +572,7 @@ describe('The OVE Core server', () => {
 // WS into the express app.
 describe('The OVE Core server', () => {
     const { WebSocket, Server } = require('mock-socket');
+    const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
     const PORT = 5555;
     const TIMEOUT = 500;
 
@@ -581,14 +599,53 @@ describe('The OVE Core server', () => {
             throw new Error('some error');
         };
         wss.clients.add(sockets.failing);
+
+        // Add a server-side socket to test the messaging functionality.
+        // It is important to create at least one client-side socket before creating a
+        // server-side sockets, since the 'wss.clients.add' method extends the WebSocket
+        // prototype by introducing a safeSend method to it.
+        sockets.serverSocket = new WebSocket(url);
+        sockets.serverSocket.readyState = 1;
+        sockets.serverSocket.on = (event, listener) => {
+            if (event === 'message') {
+                sockets.serverSocket.onmessage = (event) => {
+                    listener(event.data);
+                };
+            }
+        };
+        middleware(sockets.serverSocket);
     });
 
     beforeEach(() => {
         sockets.messages = [];
+        sockets.serverSocket.readyState = 1;
         sockets.closed.readyState = 0;
     });
 
     jest.useFakeTimers();
+
+    it('should be able to receive events', () => {
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+    });
+
+    // This scenario would happen only if section information would be requested by an app within a section.
+    // OVE prevents this scenario as it is both a security breach and a consistency violation.
+    it('should be complaining when a read event from the core application is sent with a section id', () => {
+        const spy = jest.spyOn(log, 'error');
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { action: Constants.Action.READ }, sectionId: 0 }));
+        expect(sockets.messages.length).toEqual(0);
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+    });
+
+    it('should not be logging all received events', () => {
+        const spy = jest.spyOn(log, 'trace');
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+    });
 
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
@@ -661,6 +718,86 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
         setTimeout(() => {
             // Update request should not be generated after a timeout, unlike in the previous test.
+            expect(sockets.messages.length).toEqual(0);
+            nock.cleanAll();
+        }, TIMEOUT);
+        jest.runOnlyPendingTimers();
+    });
+
+    it('should trigger an event to its sockets when trying to read information about a section that has been created', async () => {
+        await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        let clients = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
+        ));
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
+        ));
+        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        setTimeout(() => {
+            // Update request is generated after a timeout, so it is required to wait for it.
+            expect(sockets.messages.length).toEqual(2);
+            expect(sockets.messages.pop()).toEqual(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+            ));
+            expect(sockets.messages.pop()).toEqual(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+            ));
+            nock.cleanAll();
+        }, TIMEOUT);
+        jest.runOnlyPendingTimers();
+    });
+
+    it('should not trigger an event to its sockets when trying to read information about a section when the server-side socket is not ready', async () => {
+        sockets.serverSocket.readyState = 0;
+        await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        let clients = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
+        ));
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(0);
+        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        setTimeout(() => {
+            // Update request is generated after a timeout, so it is required to wait for it.
+            expect(sockets.messages.length).toEqual(1);
+            expect(sockets.messages.pop()).toEqual(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+            ));
+            nock.cleanAll();
+        }, TIMEOUT);
+        jest.runOnlyPendingTimers();
+    });
+
+    it('should trigger an event to its sockets when trying to read information about a section that has been created without an app', async () => {
+        await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        let clients = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
+        ));
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
+        ));
+        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        setTimeout(() => {
+            // Update request should not be generated after a timeout, unlike in the previous tests.
             expect(sockets.messages.length).toEqual(0);
             nock.cleanAll();
         }, TIMEOUT);
