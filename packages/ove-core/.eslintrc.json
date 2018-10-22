@@ -1,4 +1,7 @@
 {
+    "env": {
+        "jest/globals": true
+    },
     "extends": "standard",
     "globals": {
         "$": true,
@@ -45,5 +48,6 @@
             "ignoreComments": false
         }],
         "semi": ["error", "always"]
-    }
+    },
+    "plugins": ["jest"]
 }

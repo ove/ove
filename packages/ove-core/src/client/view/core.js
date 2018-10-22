@@ -77,7 +77,7 @@ updateSections = function (m) {
             }
             break;
         case Constants.Action.DELETE:
-            if (m.id) {
+            if (m.id !== undefined) {
                 const frame = $(Constants.SECTION_FRAME_ID + m.id);
                 if (frame.length) {
                     log.info('Deleting section:', m.id);

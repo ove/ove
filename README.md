@@ -31,6 +31,11 @@ Build and start runtime:
 * `lerna run build`
 * `pm2 start pm2.json`
 
+Lint the code, run the unit tests and generate coverage report:
+
+* `lerna run lint`
+* `lerna run test`
+
 ### Run
 
 Run in Google Chrome:

@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
-const yamljs = require('yamljs');
+const yamljs = require('js-yaml');
 const chalk = require('chalk');
 const dateFormat = require('dateformat');
 const HttpStatus = require('http-status-codes');
@@ -87,7 +87,7 @@ function Utils (app, appName, dirs) {
         // Each CSS file is combination of {type}/{name}.css and common/{name}.css.
         // Each JS file is combination of {type}/{name}.js, common/{name}.js and
         // constants/{name}.js files from the filesystem.
-        app.use('/' + appName + '.:type.:fileType(js|css)', function (req, res) {
+        app.use('/' + appName + '.:type(view|control).:fileType(js|css)', function (req, res) {
             let text = '';
             const type = req.params.type === 'control' ? 'control' : 'view';
             const fileName = appName + '.' + req.params.fileType;
@@ -106,6 +106,7 @@ function Utils (app, appName, dirs) {
                 case 'css':
                     cType = Constants.HTTP_CONTENT_TYPE_CSS;
                     break;
+                /* istanbul ignore next */
                 default:
                     // This should not happen since the fileType is either CSS or JS.
             }
@@ -138,13 +139,13 @@ function Utils (app, appName, dirs) {
             swagger.info.contact.email = swagger.info.contact.email.replace(Constants.RegExp.Annotation.AUTHOR,
                 pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
             return swagger;
-        })(yamljs.load(swaggerPath), require(packagePath));
+        })(yamljs.safeLoad(fs.readFileSync(swaggerPath)), require(packagePath));
 
         // App-specific swagger extensions
         if (arguments.length > 2 && swaggerExtPath) {
             (function (swaggerDoc, swaggerExt) {
                 if (fs.existsSync(swaggerExt)) {
-                    let swagger = yamljs.load(swaggerExt);
+                    let swagger = yamljs.safeLoad(fs.readFileSync(swaggerExt));
                     // Copying tags (which is an array)
                     swagger.tags.forEach(function (e) {
                         swaggerDoc.tags.push(e);
