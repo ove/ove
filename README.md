@@ -31,10 +31,9 @@ Build and start runtime:
 * `lerna run build`
 * `pm2 start pm2.json`
 
-### Testing
+Lint the code, run the unit tests and generate coverage report:
 
-Run the unit tests and generate coverage report:
-
+* `lerna run lint`
 * `lerna run test`
 
 ### Run

@@ -5,7 +5,8 @@
   "scripts": {
     "clean": "npx rimraf lib",
     "build": "npx babel-cli src --out-dir lib --copy-files",
-    "test": "jest --coverage --colors"
+    "test": "jest --coverage --colors",
+    "lint": "eslint src/. --ext .js"
   },
   "files": [
     "lib/*"
