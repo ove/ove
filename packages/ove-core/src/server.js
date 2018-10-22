@@ -254,7 +254,7 @@ module.exports = function (app, wss, log, Utils, Constants) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
-            let section = { id: parseInt(sectionId), w: sections[sectionId].w, h: sections[sectionId].h };
+            let section = { id: parseInt(sectionId, 10), w: sections[sectionId].w, h: sections[sectionId].h };
             if (sections[sectionId].app && sections[sectionId].app.state) {
                 section.state = sections[sectionId].app.state;
             }
@@ -277,7 +277,7 @@ module.exports = function (app, wss, log, Utils, Constants) {
                 oldURL = sections[sectionId].app.url;
                 log.debug('Deleting existing application configuration');
                 delete sections[sectionId].app;
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId) } }));
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
             }
             if (req.body.app) {
                 const url = req.body.app.url.replace(/\/$/, '');
@@ -318,7 +318,7 @@ module.exports = function (app, wss, log, Utils, Constants) {
                         }
                     }
                 }
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId), app: req.body.app } }));
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: req.body.app } }));
             } else if (oldURL) {
                 log.debug('Flushing application at URL:', oldURL);
                 request.post(oldURL + '/flush');
@@ -333,7 +333,7 @@ module.exports = function (app, wss, log, Utils, Constants) {
                 }
             });
             log.info('Successfully updated section:', sectionId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId) }));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
         }
     };
 
@@ -354,11 +354,11 @@ module.exports = function (app, wss, log, Utils, Constants) {
 
             wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
-                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId) } }));
+                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId, 10) } }));
                 }
             });
             log.info('Successfully deleted section:', sectionId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId) }));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
         }
     };
 

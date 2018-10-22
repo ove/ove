@@ -38,7 +38,7 @@ describe('The OVE Utils library', () => {
         expect(Utils.isNullOrEmpty(undefined)).toBeTruthy();
         expect(Utils.isNullOrEmpty({})).toBeTruthy();
         expect(Utils.isNullOrEmpty('test')).toBeFalsy();
-        expect(Utils.isNullOrEmpty(10.10)).toBeFalsy();
+        expect(Utils.isNullOrEmpty(10.1)).toBeFalsy();
         const foo = { bar: 'foobar' };
         expect(Utils.isNullOrEmpty(foo)).toBeFalsy();
     });
