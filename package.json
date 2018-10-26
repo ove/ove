@@ -10,7 +10,8 @@
     "build:clean": "lerna run clean && lerna run build",
     "build:docker": "lerna run clean && lerna run build && docker-compose build",
     "test": "lerna run test",
-    "start": "lerna run start",
+    "start": "pm2 start pm2.json",
+    "start:windows": "pm2 start pm2-windows.json",
     "start:dev": "lerna run start:dev"
   },
   "devDependencies": {
