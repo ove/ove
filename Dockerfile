@@ -1,20 +1,14 @@
-FROM node:10-stretch
+FROM node:10-alpine
 WORKDIR /usr/src/app
 
-# Bundle app source
 COPY . .
 
-# install dependencies with npm
-RUN npm install -global npx
 RUN npm install -global pm2
 RUN npm install -global lerna
 
-# setup lerna
-RUN lerna bootstrap --hoist
+RUN npm run install:prod 
 
-# build
-RUN lerna run clean
-RUN lerna run build
+RUN npm uninstall -global lerna
 
 EXPOSE 8080
 
