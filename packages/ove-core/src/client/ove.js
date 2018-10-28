@@ -6,7 +6,7 @@
  * Released under @LICENSE License
  */
 //-- IMPORTANT: all code comments must be in this format. --//
-function OVE (appId) {
+function OVE (appId, hostname) {
     // @CONSTANTS
 
     const log = OVE.Utils.Logger('OVE');
@@ -55,7 +55,7 @@ function OVE (appId) {
                 setTimeout(function () { getSocket(url); }, Constants.SOCKET_REFRESH_DELAY);
             });
         };
-        getSocket('ws://' + getHostName(false) + '/');
+        getSocket('ws://' + (__private.hostname || getHostName(false)) + '/');
 
         //-- SDK functions --//
         this.on = function (func) {
@@ -177,7 +177,7 @@ function OVE (appId) {
     };
 
     //-- holds private data within OVE library --//
-    let __private = { appId: appId };
+    let __private = { appId: appId, hostname: hostname };
 
     this.context = {
         //-- A version 4 UUID is available for each OVE instance. This to support intra/inter-app --//
