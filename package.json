@@ -2,6 +2,18 @@
   "name": "ove",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "install": "lerna bootstrap --hoist",
+    "install:prod": "lerna bootstrap --hoist -- --production --no-optional",
+    "clean": "lerna run clean",
+    "build": "lerna run build",
+    "build:clean": "lerna run clean && lerna run build",
+    "build:docker": "lerna run clean && lerna run build && docker-compose build",
+    "test": "lerna run test",
+    "start": "pm2 start pm2.json",
+    "start:windows": "pm2 start pm2-windows.json",
+    "start:dev": "lerna run start:dev"
+  },
   "devDependencies": {
     "babel-cli": "6.26.0",
     "eslint": "5.7.0",
