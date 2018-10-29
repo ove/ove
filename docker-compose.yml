@@ -1,7 +1,7 @@
 version: '3'
 services:
-  ove-ove-latest:
-    image: ove/ove:latest
+  ovehub-ove:
+    image: ovehub/ove:${SERVICE_VERSION}
     build: .
     ports:
     - "8080:8080"
