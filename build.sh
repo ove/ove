@@ -53,6 +53,13 @@ trap deactivate_env EXIT SIGINT SIGTERM
 
 echo "Building version = ${SERVICE_VERSION}"
 
+npm run build:clean
+if [ $? -ne 0 ]; then
+  # fail if the image build process failed
+  exit 1
+fi
+
+
 docker-compose build
 if [ $? -ne 0 ]; then
   # fail if the image build process failed
