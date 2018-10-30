@@ -53,11 +53,16 @@ It is recommended to use OVE with Google Chrome, as this is the web browser used
 
 ## Docker
 
-Alternatively, you can use docker:
+Alternatively, you can use docker to build this image:
 
 ```sh
-docker build -t ove -f Dockerfile .
-docker run -d -p 8080:8080 --name ove ove
+./build.sh
+```
+
+In order to run the image, you can customize the docker-compose file or run the default configuration:
+
+```sh
+SERVICE_VERSION="latest" docker-compose up -d
 ```
 
 OVE should now run on port 8080 on localhost.
