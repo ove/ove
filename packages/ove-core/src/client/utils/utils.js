@@ -143,6 +143,24 @@ function OVEUtils () {
         return +parts[parts.length - 1];
     };
 
+    this.getSectionId = function () {
+        let id = OVE.Utils.getQueryParam('oveClientId');
+        //-- clientId will not be provided by a controller --//
+        if (!id) {
+            return OVE.Utils.getQueryParam('oveSectionId');
+        }
+        const sectionId = id.substr(id.lastIndexOf('.') + 1);
+        id = id.substr(0, id.lastIndexOf('.'));
+        if (!id && sectionId) {
+            //-- sectionId has not been provided as a part of oveClientId  --//
+            //-- oveClientId has the format "{space}-{client}.{sectionId}" --//
+            //-- the ".{sectionId}" portion is optional and can be omitted --//
+            return OVE.Utils.getQueryParam('oveSectionId');
+        } else {
+            return sectionId;
+        }
+    };
+
     //-----------------------------------------------------------//
     //--                    Other Utilities                    --//
     //-----------------------------------------------------------//

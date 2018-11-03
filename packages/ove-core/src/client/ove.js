@@ -6,7 +6,7 @@
  * Released under @LICENSE License
  */
 //-- IMPORTANT: all code comments must be in this format. --//
-function OVE (appId, hostname) {
+function OVE (appId, hostname, sectionId) {
     // @CONSTANTS
 
     const log = OVE.Utils.Logger('OVE');
@@ -14,6 +14,9 @@ function OVE (appId, hostname) {
     //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
     //-- with or without the scheme (useful for opening WebSockets).                             --//
     const getHostName = function (withScheme) {
+        if (__private.hostname) {
+            return (withScheme ? '//' : '') + __private.hostname;
+        }
         let scripts = document.getElementsByTagName('script');
         for (let i = 0; i < scripts.length; i++) {
             if (scripts[i].src.indexOf('ove.js') > 0) {
@@ -55,7 +58,7 @@ function OVE (appId, hostname) {
                 setTimeout(function () { getSocket(url); }, Constants.SOCKET_REFRESH_DELAY);
             });
         };
-        getSocket('ws://' + (__private.hostname || getHostName(false)) + '/');
+        getSocket('ws://' + getHostName(false) + '/');
 
         //-- SDK functions --//
         this.on = function (func) {
@@ -116,7 +119,7 @@ function OVE (appId, hostname) {
         let id = OVE.Utils.getQueryParam('oveClientId');
         //-- clientId will not be provided by a controller --//
         if (!id) {
-            fetchSection(OVE.Utils.getQueryParam('oveSectionId'));
+            fetchSection(OVE.Utils.getQueryParam('oveSectionId') || __private.proposedSectionId);
             return;
         }
         let sectionId = id.substr(id.lastIndexOf('.') + 1);
@@ -178,6 +181,12 @@ function OVE (appId, hostname) {
 
     //-- holds private data within OVE library --//
     let __private = { appId: appId, hostname: hostname };
+
+    //-- sectionId can be provided into OVE but will only be used if it cannot be determined      --//
+    //-- using the oveClientId and oveSectionId query parameters.                                 --//
+    if (sectionId || sectionId === 0) {
+        __private.proposedSectionId = sectionId.toString();
+    }
 
     this.context = {
         //-- A version 4 UUID is available for each OVE instance. This to support intra/inter-app --//
