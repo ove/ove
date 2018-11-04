@@ -68,7 +68,7 @@ describe('The OVE Utils library', () => {
         const app = express();
         const { Utils } = index(app, 'core', dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
-            path.join('..', 'package.json'));
+            path.join(srcDir, '..', 'package.json'));
         const res = await request(app).get('/api-docs/');
         expect(res.text).toContain('<title>Swagger UI</title>');
     });
@@ -77,9 +77,21 @@ describe('The OVE Utils library', () => {
         const app = express();
         const { Utils } = index(app, 'core', dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
-            path.join('..', 'package.json'));
+            path.join(srcDir, '..', 'package.json'));
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
         expect(res.text).toContain('"title": "Test Swagger"');
+    });
+
+    it('should not be generating documentation using the swagger.yaml when package.json is not found', async () => {
+        const app = express();
+        const { Utils } = index(app, 'core', dirs);
+        const spy = jest.spyOn(global.console, 'warn');
+        Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
+            path.join('dummyDir', 'package.json'));
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+        const res = await request(app).get('/api-docs/swagger-ui-init.js');
+        expect(res.text).not.toContain('"title": "Test Swagger"');
     });
 
     it('should be replacing content on Swagger using package.json', async () => {
@@ -88,7 +100,7 @@ describe('The OVE Utils library', () => {
         // reference.
         const app = express();
         const { Utils } = index(app, 'core', dirs);
-        const pjsonPath = path.join('..', 'package.json');
+        const pjsonPath = path.join(srcDir, '..', 'package.json');
         const pjson = require(pjsonPath);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'), pjsonPath);
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
@@ -102,7 +114,7 @@ describe('The OVE Utils library', () => {
         const app = express();
         const { Utils } = index(app, 'core', dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
-            path.join('..', 'package.json'), path.join(srcDir, '..', 'test', 'resources', 'swagger-extensions.yaml'));
+            path.join(srcDir, '..', 'package.json'), path.join(srcDir, '..', 'test', 'resources', 'swagger-extensions.yaml'));
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
         expect(res.text).toContain('"name": "operation"');
         expect(res.text).toContain('"/operation/dummy"');
@@ -112,7 +124,7 @@ describe('The OVE Utils library', () => {
         const app = express();
         const { Utils } = index(app, 'core', dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
-            path.join('..', 'package.json'), path.join(srcDir, '..', 'test', 'resources', 'swagger-fake-extensions.yaml'));
+            path.join(srcDir, '..', 'package.json'), path.join(srcDir, '..', 'test', 'resources', 'swagger-fake-extensions.yaml'));
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
         expect(res.text).not.toContain('"name": "operation"');
         expect(res.text).not.toContain('"/operation/dummy"');

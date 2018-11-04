@@ -37,6 +37,19 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
 
+    it('should be able to work without a config.json', async () => {
+        // We are loading the module once again here, so the line below is important.
+        jest.resetModules();
+        const newIndex = require(path.join(srcDir, 'index'));
+        const newBase = newIndex(path.join(srcDir, '..', 'test', 'fake'), 'dummy');
+        const { app: newApp } = newBase;
+        expect(Object.keys(newBase)).toContain('config');
+        let res = await request(newApp).post('/flush');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+        expect(newBase.config).toEqual([]);
+    });
+
     it('should be able to perform a flush operation', async () => {
         let res = await request(app).post('/flush');
         expect(res.statusCode).toEqual(HttpStatus.OK);

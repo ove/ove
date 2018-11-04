@@ -13,6 +13,7 @@ module.exports = function (baseDir, appName) {
     };
     const { Constants, Utils } = require('@ove-lib/utils')(app, appName, dirs);
     const log = Utils.Logger(appName);
+    const configPath = path.join(baseDir, 'config.json');
 
     log.debug('Starting application:', appName);
     log.debug('Application directories:', JSON.stringify(dirs));
@@ -23,7 +24,11 @@ module.exports = function (baseDir, appName) {
 
     module.exports.express = express;
     module.exports.app = app;
-    module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), Constants.UTF8));
+    if (fs.existsSync(configPath)) {
+        module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
+    } else {
+        module.exports.config = [];
+    }
     module.exports.nodeModules = dirs.nodeModules;
     module.exports.log = log;
 
@@ -89,7 +94,11 @@ module.exports = function (baseDir, appName) {
     const flush = function (_req, res) {
         log.debug('Flushing application');
         state = [];
-        module.exports.config = JSON.parse(fs.readFileSync(path.join(baseDir, 'config.json'), Constants.UTF8));
+        if (fs.existsSync(configPath)) {
+            module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
+        } else {
+            module.exports.config = [];
+        }
         Utils.sendEmptySuccess(res);
     };
 

@@ -129,6 +129,10 @@ function Utils (app, appName, dirs) {
     };
 
     this.buildAPIDocs = function (swaggerPath, packagePath, swaggerExtPath) {
+        if (!fs.existsSync(packagePath)) {
+            log.warn('Failed to build Swagger API documentation, as package.json does not exist at path:', packagePath);
+            return;
+        }
         log.debug('Building Swagger API documentation');
         // Swagger API documentation
         let swaggerDoc = (function (swagger, pjson) {

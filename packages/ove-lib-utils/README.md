@@ -11,6 +11,7 @@ npm install @ove-lib/utils --save
 ## Usage
 
 ```js
+const path = require('path');
 const express = require('express');
 const app = express();
 const dirs = {
