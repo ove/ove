@@ -14,7 +14,7 @@ const dirs = {
     nodeModules: path.join(srcDir, '..', '..', '..', 'node_modules'),
     constants: path.join(__dirname, '..', 'test', 'resources')
 };
-const { Utils, Constants } = index(app, 'core', dirs);
+const { Utils, Constants } = index('core', app, dirs);
 
 describe('The OVE Utils library', () => {
     it('should export mandatory functionality', () => {
@@ -66,7 +66,7 @@ describe('The OVE Utils library', () => {
         // rendering process in these tests. We also assume that Swagger has a way of
         // validating the swagger.yaml that we provide, since that is also not tested.
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
             path.join(srcDir, '..', 'package.json'));
         const res = await request(app).get('/api-docs/');
@@ -75,7 +75,7 @@ describe('The OVE Utils library', () => {
 
     it('should be generating documentation using the swagger.yaml that is provided', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
             path.join(srcDir, '..', 'package.json'));
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
@@ -84,7 +84,7 @@ describe('The OVE Utils library', () => {
 
     it('should not be generating documentation using the swagger.yaml when package.json is not found', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         const spy = jest.spyOn(global.console, 'warn');
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
             path.join('dummyDir', 'package.json'));
@@ -99,7 +99,7 @@ describe('The OVE Utils library', () => {
         // we rely on the developers to update this test case with any new fields they
         // reference.
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         const pjsonPath = path.join(srcDir, '..', 'package.json');
         const pjson = require(pjsonPath);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'), pjsonPath);
@@ -112,7 +112,7 @@ describe('The OVE Utils library', () => {
 
     it('should be extending documentation using the swagger-extensions.yaml that is provided', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
             path.join(srcDir, '..', 'package.json'), path.join(srcDir, '..', 'test', 'resources', 'swagger-extensions.yaml'));
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
@@ -122,7 +122,7 @@ describe('The OVE Utils library', () => {
 
     it('should not be extending documentation using a swagger-extensions.yaml that cannot be found', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.buildAPIDocs(path.join(srcDir, '..', 'test', 'resources', 'swagger.yaml'),
             path.join(srcDir, '..', 'package.json'), path.join(srcDir, '..', 'test', 'resources', 'swagger-fake-extensions.yaml'));
         const res = await request(app).get('/api-docs/swagger-ui-init.js');
@@ -132,7 +132,7 @@ describe('The OVE Utils library', () => {
 
     it('should expose jQuery', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForContent();
         const res = await request(app).get('/jquery.min.js');
         expect(res.text).toContain(fs.readFileSync(path.join(dirs.nodeModules, 'jquery', 'dist', 'jquery.min.js')));
@@ -140,7 +140,7 @@ describe('The OVE Utils library', () => {
 
     it('should expose HTML and replace __OVETYPE__ appropriately', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForContent();
         let res = await request(app).get('/view.html');
         expect(res.text).toContain('test.view.js');
@@ -168,7 +168,7 @@ describe('The OVE Utils library', () => {
             nodeModules: dirs.nodeModules,
             constants: path.join(srcDir, '..', 'test', 'resources', 'client', 'constants')
         };
-        const { Utils } = index(app, 'dummy', newDirs);
+        const { Utils } = index('dummy', app, newDirs);
         Utils.registerRoutesForContent();
         let res = await request(app).get('/dummy.view.js');
         expect(res.text).toContain('initView');
@@ -202,7 +202,7 @@ describe('The OVE Utils library', () => {
             nodeModules: dirs.nodeModules,
             constants: path.join(srcDir, '..', 'test', 'resources', 'client', 'constants')
         };
-        const { Utils } = index(app, 'foo', newDirs);
+        const { Utils } = index('foo', app, newDirs);
         Utils.registerRoutesForContent();
         let res = await request(app).get('/foo.control.js');
         expect(res.text).toContain('initControl');
@@ -219,7 +219,7 @@ describe('The OVE Utils library', () => {
 
     it('should route / to index.html when rootPage is not provided', async () => {
         const app = express();
-        const { Utils } = index(app, 'core', dirs);
+        const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForContent();
         let resRoot = await request(app).get('/');
         let resIndexHTML = await request(app).get('/index.html');
@@ -234,7 +234,7 @@ describe('The OVE Utils library', () => {
             constants: dirs.constants,
             rootPage: path.join(dirs.base, 'client', 'root.html')
         };
-        const { Utils } = index(app, 'core', newDirs);
+        const { Utils } = index('core', app, newDirs);
         Utils.registerRoutesForContent();
         let resRoot = await request(app).get('/');
         let resIndexHTML = await request(app).get('/index.html');
@@ -253,7 +253,7 @@ describe('The OVE Utils library', () => {
             constants: dirs.constants,
             rootPage: path.join(dirs.base, 'client', 'root.html')
         };
-        const { Utils } = index(app, 'foo', newDirs);
+        const { Utils } = index('foo', app, newDirs);
         Utils.registerRoutesForContent();
         let resRoot = await request(app).get('/');
         let resRootHTML = await request(app).get('/root.html');
@@ -383,20 +383,27 @@ describe('The OVE Utils library', () => {
     // names of the constants without having naming conflicts. There are a
     // number of tests to validate this functionality.
     it('should export constants for any function', () => {
-        const ConstantsA = index(app, 'core', dirs).Constants;
+        const ConstantsA = index('core', app, dirs).Constants;
         expect(Object.keys(ConstantsA)).toContain('SWAGGER_API_DOCS_CONTEXT');
-        const ConstantsB = index(app, 'foo', dirs).Constants;
+        const ConstantsB = index('foo', app, dirs).Constants;
+        expect(Object.keys(ConstantsB)).toContain('SWAGGER_API_DOCS_CONTEXT');
+    });
+
+    it('should not require dirs to export constants for any function', () => {
+        const ConstantsA = index('core', app).Constants;
+        expect(Object.keys(ConstantsA)).toContain('SWAGGER_API_DOCS_CONTEXT');
+        const ConstantsB = index('foo', app).Constants;
         expect(Object.keys(ConstantsB)).toContain('SWAGGER_API_DOCS_CONTEXT');
     });
 
     it('should export constants for the core app', () => {
-        const { Constants } = index(app, 'core', dirs);
+        const { Constants } = index('core', app, dirs);
         expect(Object.keys(Constants)).toContain('CORE_DUMMY');
         expect(Object.keys(Constants)).not.toContain('FOO_DUMMY');
     });
 
     it('should also export constants for the foo app', () => {
-        const { Constants } = index(app, 'foo', dirs);
+        const { Constants } = index('foo', app, dirs);
         expect(Object.keys(Constants)).not.toContain('CORE_DUMMY');
         expect(Object.keys(Constants)).toContain('FOO_DUMMY');
     });
@@ -407,9 +414,9 @@ describe('The OVE Utils library', () => {
             nodeModules: dirs.nodeModules,
             constants: srcDir
         };
-        const ConstantsA = index(app, 'core', newDirs).Constants;
+        const ConstantsA = index('core', app, newDirs).Constants;
         expect(Object.keys(ConstantsA)).not.toContain('CORE_DUMMY');
-        const ConstantsB = index(app, 'foo', newDirs).Constants;
+        const ConstantsB = index('foo', app, newDirs).Constants;
         expect(Object.keys(ConstantsB)).not.toContain('FOO_DUMMY');
     });
 });
@@ -431,7 +438,7 @@ describe('The OVE Utils library', () => {
 
     it('should log based on the global log level specified as an environment variable', () => {
         const index = require(path.join(srcDir, 'index'));
-        const { Utils, Constants } = index(app, 'core', dirs);
+        const { Utils, Constants } = index('core', app, dirs);
         expect(Constants.LOG_LEVEL).toEqual(3);
         const log = Utils.Logger('test');
         const spy = jest.spyOn(global.console, 'log');

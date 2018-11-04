@@ -10,7 +10,7 @@ const dirs = {
     constants: path.join(__dirname, 'client', 'utils'),
     rootPage: path.join(__dirname, 'blank.html')
 };
-const { Constants, Utils } = require('@ove-lib/utils')(app, 'core', dirs);
+const { Constants, Utils } = require('@ove-lib/utils')('core', app, dirs);
 const log = Utils.Logger('OVE');
 const server = require(path.join(__dirname, 'server', 'main'));
 

@@ -10,6 +10,8 @@ npm install @ove-lib/utils --save
 
 ## Usage
 
+To use the entire library:
+
 ```js
 const path = require('path');
 const express = require('express');
@@ -20,7 +22,15 @@ const dirs = {
     constants: path.join(__dirname, 'constants'),
     rootPage: path.join(__dirname, 'client', 'blank.html')
 };
-const { Constants, Utils } = require('@ove-lib/utils')(app, 'myapp', dirs);
+const { Constants, Utils } = require('@ove-lib/utils')('myapp', app, dirs);
 const log = Utils.Logger('myapp');
 log.debug('Starting application:', 'myapp');
+```
+
+To use logging and common utility functions:
+
+```js
+const { Utils } = require('@ove-lib/utils')();
+const log = Utils.Logger('myapp');
+log.debug('Sample log message');
 ```

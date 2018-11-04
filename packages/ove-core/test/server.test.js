@@ -17,7 +17,7 @@ const dirs = {
     constants: path.join(srcDir, 'client', 'utils'),
     rootPage: path.join(srcDir, 'blank.html')
 };
-const { Constants, Utils } = require('@ove-lib/utils')(app, 'core', dirs);
+const { Constants, Utils } = require('@ove-lib/utils')('core', app, dirs);
 const log = Utils.Logger('OVE');
 
 app.use(cors());

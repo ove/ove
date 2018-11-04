@@ -18,7 +18,7 @@ const { Constants } = require('./constants');
 //        2. The location of the node_modules directory
 //        3. The location of additional app-specific constants.js
 //        4. [optional] The location of the page to use as '/'
-function Utils (app, appName, dirs) {
+function Utils (appName, app, dirs) {
     /**************************************************************
                            Utilities for JSON
     **************************************************************/
@@ -190,22 +190,26 @@ function Utils (app, appName, dirs) {
 /**************************************************************
                         Module Exports
 **************************************************************/
-module.exports = function (app, appName, dirs) {
+module.exports = function (appName, app, dirs) {
     // Constants are defined as follows:
     //    1. System-wide within @ove-lib/utils
     //    2. Within OVE Core as a part of client utilities
     //    3. Within each app as a part of client constants
     // But, some apps may not be having specific constants of their own, and simply depend on the
     // system-wide constants. The following code supports all of the above combinations.
-    const constantsFile = path.join(dirs.constants, (appName === 'core' ? 'constants' : appName) + '.js');
-    if (fs.existsSync(constantsFile)) {
-        module.exports.Constants = Object.assign({}, Constants, require(constantsFile).Constants);
-    } else {
+    if (!dirs) {
         module.exports.Constants = Constants;
+    } else {
+        const constantsFile = path.join(dirs.constants, (appName === 'core' ? 'constants' : appName) + '.js');
+        if (fs.existsSync(constantsFile)) {
+            module.exports.Constants = Object.assign({}, Constants, require(constantsFile).Constants);
+        } else {
+            module.exports.Constants = Constants;
+        }
     }
 
     // Exporting the Utility functions.
-    module.exports.Utils = new Utils(app, appName, dirs);
+    module.exports.Utils = new Utils(appName, app, dirs);
 
     return module.exports;
 };
