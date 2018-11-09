@@ -69,17 +69,4 @@ OVE should now run on port 8080 on localhost.
 
 ### Development
 
-If you are a developer who has made changes to your local copy of OVE, and want to quickly rebuild it without rebuilding the docker container, you can run a container and mount the code as a volume:
-
-```sh
-cd /some/path/to/ove
-docker run -it -p 8080:8080 -v $PWD:/code ove bash
-```
-
-and then, inside the container, run:
-
-```sh
-cd /code
-lerna bootstrap --hoist && lerna run clean && lerna run build
-pm2 start pm2.json
-```
+If you are a developer who has made changes to your local copy of OVE apps, you can quickly rebuild it with the **build.sh** script and then run the app with the **docker-compose** file. The **docker-compose.yml** file can be customized to reflect local changes.
