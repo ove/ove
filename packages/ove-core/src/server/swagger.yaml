@@ -291,7 +291,7 @@ definitions:
       space:
         type: "string"
         description: "Name of space"
-        example: "DODev"
+        example: "LocalNine"
       x:
         type: "integer"
         format: "int32"
