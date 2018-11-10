@@ -2,6 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
+const request = require('request');
 const app = express();
 const wss = require('express-ws')(app).getWss('/');
 const dirs = {
@@ -21,8 +22,38 @@ app.use(cors());
 log.debug('Using Express JSON middleware');
 app.use(express.json());
 
-const clients = JSON.parse(fs.readFileSync(path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME)));
-server(app, wss, clients, log, Utils, Constants);
+// Clients can be loaded either from a URL specified by an environment variable or through
+// a local file.
+/* jshint ignore:start */
+// current version of JSHint does not support async/await
+let getClients = async function () {
+    let clients;
+    if (process.env.OVE_CLIENTS_JSON) {
+        log.info('Loading clients from environment variable:', process.env.OVE_CLIENTS_JSON);
+        await new Promise(function (resolve) {
+            request(process.env.OVE_CLIENTS_JSON, { json: true }, function (err, _res, body) {
+                if (err) {
+                    log.error('Failed to load clients:', err);
+                    resolve('clients failed to load');
+                } else {
+                    clients = body;
+                    resolve('clients loaded');
+                }
+            });
+        });
+    }
+    if (!clients) {
+        const clientsPath = path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME);
+        log.info('Loading clients from path:', clientsPath);
+        clients = JSON.parse(fs.readFileSync(clientsPath));
+    }
+    return clients;
+};
+/* jshint ignore:end */
 
-app.listen(process.env.PORT || 8080);
-log.info('OVE Core started');
+getClients().then(clients => {
+    server(app, wss, clients, log, Utils, Constants);
+
+    app.listen(process.env.PORT || 8080);
+    log.info('OVE Core started');
+});

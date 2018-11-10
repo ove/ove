@@ -293,5 +293,5 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.delete('/section/:id', deleteSectionById);
 
     // Swagger API documentation
-    Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', 'package.json'));
+    Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
 };
