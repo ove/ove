@@ -151,7 +151,37 @@ describe('The OVE Core server', () => {
 
         res = await request(app).delete('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should be able to successfully delete sections by space, without an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).delete('/sections?space=FakeSpace');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).not.toEqual(Utils.JSON.EMPTY);
+
+        res = await request(app).delete('/sections?space=TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -276,7 +306,41 @@ describe('The OVE Core server', () => {
         res = await request(app).delete('/section/0');
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should be able to successfully delete sections by space, without an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+
+        res = await request(app).delete('/sections?space=FakeSpace');
+        expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).not.toEqual(Utils.JSON.EMPTY);
+
+        res = await request(app).delete('/sections?space=TestingNine');
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -684,7 +748,7 @@ describe('The OVE Core server', () => {
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
         ));
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).delete('/section/0').expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        await request(app).delete('/section/0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.DELETE, id: 0 } }
         ));
@@ -710,7 +774,7 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, clients: clients } }
         ));
-        await request(app).delete('/section/0').expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        await request(app).delete('/section/0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.DELETE, id: 0 } }
         ));

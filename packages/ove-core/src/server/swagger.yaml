@@ -61,6 +61,12 @@ paths:
       description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them."
       produces:
       - "application/json"
+      parameters:
+      - name: "space"
+        in: "query"
+        type: "string"
+        description: "Name of space"
+        required: false
       responses:
         200:
           description: "successful operation"

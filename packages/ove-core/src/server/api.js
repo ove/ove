@@ -149,30 +149,67 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
-    // Deletes all sections
-    const deleteSections = function (_req, res) {
-        while (server.sections.length !== 0) {
-            let section = server.sections.pop();
-            if (section.app) {
-                log.debug('Flushing application at URL:', section.app.url);
-                request.post(section.app.url + '/flush');
-            }
+    // Internal utility function to delete section by a given id. This function is used
+    // either to delete all sections belonging to a given space, or to delete a specific
+    // section by its id.
+    const _deleteSectionById = function (sectionId) {
+        let section = server.sections[sectionId];
+        if (section.app) {
+            log.debug('Flushing application at URL:', section.app.url);
+            request.post(section.app.url + '/flush');
         }
-        log.info('Deleting all sections');
-        log.debug('Existing sections (active/deleted):', server.sections.length);
+        delete server.sections[sectionId];
+        server.sections[sectionId] = {};
 
         server.wss.clients.forEach(function (c) {
             if (c.readyState === Constants.WEBSOCKET_READY) {
-                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
+                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId, 10) } }));
             }
         });
-        Utils.sendEmptySuccess(res);
+    };
+
+    // Deletes all sections
+    const deleteSections = function (req, res) {
+        let space = req.query.space;
+        if (space) {
+            let findSectionsBySpace = function (e) {
+                return !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.clients[space]);
+            };
+            log.info('Deleting sections of space:', space);
+            let deletedSections = [];
+            let i = server.sections.findIndex(findSectionsBySpace);
+            while (i !== -1) {
+                _deleteSectionById(i);
+                deletedSections.push(parseInt(i, 10));
+                i = server.sections.findIndex(findSectionsBySpace);
+            }
+            log.debug('Existing sections (active/deleted):', server.sections.length);
+            log.info('Successfully deleted sections:', deletedSections);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
+        } else {
+            while (server.sections.length !== 0) {
+                let section = server.sections.pop();
+                if (section.app) {
+                    log.debug('Flushing application at URL:', section.app.url);
+                    request.post(section.app.url + '/flush');
+                }
+            }
+            log.info('Deleting all sections');
+            log.debug('Existing sections (active/deleted):', server.sections.length);
+
+            server.wss.clients.forEach(function (c) {
+                if (c.readyState === Constants.WEBSOCKET_READY) {
+                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
+                }
+            });
+            Utils.sendEmptySuccess(res);
+        }
     };
 
     // Fetches details of an individual section
     const readSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (!server.sections[sectionId]) {
+        if (Utils.isNullOrEmpty(server.sections[sectionId])) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
@@ -266,21 +303,9 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
-            let section = server.sections[sectionId];
-            if (section.app) {
-                log.debug('Flushing application at URL:', section.app.url);
-                request.post(section.app.url + '/flush');
-            }
-            delete server.sections[sectionId];
-            server.sections[sectionId] = {};
-
-            server.wss.clients.forEach(function (c) {
-                if (c.readyState === Constants.WEBSOCKET_READY) {
-                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId, 10) } }));
-                }
-            });
+            _deleteSectionById(sectionId);
             log.info('Successfully deleted section:', sectionId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
         }
     };
 
