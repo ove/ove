@@ -184,9 +184,11 @@ paths:
           schema:
             type: "object"
             properties:
-              id:
-                type: "integer"
-                format: "int32"
+              ids:
+                type: "array"
+                items:
+                  type: "integer"
+                  format: "int32"
         400:
           description: "bad request"
           schema:
