@@ -195,7 +195,8 @@ function OVE (appId, hostname, sectionId) {
             let r = Math.random() * 16 | 0;
             let v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
-        })
+        }),
+        hostname: getHostName(true)
     };
 
     this.socket = new OVESocket(__private);

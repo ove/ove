@@ -5,6 +5,7 @@ function OVEUtils () {
     // @CONSTANTS
 
     let __self = this;
+    let __private = {};
     //-----------------------------------------------------------//
     //--                   Utilities for JSON                  --//
     //-----------------------------------------------------------//
@@ -133,12 +134,18 @@ function OVEUtils () {
     //--                     Layout Related                    --//
     //-----------------------------------------------------------//
     this.getSpace = function () {
-        const clientId = this.getQueryParam('oveClientId');
+        const clientId = OVE.Utils.getQueryParam('oveClientId');
+        if (!clientId) {
+            return null;
+        }
         return clientId.substr(0, clientId.lastIndexOf('-'));
     };
 
     this.getClient = function () {
-        const clientId = this.getQueryParam('oveClientId');
+        const clientId = OVE.Utils.getQueryParam('oveClientId');
+        if (!clientId) {
+            return null;
+        }
         const parts = clientId.split('-');
         return +parts[parts.length - 1];
     };
@@ -159,6 +166,100 @@ function OVEUtils () {
         } else {
             return sectionId;
         }
+    };
+
+    //-----------------------------------------------------------//
+    //--                  Coordinates Related                  --//
+    //-----------------------------------------------------------//
+    this.Coordinates = {
+        SCREEN: 'SCREEN',
+        SECTION: 'SECTION',
+        SPACE: 'SPACE'
+    };
+
+    $(document).on(OVE.Event.LOADED, function () {
+        const sectionId = __self.getSectionId();
+        const hostname = window.ove.context.hostname;
+        if (window.ove.layout && __self.getSpace()) {
+            fetch(hostname + '/clients').then(function (r) { return r.text(); }).then(function (text) {
+                const allClients = JSON.parse(text)[__self.getSpace()] || [];
+                if (allClients.length > 0) {
+                    //-- The space dimensions are calculated in this utility to avoid  --//
+                    //-- duplication of code/effort in ove.js. The dimensions of the   --//
+                    //-- space is calculated using the clients that are furthest from  --//
+                    //-- the top-left of the space along the x and y axes.             --//
+                    window.ove.layout.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
+                    allClients.forEach(function (e) {
+                        window.ove.layout.space.w = Math.max(e.x + e.w, window.ove.layout.space.w);
+                        window.ove.layout.space.h = Math.max(e.y + e.h, window.ove.layout.space.h);
+                    });
+                    if (sectionId !== undefined && window.ove.layout.offset) {
+                        fetch(hostname + '/client/' + sectionId)
+                            .then(function (r) { return r.text(); }).then(function (text) {
+                                const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
+                                const section = { x: Number.MAX_VALUE, y: Number.MAX_VALUE };
+                                //-- The x and y of the section is obtained by picking --//
+                                //-- the clients within a section that is the nearest  --//
+                                //-- to the top-left of the space along the x and y    --//
+                                //-- axes.                                             --//
+                                sectionClients.forEach(function (e, i) {
+                                    if (!__self.JSON.equals(e, {}) && allClients[i]) {
+                                        section.x = Math.min(allClients[i].x + window.ove.layout.offset.x, section.x);
+                                        section.y = Math.min(allClients[i].y + window.ove.layout.offset.y, section.y);
+                                    }
+                                });
+                                if (section.x !== Number.MAX_VALUE && section.y !== Number.MAX_VALUE) {
+                                    __private.section = {
+                                        x: section.x + window.ove.layout.offset.x,
+                                        y: section.y + window.ove.layout.offset.y
+                                    };
+                                }
+                            });
+                    }
+                }
+            });
+        }
+    });
+
+    this.Coordinates.transform = function (vector, inputType, outputType) {
+        if (!__private.section) {
+            log.error('Unable to transform coordinates, geometry information not available');
+            return undefined;
+        }
+        const section = __private.section;
+        const layout = window.ove.layout;
+        if ((inputType === OVE.Utils.Coordinates.SCREEN || outputType === OVE.Utils.Coordinates.SCREEN) &&
+            (layout.x === undefined || layout.y === undefined || !layout.offset)) {
+            log.error('Unable to transform coordinates, screen geometry information not available');
+            return undefined;
+        }
+        if ((inputType === OVE.Utils.Coordinates.SPACE || outputType === OVE.Utils.Coordinates.SPACE) &&
+            section === undefined) {
+            log.error('Unable to transform coordinates, section geometry information not available');
+            return undefined;
+        }
+
+        //-- No conversions along the z-axis as yet --//
+        const Conversions = {
+            SCREEN_TO_SECTION: [layout.x - layout.offset.x, layout.y - layout.offset.y, 0],
+            SECTION_TO_SCREEN: [layout.offset.x - layout.x, layout.offset.y - layout.y, 0],
+            SECTION_TO_SPACE: [section.x, section.y, 0],
+            SPACE_TO_SECTION: [-section.x, -section.y, 0],
+            SCREEN_TO_SPACE: [layout.x - layout.offset.x + section.x, layout.y - layout.offset.y + section.y, 0],
+            SPACE_TO_SCREEN: [layout.offset.x - layout.x - section.x, layout.offset.y - layout.y - section.y, 0]
+        };
+
+        //-- Logic to run the corresponding conversion --//
+        const conversion = Conversions[inputType + '_TO_' + outputType];
+        if (!conversion) {
+            log.error('Unable to convert', vector, 'from:', inputType, 'to:', outputType);
+            return undefined;
+        }
+        let output = [];
+        vector.forEach(function (e, i) {
+            output.push(e + conversion[i]);
+        });
+        return output;
     };
 
     //-----------------------------------------------------------//
