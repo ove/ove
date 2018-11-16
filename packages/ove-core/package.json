@@ -17,7 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "@ove-lib/utils": "0.1.1",
-    "cors": "2.8.4",
+    "cors": "2.8.5",
     "express": "4.16.4",
     "express-ws": "4.0.0",
     "http-status-codes": "1.3.0",
