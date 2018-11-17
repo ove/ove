@@ -138,7 +138,7 @@ function OVEUtils () {
         if (!clientId) {
             return null;
         }
-        return clientId.substr(0, clientId.lastIndexOf('-'));
+        return clientId.substring(0, clientId.lastIndexOf('-'));
     };
 
     this.getClient = function () {
@@ -156,8 +156,8 @@ function OVEUtils () {
         if (!id) {
             return OVE.Utils.getQueryParam('oveSectionId');
         }
-        const sectionId = id.substr(id.lastIndexOf('.') + 1);
-        id = id.substr(0, id.lastIndexOf('.'));
+        const sectionId = id.substring(id.lastIndexOf('.') + 1);
+        id = id.substring(0, id.lastIndexOf('.'));
         if (!id && sectionId) {
             //-- sectionId has not been provided as a part of oveClientId  --//
             //-- oveClientId has the format "{space}-{client}.{sectionId}" --//

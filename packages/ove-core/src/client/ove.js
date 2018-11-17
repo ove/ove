@@ -20,7 +20,7 @@ function OVE (appId, hostname, sectionId) {
         let scripts = document.getElementsByTagName('script');
         for (let i = 0; i < scripts.length; i++) {
             if (scripts[i].src.indexOf('ove.js') > 0) {
-                return scripts[i].src.substr(
+                return scripts[i].src.substring(
                     withScheme ? 0 : scripts[i].src.indexOf('//') + 2,
                     scripts[i].src.lastIndexOf('/') - (withScheme ? 0 : scripts[i].src.indexOf('//') + 2));
             }
@@ -122,8 +122,8 @@ function OVE (appId, hostname, sectionId) {
             fetchSection(OVE.Utils.getQueryParam('oveSectionId') || __private.proposedSectionId);
             return;
         }
-        let sectionId = id.substr(id.lastIndexOf('.') + 1);
-        id = id.substr(0, id.lastIndexOf('.'));
+        let sectionId = id.substring(id.lastIndexOf('.') + 1);
+        id = id.substring(0, id.lastIndexOf('.'));
         if (!id && sectionId) {
             //-- sectionId has not been provided as a part of oveClientId  --//
             //-- oveClientId has the format "{space}-{client}.{sectionId}" --//
@@ -131,8 +131,8 @@ function OVE (appId, hostname, sectionId) {
             id = sectionId;
             sectionId = OVE.Utils.getQueryParam('oveSectionId');
         }
-        const client = id.substr(id.lastIndexOf('-') + 1);
-        const space = id.substr(0, id.lastIndexOf('-'));
+        const client = id.substring(id.lastIndexOf('-') + 1);
+        const space = id.substring(0, id.lastIndexOf('-'));
         if (sectionId) {
             log.info('Running OVE for section:', sectionId, ', client:', client, ', space:', space);
         } else {

@@ -37,8 +37,8 @@ updateSections = function (m) {
     const id = OVE.Utils.getQueryParam('oveClientId');
     switch (m.action) {
         case Constants.Action.CREATE:
-            const client = id.substr(id.lastIndexOf('-') + 1);
-            const space = id.substr(0, id.lastIndexOf('-'));
+            const client = id.substring(id.lastIndexOf('-') + 1);
+            const space = id.substring(0, id.lastIndexOf('-'));
             let layout = (m.clients[space] || [])[client] || {};
             if (Object.keys(layout).length !== 0 && layout.h > 0 && layout.w > 0) {
                 log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
