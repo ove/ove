@@ -22,7 +22,7 @@ function OVE (appId, hostname, sectionId) {
             if (scripts[i].src.indexOf('ove.js') > 0) {
                 return scripts[i].src.substring(
                     withScheme ? 0 : scripts[i].src.indexOf('//') + 2,
-                    scripts[i].src.lastIndexOf('/') - (withScheme ? 0 : scripts[i].src.indexOf('//') + 2));
+                    scripts[i].src.lastIndexOf('/'));
             }
         }
     };
