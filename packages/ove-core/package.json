@@ -16,7 +16,7 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "@ove-lib/utils": "0.2.0",
+    "@ove-lib/utils": "^0.2.0",
     "cors": "2.8.5",
     "express": "4.16.4",
     "express-ws": "4.0.0",
@@ -25,8 +25,8 @@
     "uglify-js": "3.4.9"
   },
   "devDependencies": {
-    "nock": "10.0.2",
-    "mock-socket": "8.0.5"
+    "mock-socket": "8.0.5",
+    "nock": "10.0.2"
   },
   "jest": {
     "collectCoverageFrom": [
