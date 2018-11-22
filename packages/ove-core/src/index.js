@@ -28,10 +28,12 @@ app.use(express.json());
 // current version of JSHint does not support async/await
 let getClients = async function () {
     let clients;
-    if (process.env.OVE_CLIENTS_JSON) {
-        log.info('Loading clients from environment variable:', process.env.OVE_CLIENTS_JSON);
+    // To support backwards compatibility with v0.2.0
+    const spacesJSONEnvVar = process.env.OVE_SPACES_JSON || process.env.OVE_CLIENTS_JSON;
+    if (spacesJSONEnvVar) {
+        log.info('Loading clients from environment variable:', spacesJSONEnvVar);
         await new Promise(function (resolve) {
-            request(process.env.OVE_CLIENTS_JSON, { json: true }, function (err, _res, body) {
+            request(spacesJSONEnvVar, { json: true }, function (err, _res, body) {
                 if (err) {
                     log.error('Failed to load clients:', err);
                     resolve('clients failed to load');
@@ -43,7 +45,7 @@ let getClients = async function () {
         });
     }
     if (!clients) {
-        const clientsPath = path.join(__dirname, 'client', Constants.CLIENTS_JSON_FILENAME);
+        const clientsPath = path.join(__dirname, 'client', Constants.SPACES_JSON_FILENAME);
         log.info('Loading clients from path:', clientsPath);
         clients = JSON.parse(fs.readFileSync(clientsPath));
     }

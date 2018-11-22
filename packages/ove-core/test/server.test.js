@@ -23,7 +23,7 @@ const log = Utils.Logger('OVE');
 app.use(cors());
 app.use(express.json());
 
-const clients = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.CLIENTS_JSON_FILENAME)));
+const clients = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
 const server = require(path.join(srcDir, 'server', 'main'))(app, wss, clients, log, Utils, Constants);
 
 // Basic tests to ensure initialisation is fine.
@@ -41,11 +41,11 @@ describe('The OVE Core server', () => {
     /* jshint ignore:end */
 });
 
-// Tests for Clients.json
+// Tests for Spaces.json
 describe('The OVE Core server', () => {
     beforeAll(() => {
-        // We should test with the actual clients.json in this scenario.
-        server.clients = JSON.parse(fs.readFileSync(path.join(srcDir, 'client', Constants.CLIENTS_JSON_FILENAME)));
+        // We should test with the actual Spaces.json in this scenario.
+        server.clients = JSON.parse(fs.readFileSync(path.join(srcDir, 'client', Constants.SPACES_JSON_FILENAME)));
     });
 
     /* jshint ignore:start */
@@ -56,16 +56,16 @@ describe('The OVE Core server', () => {
         // It is important to compare the JSON on both side since the ordering of
         // elements changes depending on how it was stringified.
         expect(JSON.parse(res.text)).toEqual(JSON.parse(fs.readFileSync(
-            path.join(srcDir, 'client', Constants.CLIENTS_JSON_FILENAME))));
+            path.join(srcDir, 'client', Constants.SPACES_JSON_FILENAME))));
         // It is also useful to validate the approach taken to produce the text
         // as below.
         expect(res.text).toEqual(JSON.stringify(JSON.parse(fs.readFileSync(
-            path.join(srcDir, 'client', Constants.CLIENTS_JSON_FILENAME)))));
+            path.join(srcDir, 'client', Constants.SPACES_JSON_FILENAME)))));
     });
     /* jshint ignore:end */
 
     afterAll(() => {
-        // We should test with the actual clients.json in this scenario.
+        // We should test with the actual Spaces.json in this scenario.
         server.clients = clients;
     });
 });

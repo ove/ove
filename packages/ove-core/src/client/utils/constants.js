@@ -11,7 +11,7 @@ const Constants = {
     //-----------------------------------------------------------//
     //--                        Back-end                       --//
     //-----------------------------------------------------------//
-    CLIENTS_JSON_FILENAME: 'Clients.json',
+    SPACES_JSON_FILENAME: 'Spaces.json',
     WEBSOCKET_READY: 1,
     SECTION_UPDATE_DELAY: 150, //-- Unit: milliseconds --//
 

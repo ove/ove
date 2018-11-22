@@ -4,7 +4,7 @@ const HttpStatus = require('http-status-codes');
 
 module.exports = function (server, log, Utils, Constants) {
     const listClients = function (_req, res) {
-        log.debug('Returning parsed result of Clients.json');
+        log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.clients));
     };
 
@@ -14,7 +14,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.debug('Unable to produce list of clients for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
-            log.debug('Returning parsed result of Clients.json for section id:', sectionId);
+            log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME + ' for section id:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.sections[sectionId].clients));
         }
     };
