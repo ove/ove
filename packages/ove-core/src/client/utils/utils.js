@@ -134,19 +134,19 @@ function OVEUtils () {
     //--                     Layout Related                    --//
     //-----------------------------------------------------------//
     this.getSpace = function () {
-        const oveViewId = OVE.Utils.getQueryParam('oveViewId');
-        if (!oveViewId) {
+        const viewId = OVE.Utils.getQueryParam('oveViewId');
+        if (!viewId) {
             return null;
         }
-        return oveViewId.substring(0, oveViewId.lastIndexOf('-'));
+        return viewId.substring(0, viewId.lastIndexOf('-'));
     };
 
     this.getClient = function () {
-        const oveViewId = OVE.Utils.getQueryParam('oveViewId');
-        if (!oveViewId) {
+        const viewId = OVE.Utils.getQueryParam('oveViewId');
+        if (!viewId) {
             return null;
         }
-        const parts = oveViewId.split('-');
+        const parts = viewId.split('-');
         return +parts[parts.length - 1];
     };
 
