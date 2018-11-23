@@ -9,7 +9,7 @@ const Constants = {
     BROWSER_IDLE_WAIT: 15000,
 
     //-----------------------------------------------------------//
-    //--                        Back-end                       --//
+    //--                        Server                         --//
     //-----------------------------------------------------------//
     SPACES_JSON_FILENAME: 'Spaces.json',
     WEBSOCKET_READY: 1,
