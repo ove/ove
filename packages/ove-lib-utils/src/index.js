@@ -8,11 +8,11 @@ const dateFormat = require('dateformat');
 const HttpStatus = require('http-status-codes');
 const { Constants } = require('./constants');
 
-// A collection of utilities for OVE and OVE applications. It is generally
-// not required module if OVE App Base Library is used to build an app. The
-// input parameters of this module include:
+// A collection of utilities for OVE and OVE apps. It is generally not
+// required if the OVE App Base Library is used to build an app. The input
+// parameters of this module include:
 //    1. The express app instance.
-//    2. The name of the application (OVE Core uses 'core').
+//    2. The name of the app (OVE Core uses 'core').
 //    3. A list of directories:
 //        1. The base directory (generally __dirname)
 //        2. The location of the node_modules directory
