@@ -3,25 +3,25 @@ const request = require('request');
 const HttpStatus = require('http-status-codes');
 
 module.exports = function (server, log, Utils, Constants) {
-    const listClients = function (_req, res) {
-        log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.clients));
-    };
-
-    const listClientById = function (req, res) {
-        let sectionId = req.params.id;
-        if (!server.sections[sectionId]) {
-            log.debug('Unable to produce list of clients for section id:', sectionId);
-            Utils.sendEmptySuccess(res);
+    const listSpaces = function (req, res) {
+        let sectionId = req.query.oveSectionId;
+        if (sectionId !== undefined) {
+            if (!server.sections[sectionId]) {
+                log.debug('Unable to produce list of spaces for section id:', sectionId);
+                Utils.sendEmptySuccess(res);
+            } else {
+                log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME + ' for section id:', sectionId);
+                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.sections[sectionId].spaces));
+            }
         } else {
-            log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME + ' for section id:', sectionId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.sections[sectionId].clients));
+            log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.spaces));
         }
     };
 
     // Creates an individual section
     const createSection = function (req, res) {
-        if (!req.body.space || !server.clients[req.body.space]) {
+        if (!req.body.space || !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
         } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
@@ -29,11 +29,11 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Invalid Dimensions', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
         } else {
-            let section = { w: req.body.w, h: req.body.h, clients: {} };
-            section.clients[req.body.space] = [];
+            let section = { w: req.body.w, h: req.body.h, spaces: {} };
+            section.spaces[req.body.space] = [];
 
             // Calculate the dimensions on a client-by-client basis
-            server.clients[req.body.space].forEach(function (e) {
+            server.spaces[req.body.space].forEach(function (e) {
                 // A section overlaps with a client if all of these conditions are met:
                 // - the section's left edge is to the left of the client's right edge
                 // - the section's right edge is to the right of the client's left edge
@@ -81,12 +81,12 @@ module.exports = function (server, log, Utils, Constants) {
                     if (c.y + c.h > req.body.h) {
                         c.h = (req.body.h - c.y);
                     }
-                    section.clients[req.body.space].push(c);
+                    section.spaces[req.body.space].push(c);
                 } else {
-                    section.clients[req.body.space].push({});
+                    section.spaces[req.body.space].push({});
                 }
             });
-            log.debug('Generated client configuration for new section');
+            log.debug('Generated spaces configuration for new section');
 
             // Deploy an App into a section
             let sectionId = server.sections.length;
@@ -134,7 +134,7 @@ module.exports = function (server, log, Utils, Constants) {
                     // Sections are created on the browser and then the application is deployed after a
                     // short delay. This will ensure proper frame sizes.
                     c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
-                        message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
+                        message: { action: Constants.Action.CREATE, id: sectionId, spaces: section.spaces } }));
                     if (section.app) {
                         setTimeout(function () {
                             c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
@@ -173,7 +173,7 @@ module.exports = function (server, log, Utils, Constants) {
         let space = req.query.space;
         if (space) {
             let findSectionsBySpace = function (e) {
-                return !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.clients[space]);
+                return !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
             };
             log.info('Deleting sections of space:', space);
             let deletedSections = [];
@@ -309,8 +309,7 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
-    server.app.get('/clients', listClients);
-    server.app.get('/client/:id', listClientById);
+    server.app.get('/spaces', listSpaces);
     server.app.delete('/sections', deleteSections);
     server.app.post('/section', createSection);
     server.app.get('/section/:id', readSectionById);

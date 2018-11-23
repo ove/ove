@@ -139,8 +139,8 @@ function OVE (appId, hostname, sectionId) {
             log.info('Running OVE for client:', client, ', space:', space);
         }
         log.debug('OVE instance UUID:', __self.context.uuid);
-        //-- call APIs /clients or /client/{sectionId}  --//
-        fetch(getHostName(true) + '/client' + (sectionId ? '/' + sectionId : 's'))
+        //-- call APIs /spaces or /spaces?oveSectionId={sectionId}  --//
+        fetch(getHostName(true) + '/spaces' + (sectionId ? '?oveSectionId=' + sectionId : ''))
             .then(function (r) { return r.text(); }).then(function (text) {
                 __self.layout = (JSON.parse(text)[space] || [])[client] || {};
                 fetchSection(sectionId);

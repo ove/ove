@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). The OVE Core provides functionality for CRUD operations on sections and obtaining details of clients."
+  description: "OVE (Open Visualisation Environment) is an open-source software stack, designed to be used in large scale visualisation environments like the [Imperial College](http://www.imperial.ac.uk) [Data Science Institute's](http://www.imperial.ac.uk/data-science/) [Data Observatory](http://www.imperial.ac.uk/data-science/data-observatory/). The OVE Core provides functionality for CRUD operations on sections and obtaining details of spaces."
   version: "@VERSION"
   title: "OVE Core"
   contact:
@@ -10,8 +10,8 @@ info:
     url: "https://raw.githubusercontent.com/ove/ove/master/LICENSE"
 basePath: "/"
 tags:
-- name: "clients"
-  description: "Layout details of all clients"
+- name: "spaces"
+  description: "Layout details of spaces"
 - name: "client"
   description: "Layout details of an individual client"
 - name: "sections"
@@ -21,38 +21,25 @@ tags:
 schemes:
 - "http"
 paths:
-  /clients:
+  /spaces:
     get:
       tags:
-      - "clients"
-      summary: "Reads details of all OVE clients"
-      produces:
-      - "application/json"
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/Clients"
-  /client/{sectionId}:
-    get:
-      tags:
-      - "client"
-      summary: "Reads details of OVE clients corresponding to a section"
-      description: "Will return an empty array if a section by the given id does not exist."
+      - "spaces"
+      summary: "Reads details of all OVE spaces"
+      description: "This will return details of all spaces if no query parameters were provided. This will return a filtered list of spaces if a section id was provided and will return an empty array if a section by the given id does not exist."
       produces:
       - "application/json"
       parameters:
-      - name: "sectionId"
-        in: "path"
+      - name: "oveSectionId"
+        in: "query"
         type: "integer"
         format: "int32"
         description: "Section ID"
-        required: true
       responses:
         200:
           description: "successful operation"
           schema:
-            $ref: "#/definitions/Clients"
+            $ref: "#/definitions/Spaces"
   /sections:
     delete:
       tags:
@@ -198,7 +185,7 @@ paths:
                 type: "string"
                 description: "Returns an error message 'invalid section id' if the section id was not found."
 definitions:
-  Clients:
+  Spaces:
     type: "object"
     additionalProperties:
       type: "array"

@@ -181,7 +181,7 @@ function OVEUtils () {
         const sectionId = __self.getSectionId();
         const hostname = window.ove.context.hostname;
         if (window.ove.layout && __self.getSpace()) {
-            fetch(hostname + '/clients').then(function (r) { return r.text(); }).then(function (text) {
+            fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
                 const allClients = JSON.parse(text)[__self.getSpace()] || [];
                 if (allClients.length > 0) {
                     //-- The space dimensions are calculated in this utility to avoid  --//
@@ -194,7 +194,7 @@ function OVEUtils () {
                         window.ove.layout.space.h = Math.max(e.y + e.h, window.ove.layout.space.h);
                     });
                     if (sectionId !== undefined && window.ove.layout.offset) {
-                        fetch(hostname + '/client/' + sectionId)
+                        fetch(hostname + '/spaces??oveSectionId=' + sectionId)
                             .then(function (r) { return r.text(); }).then(function (text) {
                                 const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
                                 const section = { x: Number.MAX_VALUE, y: Number.MAX_VALUE };

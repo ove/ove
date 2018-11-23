@@ -23,8 +23,8 @@ const log = Utils.Logger('OVE');
 app.use(cors());
 app.use(express.json());
 
-const clients = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
-const server = require(path.join(srcDir, 'server', 'main'))(app, wss, clients, log, Utils, Constants);
+const spaces = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
+const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, log, Utils, Constants);
 
 // Separate test suite for scenarios where log level TRACE_SERVER is enabled.
 // Based on how mock-socket is implemented, we cannot group all tests together.

@@ -12,7 +12,7 @@ module.exports = function (server, log, _Utils, Constants) {
                         if (section && s.readyState === Constants.WEBSOCKET_READY) {
                             // Sections are created on the browser and then the application is deployed after a
                             // short delay. This will ensure proper frame sizes.
-                            s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.CREATE, id: sectionId, clients: section.clients } }));
+                            s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.CREATE, id: sectionId, spaces: section.spaces } }));
                             if (section.app) {
                                 setTimeout(function () {
                                     s.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));

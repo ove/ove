@@ -3,9 +3,9 @@ const fs = require('fs');
 const uglify = require('uglify-js');
 const pjson = require(path.join('..', '..', 'package.json')); // this path might have to be fixed based on packaging
 
-module.exports = function (app, wss, clients, log, Utils, Constants) {
+module.exports = function (app, wss, spaces, log, Utils, Constants) {
     this.sections = [];
-    this.clients = clients;
+    this.spaces = spaces;
     this.wss = wss;
     this.app = app;
 

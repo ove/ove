@@ -39,7 +39,7 @@ updateSections = function (m) {
         case Constants.Action.CREATE:
             const client = id.substring(id.lastIndexOf('-') + 1);
             const space = id.substring(0, id.lastIndexOf('-'));
-            let layout = (m.clients[space] || [])[client] || {};
+            let layout = (m.spaces[space] || [])[client] || {};
             if (Object.keys(layout).length !== 0 && layout.h > 0 && layout.w > 0) {
                 log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
                 log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);

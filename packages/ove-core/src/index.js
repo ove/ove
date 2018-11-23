@@ -22,39 +22,39 @@ app.use(cors());
 log.debug('Using Express JSON middleware');
 app.use(express.json());
 
-// Clients can be loaded either from a URL specified by an environment variable or through
-// a local file.
+// The spaces configuration can be loaded either from a URL specified by an environment
+// variable or through a local file.
 /* jshint ignore:start */
 // current version of JSHint does not support async/await
-let getClients = async function () {
-    let clients;
+let getSpaces = async function () {
+    let spaces;
     // BACKWARDS-COMPATIBILITY: To support deployments designed for OVE v0.2.0
     const spacesJSONEnvVar = process.env.OVE_SPACES_JSON || process.env.OVE_CLIENTS_JSON;
     if (spacesJSONEnvVar) {
-        log.info('Loading clients from environment variable:', spacesJSONEnvVar);
+        log.info('Loading spaces configuration from environment variable:', spacesJSONEnvVar);
         await new Promise(function (resolve) {
             request(spacesJSONEnvVar, { json: true }, function (err, _res, body) {
                 if (err) {
-                    log.error('Failed to load clients:', err);
-                    resolve('clients failed to load');
+                    log.error('Failed to load spaces configuration:', err);
+                    resolve('spaces failed to load');
                 } else {
-                    clients = body;
-                    resolve('clients loaded');
+                    spaces = body;
+                    resolve('spaces loaded');
                 }
             });
         });
     }
-    if (!clients) {
-        const clientsPath = path.join(__dirname, 'client', Constants.SPACES_JSON_FILENAME);
-        log.info('Loading clients from path:', clientsPath);
-        clients = JSON.parse(fs.readFileSync(clientsPath));
+    if (!spaces) {
+        const spacesPath = path.join(__dirname, 'client', Constants.SPACES_JSON_FILENAME);
+        log.info('Loading spaces configuration from path:', spacesPath);
+        spaces = JSON.parse(fs.readFileSync(spacesPath));
     }
-    return clients;
+    return spaces;
 };
 /* jshint ignore:end */
 
-getClients().then(clients => {
-    server(app, wss, clients, log, Utils, Constants);
+getSpaces().then(spaces => {
+    server(app, wss, spaces, log, Utils, Constants);
 
     app.listen(process.env.PORT || 8080);
     log.info('OVE Core started');
