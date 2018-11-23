@@ -3,7 +3,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "install": "lerna bootstrap --hoist",
+    "install": "lerna bootstrap --hoist --no-ci",
     "install:prod": "lerna bootstrap --hoist -- --production --no-optional",
     "clean": "lerna run clean",
     "build": "lerna run build",
