@@ -14,7 +14,7 @@ before_install: npm install -g npm
 jobs:
   include:
     - stage: install
-      script: npm install
+      script: pwd && npm install
     - stage: compile
       script: npm run build:clean
     - stage: test
