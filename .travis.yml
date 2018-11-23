@@ -2,17 +2,19 @@ sudo: false
 language: node_js
 node_js: stable
 
+services:
+  - docker
+
 install: npm install
 
 stages:
-  - compile
   - test
   - name: deploy
     if: branch = master
 
 jobs:
   include:
-    - stage: compile
-      script: npm run build:clean
     - stage: test
-      script: npm test
+      script: npm run lint && npm run build:clean && npm test
+    - stage: deploy
+      script: ./build.sh
