@@ -1,20 +1,15 @@
+sudo: false
 language: node_js
-node_js:
-  - "10"
+node_js: stable
 
 stages:
-  - install
   - compile
   - test
   - name: deploy
     if: branch = master
 
-before_install: npm install -g npm
-
 jobs:
   include:
-    - stage: install
-      script: pwd && npm install
     - stage: compile
       script: npm run build:clean
     - stage: test
