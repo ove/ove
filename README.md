@@ -40,7 +40,7 @@ Lint the code, run the unit tests and generate coverage report:
 
 Run in Google Chrome:
 
-* Client pages   `http://localhost:8080/view.html?oveClientId=LocalNine-0` < check Spaces.json for info
+* Client pages   `http://localhost:8080/view.html?oveViewId=LocalNine-0` < check Spaces.json for info
 * OVE JS library `http://localhost:8080/ove.js`
 * OVE API docs   `http://localhost:8080/api-docs`
 

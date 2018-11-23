@@ -116,8 +116,8 @@ function OVE (appId, hostname, sectionId) {
                     });
             }
         };
-        let id = OVE.Utils.getQueryParam('oveClientId');
-        //-- clientId will not be provided by a controller --//
+        let id = OVE.Utils.getQueryParam('oveViewId');
+        //-- oveViewId will not be provided by a controller --//
         if (!id) {
             fetchSection(OVE.Utils.getQueryParam('oveSectionId') || __private.proposedSectionId);
             return;
@@ -125,8 +125,8 @@ function OVE (appId, hostname, sectionId) {
         let sectionId = id.substring(id.lastIndexOf('.') + 1);
         id = id.substring(0, id.lastIndexOf('.'));
         if (!id && sectionId) {
-            //-- sectionId has not been provided as a part of oveClientId  --//
-            //-- oveClientId has the format "{space}-{client}.{sectionId}" --//
+            //-- sectionId has not been provided as a part of oveViewId  --//
+            //-- oveViewId has the format "{space}-{client}.{sectionId}" --//
             //-- the ".{sectionId}" portion is optional and can be omitted --//
             id = sectionId;
             sectionId = OVE.Utils.getQueryParam('oveSectionId');
@@ -183,7 +183,7 @@ function OVE (appId, hostname, sectionId) {
     let __private = { appId: appId, hostname: hostname };
 
     //-- sectionId can be provided into OVE but will only be used if it cannot be determined      --//
-    //-- using the oveClientId and oveSectionId query parameters.                                 --//
+    //-- using the oveViewId and oveSectionId query parameters.                                 --//
     if (sectionId || sectionId === 0) {
         __private.proposedSectionId = sectionId.toString();
     }

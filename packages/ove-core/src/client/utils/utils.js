@@ -134,33 +134,33 @@ function OVEUtils () {
     //--                     Layout Related                    --//
     //-----------------------------------------------------------//
     this.getSpace = function () {
-        const clientId = OVE.Utils.getQueryParam('oveClientId');
-        if (!clientId) {
+        const oveViewId = OVE.Utils.getQueryParam('oveViewId');
+        if (!oveViewId) {
             return null;
         }
-        return clientId.substring(0, clientId.lastIndexOf('-'));
+        return oveViewId.substring(0, oveViewId.lastIndexOf('-'));
     };
 
     this.getClient = function () {
-        const clientId = OVE.Utils.getQueryParam('oveClientId');
-        if (!clientId) {
+        const oveViewId = OVE.Utils.getQueryParam('oveViewId');
+        if (!oveViewId) {
             return null;
         }
-        const parts = clientId.split('-');
+        const parts = oveViewId.split('-');
         return +parts[parts.length - 1];
     };
 
     this.getSectionId = function () {
-        let id = OVE.Utils.getQueryParam('oveClientId');
-        //-- clientId will not be provided by a controller --//
+        let id = OVE.Utils.getQueryParam('oveViewId');
+        //-- oveViewId will not be provided by a controller --//
         if (!id) {
             return OVE.Utils.getQueryParam('oveSectionId');
         }
         const sectionId = id.substring(id.lastIndexOf('.') + 1);
         id = id.substring(0, id.lastIndexOf('.'));
         if (!id && sectionId) {
-            //-- sectionId has not been provided as a part of oveClientId  --//
-            //-- oveClientId has the format "{space}-{client}.{sectionId}" --//
+            //-- sectionId has not been provided as a part of oveViewId  --//
+            //-- oveViewId has the format "{space}-{client}.{sectionId}" --//
             //-- the ".{sectionId}" portion is optional and can be omitted --//
             return OVE.Utils.getQueryParam('oveSectionId');
         } else {

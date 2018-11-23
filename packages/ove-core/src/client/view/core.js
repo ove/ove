@@ -34,7 +34,7 @@ updateSections = function (m) {
         window.ove.context.isInitialized = true;
         log.debug('Application is initialized:', window.ove.context.isInitialized);
     }
-    const id = OVE.Utils.getQueryParam('oveClientId');
+    const id = OVE.Utils.getQueryParam('oveViewId');
     switch (m.action) {
         case Constants.Action.CREATE:
             const client = id.substring(id.lastIndexOf('-') + 1);
@@ -64,7 +64,7 @@ updateSections = function (m) {
             if (frame.length) {
                 log.info('Updating section:', m.id);
                 if (m.app) {
-                    const url = m.app.url + '/view.html?oveClientId=' + id + '.' + m.id;
+                    const url = m.app.url + '/view.html?oveViewId=' + id + '.' + m.id;
                     log.info('Setting iFrame source URL:', url);
                     frame.attr('src', url);
                 } else {

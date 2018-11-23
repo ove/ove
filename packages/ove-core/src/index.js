@@ -28,7 +28,7 @@ app.use(express.json());
 // current version of JSHint does not support async/await
 let getClients = async function () {
     let clients;
-    // To support backwards compatibility with v0.2.0
+    // BACKWARDS-COMPATIBILITY: To support deployments designed for OVE v0.2.0
     const spacesJSONEnvVar = process.env.OVE_SPACES_JSON || process.env.OVE_CLIENTS_JSON;
     if (spacesJSONEnvVar) {
         log.info('Loading clients from environment variable:', spacesJSONEnvVar);
