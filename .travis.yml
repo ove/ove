@@ -9,6 +9,8 @@ stages:
   - name: deploy
     if: branch = master
 
+before_install: npm install -g npm
+
 jobs:
   include:
     - stage: install
