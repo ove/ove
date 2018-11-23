@@ -15,6 +15,11 @@ stages:
 jobs:
   include:
     - stage: test
-      script: npm run lint && npm run build:clean && npm test
+      script: 
+        - npm run lint 
+        - npm run build:clean 
+        - npm test
     - stage: deploy
-      script: ./build.sh
+      script:
+        - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin 
+        - ./build.sh
