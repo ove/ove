@@ -10,7 +10,7 @@ install: npm install
 stages:
   - test
   - name: deploy
-    #    if: branch = master
+    if: branch = master
 
 jobs:
   include:
@@ -22,4 +22,4 @@ jobs:
     - stage: deploy
       script:
         - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin 
-        - ./build.sh
+        - ./build.sh --push
