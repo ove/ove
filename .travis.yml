@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+  - "10"
+
+stages:
+  - install
+  - compile
+  - test
+  - name: deploy
+    if: branch = master
+
+jobs:
+  include:
+    - stage: install
+      script: npm install
+    - stage: compile
+      script: npm run build:clean
+    - stage: test
+      script: npm test
