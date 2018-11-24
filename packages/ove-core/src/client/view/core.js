@@ -34,7 +34,7 @@ updateSections = function (m) {
         window.ove.context.isInitialized = true;
         log.debug('Application is initialized:', window.ove.context.isInitialized);
     }
-    const id = OVE.Utils.getQueryParam('oveViewId');
+    const id = OVE.Utils.getViewId();
     switch (m.action) {
         case Constants.Action.CREATE:
             const client = id.substring(id.lastIndexOf('-') + 1);

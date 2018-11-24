@@ -116,10 +116,10 @@ function OVE (appId, hostname, sectionId) {
                     });
             }
         };
-        let id = OVE.Utils.getQueryParam('oveViewId');
+        let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
         if (!id) {
-            fetchSection(OVE.Utils.getQueryParam('oveSectionId') || __private.proposedSectionId);
+            fetchSection(OVE.Utils.getSectionId() || __private.proposedSectionId);
             return;
         }
         let sectionId = id.substring(id.lastIndexOf('.') + 1);
@@ -129,7 +129,7 @@ function OVE (appId, hostname, sectionId) {
             //-- oveViewId has the format "{space}-{client}.{sectionId}" --//
             //-- the ".{sectionId}" portion is optional and can be omitted --//
             id = sectionId;
-            sectionId = OVE.Utils.getQueryParam('oveSectionId');
+            sectionId = OVE.Utils.getSectionId();
         }
         const client = id.substring(id.lastIndexOf('-') + 1);
         const space = id.substring(0, id.lastIndexOf('-'));

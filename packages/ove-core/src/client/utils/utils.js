@@ -134,7 +134,7 @@ function OVEUtils () {
     //--                     Geometry Related                    --//
     //-----------------------------------------------------------//
     this.getSpace = function () {
-        const viewId = OVE.Utils.getQueryParam('oveViewId');
+        const viewId = OVE.Utils.getViewId();
         if (!viewId) {
             return null;
         }
@@ -142,7 +142,7 @@ function OVEUtils () {
     };
 
     this.getClient = function () {
-        const viewId = OVE.Utils.getQueryParam('oveViewId');
+        const viewId = OVE.Utils.getViewId();
         if (!viewId) {
             return null;
         }
@@ -151,10 +151,10 @@ function OVEUtils () {
     };
 
     this.getSectionId = function () {
-        let id = OVE.Utils.getQueryParam('oveViewId');
+        let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
         if (!id) {
-            return OVE.Utils.getQueryParam('oveSectionId');
+            return OVE.Utils.getSectionId();
         }
         const sectionId = id.substring(id.lastIndexOf('.') + 1);
         id = id.substring(0, id.lastIndexOf('.'));
@@ -162,7 +162,7 @@ function OVEUtils () {
             //-- sectionId has not been provided as a part of oveViewId  --//
             //-- oveViewId has the format "{space}-{client}.{sectionId}" --//
             //-- the ".{sectionId}" portion is optional and can be omitted --//
-            return OVE.Utils.getQueryParam('oveSectionId');
+            return OVE.Utils.getSectionId();
         } else {
             return sectionId;
         }
@@ -270,6 +270,15 @@ function OVEUtils () {
             return new URLSearchParams(location.search.slice(1)).get(name) || defaultValue;
         }
         return new URLSearchParams(location.search.slice(1)).get(name);
+    };
+
+    this.getViewId = function () {
+        //-- BACKWARDS-COMPATIBILITY: For < v0.2.0 --//
+        return OVE.Utils.getQueryParam('oveViewId') || OVE.Utils.getQueryParam('oveClientId');
+    };
+
+    this.getSectionId = function () {
+        return OVE.Utils.getQueryParam('oveSectionId');
     };
 
     this.resizeController = function (contentDivName) {
