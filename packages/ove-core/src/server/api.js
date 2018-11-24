@@ -19,6 +19,35 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
+    let spaceGeometries = {};
+    // Internal utility functions to calculate space geometries.
+    const _getSpaceGeometries = function () {
+        if (Utils.isNullOrEmpty(spaceGeometries) && !Utils.isNullOrEmpty(server.spaces)) {
+            Object.keys(server.spaces).forEach(function (s) {
+                const geometry = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
+                server.spaces[s].forEach(function (e) {
+                    geometry.w = Math.max(e.x + e.w, geometry.w);
+                    geometry.h = Math.max(e.y + e.h, geometry.h);
+                });
+                log.debug('Successfully computed geometry for space:', s);
+                spaceGeometries[s] = geometry;
+            });
+        }
+        return spaceGeometries;
+    };
+
+    const getSpaceGeometry = function (req, res) {
+        const spaceName = req.params.name;
+        const geometry = _getSpaceGeometries()[spaceName];
+        if (Utils.isNullOrEmpty(geometry)) {
+            log.error('Invalid Space', 'name:', spaceName);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+        } else {
+            log.debug('Returning geometry for space:', spaceName);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(geometry));
+        }
+    };
+
     // Creates an individual section
     const createSection = function (req, res) {
         if (!req.body.space || !server.spaces[req.body.space]) {
@@ -310,6 +339,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     server.app.get('/spaces', listSpaces);
+    server.app.get('/spaces/:name/geometry', getSpaceGeometry);
     server.app.delete('/sections', deleteSections);
     server.app.post('/section', createSection);
     server.app.get('/section/:id', readSectionById);

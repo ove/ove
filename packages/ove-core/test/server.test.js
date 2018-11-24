@@ -62,6 +62,20 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify(JSON.parse(fs.readFileSync(
             path.join(srcDir, 'client', Constants.SPACES_JSON_FILENAME)))));
     });
+
+    it('should return space geometries', async () => {
+        let res = await request(app).get('/spaces/LocalNine/geometry');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        // The width and height are hard-coded for the LocalNine space and will have
+        // to be updated accordingly if the dimensions of the space has changed.
+        expect(res.text).toEqual(JSON.stringify({ w: 4320, h: 2424 }));
+    });
+
+    it('should return an error if the space name was invalid', async () => {
+        let res = await request(app).get('/spaces/Fake/geometry');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid space' }));
+    });
     /* jshint ignore:end */
 
     afterAll(() => {

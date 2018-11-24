@@ -38,6 +38,32 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Spaces"
+  /spaces/{name}/geometry:
+    get:
+      tags:
+      - "spaces"
+      summary: "Reads geometry of a named space"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        type: "string"
+        description: "Name of space"
+        required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Space%20Geometry"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid space' if the name of the space was not provided or not found."
   /sections:
     delete:
       tags:
@@ -249,6 +275,18 @@ definitions:
           y: 0
           w: 1440
           h: 808
+  Space Geometry:
+    description: "Response format, when fetching space geometry"
+    type: "object"
+    properties:
+      w:
+        type: "integer"
+        format: "int32"
+        example: 30720
+      h:
+        type: "integer"
+        format: "int32"
+        example: 4320
   Section (app-only):
     description: "Used when updating a section"
     type: "object"
