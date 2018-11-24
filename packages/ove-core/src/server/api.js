@@ -3,6 +3,11 @@ const request = require('request');
 const HttpStatus = require('http-status-codes');
 
 module.exports = function (server, log, Utils, Constants) {
+    let __private = {
+        spaceGeometries: {}
+    };
+
+    // Lists details of all spaces, and accepts filters as a part of its query string.
     const listSpaces = function (req, res) {
         let sectionId = req.query.oveSectionId;
         if (sectionId !== undefined) {
@@ -19,10 +24,9 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
-    let spaceGeometries = {};
-    // Internal utility functions to calculate space geometries.
+    // Internal utility function to calculate space geometries.
     const _getSpaceGeometries = function () {
-        if (Utils.isNullOrEmpty(spaceGeometries) && !Utils.isNullOrEmpty(server.spaces)) {
+        if (Utils.isNullOrEmpty(__private.spaceGeometries) && !Utils.isNullOrEmpty(server.spaces)) {
             Object.keys(server.spaces).forEach(function (s) {
                 const geometry = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
                 server.spaces[s].forEach(function (e) {
@@ -30,12 +34,13 @@ module.exports = function (server, log, Utils, Constants) {
                     geometry.h = Math.max(e.y + e.h, geometry.h);
                 });
                 log.debug('Successfully computed geometry for space:', s);
-                spaceGeometries[s] = geometry;
+                __private.spaceGeometries[s] = geometry;
             });
         }
-        return spaceGeometries;
+        return __private.spaceGeometries;
     };
 
+    // Gets geometry of a named space.
     const getSpaceGeometry = function (req, res) {
         const spaceName = req.params.name;
         const geometry = _getSpaceGeometries()[spaceName];
@@ -187,6 +192,12 @@ module.exports = function (server, log, Utils, Constants) {
             log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/flush');
         }
+        server.groups.forEach(function (e, groupId) {
+            if (e.includes(sectionId)) {
+                // The outcome of this operation is logged within the internal utility method
+                _deleteGroupById(groupId);
+            }
+        });
         delete server.sections[sectionId];
         server.sections[sectionId] = {};
 
@@ -199,8 +210,21 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Deletes all sections
     const deleteSections = function (req, res) {
-        let space = req.query.space;
-        if (space) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        if (groupId) {
+            let deletedSections = [];
+            if (!Utils.isNullOrEmpty(server.groups[groupId])) {
+                log.info('Deleting sections of group:', groupId);
+                const group = server.groups[groupId].slice();
+                group.forEach(function (e) {
+                    _deleteSectionById(e);
+                    deletedSections.push(parseInt(e, 10));
+                });
+            }
+            log.info('Successfully deleted sections:', deletedSections);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
+        } else if (space) {
             let findSectionsBySpace = function (e) {
                 return !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
             };
@@ -212,7 +236,6 @@ module.exports = function (server, log, Utils, Constants) {
                 deletedSections.push(parseInt(i, 10));
                 i = server.sections.findIndex(findSectionsBySpace);
             }
-            log.debug('Existing sections (active/deleted):', server.sections.length);
             log.info('Successfully deleted sections:', deletedSections);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
         } else {
@@ -223,16 +246,19 @@ module.exports = function (server, log, Utils, Constants) {
                     request.post(section.app.url + '/flush');
                 }
             }
-            log.info('Deleting all sections');
-            log.debug('Existing sections (active/deleted):', server.sections.length);
-
+            while (server.groups.length !== 0) {
+                server.groups.pop();
+            }
             server.wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
                 }
             });
+            log.info('Successfully deleted all sections');
             Utils.sendEmptySuccess(res);
         }
+        log.debug('Existing sections (active/deleted):', server.sections.length);
+        log.debug('Existing groups (active/deleted):', server.groups.length);
     };
 
     // Fetches details of an individual section
@@ -338,6 +364,80 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
+    // Internal utility function to create or update a group
+    const _createOrUpdateGroup = function (groupId, operation, req, res) {
+        const validateSections = function (group) {
+            let valid = true;
+            group.forEach(function (e) {
+                if (Utils.isNullOrEmpty(server.sections[e])) {
+                    valid = false;
+                }
+            });
+            return valid;
+        };
+        if (!req.body || !req.body.length || !validateSections(req.body)) {
+            log.error('Invalid Group', 'request:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+        } else {
+            server.groups[groupId] = req.body.slice();
+            log.info('Successfully ' + operation + 'd group:', groupId);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
+        }
+    };
+
+    // Creates an individual group
+    const createGroup = function (req, res) {
+        _createOrUpdateGroup(server.groups.length, 'create', req, res);
+    };
+
+    // Fetches details of an individual group
+    const readGroupById = function (req, res) {
+        let groupId = req.params.id;
+        if (Utils.isNullOrEmpty(server.groups[groupId])) {
+            log.error('Invalid Group Id:', groupId);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+        } else {
+            log.debug('Successfully read configuration for group id:', groupId);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.groups[groupId]));
+        }
+    };
+
+    // Updates an individual group
+    const updateGroupById = function (req, res) {
+        _createOrUpdateGroup(req.params.id, 'update', req, res);
+    };
+
+    // Internal utility function to delete a group by the given id
+    const _deleteGroupById = function (groupId) {
+        delete server.groups[groupId];
+        server.groups[groupId] = [];
+        let hasNonEmptyGroups = false;
+        server.groups.forEach(function (e) {
+            if (!Utils.isNullOrEmpty(e)) {
+                hasNonEmptyGroups = true;
+            }
+        });
+        if (hasNonEmptyGroups) {
+            log.info('Successfully deleted group:', groupId);
+        } else {
+            server.groups = [];
+            log.info('Successfully deleted all groups');
+        }
+    };
+
+    // Deletes an individual group. If there are no more non-empty groups at the end of this
+    // operation, it will reset all groups on the server.
+    const deleteGroupById = function (req, res) {
+        let groupId = req.params.id;
+        if (Utils.isNullOrEmpty(server.groups[groupId])) {
+            log.error('Invalid Group Id:', groupId);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+        } else {
+            _deleteGroupById(groupId);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
+        }
+    };
+
     server.app.get('/spaces', listSpaces);
     server.app.get('/spaces/:name/geometry', getSpaceGeometry);
     server.app.delete('/sections', deleteSections);
@@ -345,6 +445,10 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.get('/section/:id', readSectionById);
     server.app.post('/section/:id', updateSectionById);
     server.app.delete('/section/:id', deleteSectionById);
+    server.app.post('/group', createGroup);
+    server.app.get('/group/:id', readGroupById);
+    server.app.post('/group/:id', updateGroupById);
+    server.app.delete('/group/:id', deleteGroupById);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));

@@ -5,6 +5,7 @@ const pjson = require(path.join('..', '..', 'package.json')); // this path might
 
 module.exports = function (app, wss, spaces, log, Utils, Constants) {
     this.sections = [];
+    this.groups = [];
     this.spaces = spaces;
     this.wss = wss;
     this.app = app;

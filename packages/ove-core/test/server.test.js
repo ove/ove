@@ -153,6 +153,32 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(Utils.JSON.EMPTY);
     });
 
+    it('should reject invalid requests when creating groups', async () => {
+        await request(app).post('/group')
+            .send().expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+        await request(app).post('/group')
+            .send([])
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+        await request(app).post('/group')
+            .send([0])
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+    });
+
+    it('should reject requests for deleting a group when it does not exist', async () => {
+        await request(app).delete('/group/0')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+    });
+
+    it('should reject requests for updating a group when it does not exist', async () => {
+        await request(app).post('/group/0').send([0])
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+    });
+
+    it('should reject requests for reading a group when it does not exist', async () => {
+        await request(app).get('/group/0').send([0])
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+    });
+
     it('should be able to successfully create and delete sections without an app', async () => {
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
@@ -173,6 +199,126 @@ describe('The OVE Core server', () => {
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should be able to successfully create, read, update and delete groups for sections without an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).post('/group').send([0]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0]));
+
+        res = await request(app).post('/group').send([1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).get('/group/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([1]));
+
+        res = await request(app).post('/group/0').send([0, 1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0, 1]));
+
+        res = await request(app).delete('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        await request(app).get('/group/0')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        res = await request(app).delete('/group/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        await request(app).get('/group/1')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should be able to successfully delete sections by group, without an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).post('/group').send([0]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0]));
+
+        res = await request(app).post('/group').send([1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).get('/group/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([1]));
+
+        res = await request(app).post('/group').send([0, 1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 2 }));
+
+        res = await request(app).get('/group/2');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0, 1]));
+
+        res = await request(app).delete('/sections?groupId=3');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).not.toEqual(Utils.JSON.EMPTY);
+
+        res = await request(app).delete('/sections?groupId=0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+
+        await request(app).get('/group/0')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        await request(app).get('/group/2')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        await request(app).get('/group/1')
+            .expect(HttpStatus.OK, JSON.stringify([1]));
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+
+        await request(app).get('/group/1')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
     });
 
     it('should be able to successfully delete sections by space, without an app', async () => {
@@ -330,7 +476,135 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
-    it('should be able to successfully delete sections by space, without an app', async () => {
+    it('should be able to successfully create, read, update and delete groups for sections with an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).post('/group').send([0]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0]));
+
+        res = await request(app).post('/group').send([1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).get('/group/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([1]));
+
+        res = await request(app).post('/group/0').send([0, 1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0, 1]));
+
+        res = await request(app).delete('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        await request(app).get('/group/0')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        res = await request(app).delete('/group/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        await request(app).get('/group/1')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should be able to successfully delete sections by group, with an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).post('/group').send([0]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0]));
+
+        res = await request(app).post('/group').send([1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).get('/group/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([1]));
+
+        res = await request(app).post('/group').send([0, 1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 2 }));
+
+        res = await request(app).get('/group/2');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([0, 1]));
+
+        res = await request(app).delete('/sections?groupId=3');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).not.toEqual(Utils.JSON.EMPTY);
+
+        let scope1 = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope2 = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        res = await request(app).delete('/sections?groupId=0');
+        expect(scope1.isDone()).toBeTruthy(); // request should be made at this point.
+        expect(scope2.isDone()).not.toBeTruthy(); // request should not be made at this point.
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+
+        await request(app).get('/group/0')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        await request(app).get('/group/2')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+
+        await request(app).get('/group/1')
+            .expect(HttpStatus.OK, JSON.stringify([1]));
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+
+        expect(scope2.isDone()).toBeTruthy(); // request should be made at this point.
+
+        await request(app).get('/group/1')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+    });
+
+    it('should be able to successfully delete sections by space, with an app', async () => {
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(res.statusCode).toEqual(HttpStatus.OK);
