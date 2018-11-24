@@ -92,17 +92,17 @@ function OVE (appId, hostname, sectionId) {
     };
 
     //-----------------------------------------------------------//
-    //--                   Layout Variables                    --//
+    //--                   Geometry Variables                    --//
     //-----------------------------------------------------------//
-    const setLayout = function (__self, __private) {
-        __self.layout = {};
+    const setGeometry = function (__self, __private) {
+        __self.geometry = {};
         const fetchSection = function (sectionId) {
             if (sectionId) {
                 log.debug('Requesting details of section:', sectionId);
                 fetch(getHostName(true) + '/section/' + sectionId)
                     .then(function (r) { return r.text(); }).then(function (text) {
                         const section = JSON.parse(text);
-                        __self.layout.section = { w: section.w, h: section.h };
+                        __self.geometry.section = { w: section.w, h: section.h };
                         __self.state.name = OVE.Utils.getQueryParam('state', section.state);
                         //-- Always store section id as a string to avoid if-checks      --//
                         //-- failing on '0'                                              --//
@@ -142,7 +142,7 @@ function OVE (appId, hostname, sectionId) {
         //-- call APIs /spaces or /spaces?oveSectionId={sectionId}  --//
         fetch(getHostName(true) + '/spaces' + (sectionId ? '?oveSectionId=' + sectionId : ''))
             .then(function (r) { return r.text(); }).then(function (text) {
-                __self.layout = (JSON.parse(text)[space] || [])[client] || {};
+                __self.geometry = (JSON.parse(text)[space] || [])[client] || {};
                 fetchSection(sectionId);
             });
     };
@@ -201,7 +201,7 @@ function OVE (appId, hostname, sectionId) {
 
     this.socket = new OVESocket(__private);
     this.state = new OVEState(__private);
-    setLayout(this, __private);
+    setGeometry(this, __private);
 }
 
 //-----------------------------------------------------------//

@@ -131,7 +131,7 @@ function OVEUtils () {
     };
 
     //-----------------------------------------------------------//
-    //--                     Layout Related                    --//
+    //--                     Geometry Related                    --//
     //-----------------------------------------------------------//
     this.getSpace = function () {
         const viewId = OVE.Utils.getQueryParam('oveViewId');
@@ -180,7 +180,7 @@ function OVEUtils () {
     $(document).on(OVE.Event.LOADED, function () {
         const sectionId = __self.getSectionId();
         const hostname = window.ove.context.hostname;
-        if (window.ove.layout && __self.getSpace()) {
+        if (window.ove.geometry && __self.getSpace()) {
             fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
                 const allClients = JSON.parse(text)[__self.getSpace()] || [];
                 if (allClients.length > 0) {
@@ -188,12 +188,12 @@ function OVEUtils () {
                     //-- duplication of code/effort in ove.js. The dimensions of the   --//
                     //-- space is calculated using the clients that are furthest from  --//
                     //-- the top-left of the space along the x and y axes.             --//
-                    window.ove.layout.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
+                    window.ove.geometry.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
                     allClients.forEach(function (e) {
-                        window.ove.layout.space.w = Math.max(e.x + e.w, window.ove.layout.space.w);
-                        window.ove.layout.space.h = Math.max(e.y + e.h, window.ove.layout.space.h);
+                        window.ove.geometry.space.w = Math.max(e.x + e.w, window.ove.geometry.space.w);
+                        window.ove.geometry.space.h = Math.max(e.y + e.h, window.ove.geometry.space.h);
                     });
-                    if (sectionId !== undefined && window.ove.layout.offset) {
+                    if (sectionId !== undefined && window.ove.geometry.offset) {
                         fetch(hostname + '/spaces??oveSectionId=' + sectionId)
                             .then(function (r) { return r.text(); }).then(function (text) {
                                 const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
@@ -204,14 +204,14 @@ function OVEUtils () {
                                 //-- axes.                                             --//
                                 sectionClients.forEach(function (e, i) {
                                     if (!__self.JSON.equals(e, {}) && allClients[i]) {
-                                        section.x = Math.min(allClients[i].x + window.ove.layout.offset.x, section.x);
-                                        section.y = Math.min(allClients[i].y + window.ove.layout.offset.y, section.y);
+                                        section.x = Math.min(allClients[i].x + window.ove.geometry.offset.x, section.x);
+                                        section.y = Math.min(allClients[i].y + window.ove.geometry.offset.y, section.y);
                                     }
                                 });
                                 if (section.x !== Number.MAX_VALUE && section.y !== Number.MAX_VALUE) {
                                     __private.section = {
-                                        x: section.x + window.ove.layout.offset.x,
-                                        y: section.y + window.ove.layout.offset.y
+                                        x: section.x + window.ove.geometry.offset.x,
+                                        y: section.y + window.ove.geometry.offset.y
                                     };
                                 }
                             });
@@ -227,9 +227,9 @@ function OVEUtils () {
             return undefined;
         }
         const section = __private.section;
-        const layout = window.ove.layout;
+        const g = window.ove.geometry;
         if ((inputType === OVE.Utils.Coordinates.SCREEN || outputType === OVE.Utils.Coordinates.SCREEN) &&
-            (layout.x === undefined || layout.y === undefined || !layout.offset)) {
+            (g.x === undefined || g.y === undefined || !g.offset)) {
             log.error('Unable to transform coordinates, screen geometry information not available');
             return undefined;
         }
@@ -241,12 +241,12 @@ function OVEUtils () {
 
         //-- No conversions along the z-axis as yet --//
         const Conversions = {
-            SCREEN_TO_SECTION: [layout.x - layout.offset.x, layout.y - layout.offset.y, 0],
-            SECTION_TO_SCREEN: [layout.offset.x - layout.x, layout.offset.y - layout.y, 0],
+            SCREEN_TO_SECTION: [g.x - g.offset.x, g.y - g.offset.y, 0],
+            SECTION_TO_SCREEN: [g.offset.x - g.x, g.offset.y - g.y, 0],
             SECTION_TO_SPACE: [section.x, section.y, 0],
             SPACE_TO_SECTION: [-section.x, -section.y, 0],
-            SCREEN_TO_SPACE: [layout.x - layout.offset.x + section.x, layout.y - layout.offset.y + section.y, 0],
-            SPACE_TO_SCREEN: [layout.offset.x - layout.x - section.x, layout.offset.y - layout.y - section.y, 0]
+            SCREEN_TO_SPACE: [g.x - g.offset.x + section.x, g.y - g.offset.y + section.y, 0],
+            SPACE_TO_SCREEN: [g.offset.x - g.x - section.x, g.offset.y - g.y - section.y, 0]
         };
 
         //-- Logic to run the corresponding conversion --//
@@ -273,32 +273,32 @@ function OVEUtils () {
     };
 
     this.resizeController = function (contentDivName) {
-        const l = window.ove.layout;
+        const g = window.ove.geometry;
         //-- The element with id contentDivName is scaled to fit inside both the client  --//
         //-- and window, whilst maintaining the aspect ratio of the section/content.     --//
         const maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
         const maxHeight = Math.min(document.documentElement.clientHeight, window.innerHeight);
         let width, height;
-        if (l.section.w * maxHeight >= maxWidth * l.section.h) {
+        if (g.section.w * maxHeight >= maxWidth * g.section.h) {
             width = maxWidth;
-            height = maxWidth * l.section.h / l.section.w;
+            height = maxWidth * g.section.h / g.section.w;
         } else {
             height = maxHeight;
-            width = maxHeight * l.section.w / l.section.h;
+            width = maxHeight * g.section.w / g.section.h;
         }
         log.debug('Resizing controller with height:', height, ', width:', width);
         $(contentDivName).css({ width: width, height: height });
     };
 
     this.resizeViewer = function (contentDivName) {
-        const l = window.ove.layout;
+        const g = window.ove.geometry;
         //-- The element with id contentDivName is resized to the size of the            --//
         //-- corresponding section (which may span multiple clients), and then           --//
         //-- translated based on the client's coordinates.                               --//
         const css = {
-            transform: 'translate(-' + l.x + 'px,-' + l.y + 'px)',
-            width: l.section.w + 'px',
-            height: l.section.h + 'px'
+            transform: 'translate(-' + g.x + 'px,-' + g.y + 'px)',
+            width: g.section.w + 'px',
+            height: g.section.h + 'px'
         };
         log.debug('Resizing viewer with height:', css.height, ', width:', css.width);
         log.debug('Performing CSS transform on viewer', css.transform);

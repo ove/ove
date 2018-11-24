@@ -11,9 +11,7 @@ info:
 basePath: "/"
 tags:
 - name: "spaces"
-  description: "Layout details of spaces"
-- name: "client"
-  description: "Layout details of an individual client"
+  description: "Details related to spaces"
 - name: "sections"
   description: "Operations on all sections"
 - name: "section"

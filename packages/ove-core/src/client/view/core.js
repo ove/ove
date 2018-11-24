@@ -39,8 +39,8 @@ updateSections = function (m) {
         case Constants.Action.CREATE:
             const client = id.substring(id.lastIndexOf('-') + 1);
             const space = id.substring(0, id.lastIndexOf('-'));
-            let layout = (m.spaces[space] || [])[client] || {};
-            if (Object.keys(layout).length !== 0 && layout.h > 0 && layout.w > 0) {
+            let geometry = (m.spaces[space] || [])[client] || {};
+            if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                 log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
                 log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
                 $('<iframe>', {
@@ -50,12 +50,12 @@ updateSections = function (m) {
                     scrolling: 'no'
                 }).css({
                     // The height is scaled to avoid random scrollbars.
-                    height: layout.h * 0.999,
-                    width: layout.w,
+                    height: geometry.h * 0.999,
+                    width: geometry.w,
                     zIndex: m.id,
                     position: 'absolute',
-                    marginLeft: layout.offset.x,
-                    marginTop: layout.offset.y
+                    marginLeft: geometry.offset.x,
+                    marginTop: geometry.offset.y
                 }).appendTo('.container');
             }
             break;
