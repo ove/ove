@@ -22,4 +22,4 @@ jobs:
     - stage: deploy
       script:
         - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin 
-        - ./build.sh --push
+        - ./build.sh --push -v unstable
