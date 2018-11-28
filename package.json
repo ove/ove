@@ -3,11 +3,12 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "install": "lerna bootstrap --hoist",
+    "install": "lerna bootstrap --hoist --no-ci",
     "install:prod": "lerna bootstrap --hoist -- --production --no-optional",
     "clean": "lerna run clean",
     "build": "lerna run build",
     "build:clean": "lerna run clean && lerna run build",
+    "lint": "lerna run lint",
     "test": "lerna run test",
     "start": "pm2 start pm2.json",
     "start:windows": "pm2 start pm2-windows.json",
