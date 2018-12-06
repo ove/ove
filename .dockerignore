@@ -18,6 +18,9 @@ docker-compose*
 renovate.json
 pm2-windows.json
 
+package-lock.json
+**/package-lock.json
+
 *.md
 **/*.md
 
