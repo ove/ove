@@ -1,0 +1,7 @@
+version: '3'
+services:
+  ovehub-ove:
+    image: ovehub/ove:latest-unstable
+    build: .
+    ports:
+    - "8080:8080"
