@@ -24,6 +24,7 @@
                 "WebSocket": true
             },
             "rules": {
+                "no-extend-native": "off",
                 "no-unused-vars": ["error", { "vars": "all", "args": "none", "ignoreRestSiblings": true, "varsIgnorePattern": "OVE" }],
                 "spaced-comment": ["error", "always", {
                     "line": { "markers": ["*package", "!", "/", ",", "=", "--" ], "exceptions": ["-----------------------------------------------------------//"] },
