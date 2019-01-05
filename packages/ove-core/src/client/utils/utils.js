@@ -20,7 +20,7 @@ function OVEUtils () {
     this.Logger = function (name, logLevel) {
         return new OVELogger(name, logLevel);
     };
-    //-- Instance of logger for the use of OVE.Utils            --//
+    //-- Instance of logger for the use of OVE.Utils           --//
     const log = this.Logger('OVEUtils');
 
     function OVELogger (name, logLevel) {
@@ -71,7 +71,7 @@ function OVEUtils () {
             return 'font-weight: 500; background: ' + logLevel.label.bgColor + '; color: ' + logLevel.label.color;
         };
 
-        //-- Internal Utility function to build log messages. --//
+        //-- Internal Utility function to build log messages.   --//
         const buildLogMessage = function (logLevel, args) {
             const time = (function (d) {
                 const locale = window.navigator.userLanguage || window.navigator.language;
@@ -165,15 +165,33 @@ function OVEUtils () {
     };
 
     //-----------------------------------------------------------//
-    //--                     Geometry Related                    --//
+    //--                   Geometry Related                    --//
     //-----------------------------------------------------------//
-    this.getSpace = function () {
+    this.getSpace = function (getSpaceFromSection) {
         const viewId = OVE.Utils.getViewId();
         if (!viewId) {
-            return null;
+            //-- We will attempt to get the space from the section details by default.   --//
+            //-- This can be prevented by setting 'getSpaceFromSection' to false.        --//
+            if (arguments.length > 0 && !getSpaceFromSection) {
+                return null;
+            }
+            return __private.space;
         }
         return viewId.substring(0, viewId.lastIndexOf('-'));
     };
+
+    $(document).on(OVE.Event.LOADED, function () {
+        const sectionId = __self.getSectionId();
+        if (window.ove.geometry && !__self.getSpace() && sectionId !== undefined) {
+            fetch(window.ove.context.hostname + '/spaces?oveSectionId=' + sectionId)
+                .then(function (r) { return r.text(); }).then(function (text) {
+                    const spaces = Object.keys(JSON.parse(text));
+                    if (spaces.length > 0) {
+                        __private.space = spaces[0];
+                    }
+                });
+        }
+    });
 
     this.getClient = function () {
         const viewId = OVE.Utils.getViewId();
@@ -214,7 +232,7 @@ function OVEUtils () {
     $(document).on(OVE.Event.LOADED, function () {
         const sectionId = __self.getSectionId();
         const hostname = window.ove.context.hostname;
-        if (window.ove.geometry && __self.getSpace()) {
+        if (window.ove.geometry && __self.getSpace(false)) {
             fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
                 const allClients = JSON.parse(text)[__self.getSpace()] || [];
                 if (allClients.length > 0) {
@@ -228,7 +246,7 @@ function OVEUtils () {
                         window.ove.geometry.space.h = Math.max(e.y + e.h, window.ove.geometry.space.h);
                     });
                     if (sectionId !== undefined && window.ove.geometry.offset) {
-                        fetch(hostname + '/spaces??oveSectionId=' + sectionId)
+                        fetch(hostname + '/spaces?oveSectionId=' + sectionId)
                             .then(function (r) { return r.text(); }).then(function (text) {
                                 const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
                                 const section = { x: Number.MAX_VALUE, y: Number.MAX_VALUE };
