@@ -379,7 +379,7 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
-    it('should not be able to update anything related to a section when no app is present', async () => {
+    it('should be able to update section dimensions, without an app', async () => {
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -396,7 +396,81 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 100, 'h': 100 }));
+
+        res = await request(app).post('/section/0')
+            .send({ 'h': 200, 'y': 10, 'x': 0 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 100, 'h': 200 }));
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+    });
+
+    it('should let you update the space, without an app, but only if the request was valid', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        await request(app).post('/section/0')
+            .send({ 'h': 10, 'space': 'FakeSpace', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+
+        await request(app).post('/section/0')
+            .send({ 'h': 10, 'space': 'TestingFour', 'w': 10 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+
+        await request(app).post('/section/0')
+            .send({ 'h': 10, 'space': 'TestingFour', 'w': 10, 'y': 0 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+
+        res = await request(app).post('/section/0')
+            .send({ 'space': 'TestingFour', 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+    });
+
+    it('should fail when updating section dimensions, if either x or y is not provided', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        await request(app).post('/section/0')
+            .send({ 'h': 100, 'space': 'TestingNine', 'w': 100 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+
+        await request(app).post('/section/0')
+            .send({ 'h': 100, 'space': 'TestingNine', 'w': 100, 'y': 0 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+
+        await request(app).post('/section/0')
+            .send({ 'x': 10 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -471,6 +545,30 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should fail to successfully create or update sections with an app without a URL', async () => {
+        await request(app).post('/section')
+            .send({ 'h': 10, 'app': { }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
+
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/section/0')
+            .send({ 'h': 10, 'app': { }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
+        expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -705,7 +803,76 @@ describe('The OVE Core server', () => {
         log.debug = mockCallback;
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/section/0')
-            .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 });
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
+        log.debug = OLD_LOG_DEBUG;
+        expect(mockCallback.mock.calls[0][0]).toBe('Deleting existing application configuration');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        // dimensions should not change as the update only changes the app.
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+    });
+
+    it('should be able to update the app of a section that never had an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        res = await request(app).post('/section/0')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        // dimensions should not change as the update only changes the app.
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+    });
+
+    it('should be able to update the app of a section, without providing space name and dimensions', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+
+        const mockCallback = jest.fn(x => x);
+        const OLD_LOG_DEBUG = log.debug;
+        log.debug = mockCallback;
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        res = await request(app).post('/section/0')
+            .send({ 'app': { 'url': 'http://localhost:8082' } });
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         log.debug = OLD_LOG_DEBUG;
         expect(mockCallback.mock.calls[0][0]).toBe('Deleting existing application configuration');
@@ -744,7 +911,7 @@ describe('The OVE Core server', () => {
         // request made when calling 'delete /sections' below.
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/section/0')
-            .send({ 'h': 100, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 });
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).not.toBeTruthy(); // checks if the flush request was actually made.
         log.debug = OLD_LOG_DEBUG;
         expect(mockCallback.mock.calls[0][0]).toBe('Deleting existing application configuration');
@@ -780,7 +947,7 @@ describe('The OVE Core server', () => {
         log.debug = mockCallback;
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/section/0')
-            .send({ 'h': 100, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 });
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         log.debug = OLD_LOG_DEBUG;
         expect(mockCallback.mock.calls[0][0]).toBe('Deleting existing application configuration');
@@ -1156,6 +1323,42 @@ describe('The OVE Core server', () => {
         jest.runOnlyPendingTimers();
     });
 
+    it('should trigger limited events to its sockets when a section had a dimension change', async () => {
+        await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
+        ));
+        await request(app).post('/section/0')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 20 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        setTimeout(() => {
+            expect(sockets.messages.length).toEqual(4);
+
+            // The order of these messages are not important.
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
+            ))).toBeTruthy();
+            spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+                { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 20, 'y': 0 } }, { }, { } ] };
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, spaces: spaces } }
+            ))).toBeTruthy();
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+            ))).toBeTruthy();
+            sockets.messages = [];
+            nock.cleanAll();
+        }, TIMEOUT);
+        jest.runOnlyPendingTimers();
+    });
+
     it('should trigger an event to its sockets when a section is updated in quick succession', async () => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
@@ -1167,7 +1370,7 @@ describe('The OVE Core server', () => {
         ));
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/section/0')
-            .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 })
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -1185,6 +1388,47 @@ describe('The OVE Core server', () => {
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
             ))).not.toBeTruthy();
+            sockets.messages = [];
+            nock.cleanAll();
+        }, TIMEOUT);
+        jest.runOnlyPendingTimers();
+    });
+
+    it('should trigger additional events to its sockets when a section is updated along with a dimension change', async () => {
+        await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
+        ));
+        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/section/0')
+            .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        setTimeout(() => {
+            expect(sockets.messages.length).toEqual(4);
+
+            // The order of these messages are not important.
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
+            ))).toBeTruthy();
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
+            ))).toBeTruthy();
+            spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
+                { 'x': 0, 'y': 0, 'w': 100, 'h': 100, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, spaces: spaces } }
+            ))).toBeTruthy();
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+            ))).not.toBeTruthy();
+            sockets.messages = [];
             nock.cleanAll();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();

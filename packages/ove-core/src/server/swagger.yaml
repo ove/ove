@@ -96,6 +96,7 @@ paths:
       tags:
       - "section"
       summary: "Creates a section on OVE and deploys an application instance into it."
+      description: "All parameters except for the load and cache parameters within the app configuration are mandatory."
       consumes:
       - "application/json"
       produces:
@@ -106,7 +107,7 @@ paths:
         description: "Section configuration"
         required: true
         schema:
-          $ref: "#/definitions/Section%20%28complete%29"
+          $ref: "#/definitions/Section"
       responses:
         200:
           description: "successful operation"
@@ -123,7 +124,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid space' if the name of the space was not provided or not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly setup."
+                description: "Returns an error message 'invalid space' if the name of the space was not provided or not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly setup. Returns an error message 'invalid app configuration' if the application configuration was not properly provided."
   /section/{id}:
     get:
       tags:
@@ -150,6 +151,7 @@ paths:
       tags:
       - "section"
       summary: "Updates a section that has been created"
+      description: "Out of the parameters provided, section, x, y, w and h are optional. If these are not provided the existing values will be left unchanged. The app parameter is required, unless the intention is to remove the app from the section. The url parameter within the app configuration is mandatory but both load and cache are optional."
       consumes:
       - "application/json"
       produces:
@@ -165,7 +167,7 @@ paths:
         name: "body"
         description: "Section configuration"
         schema:
-          $ref: "#/definitions/Section%20%28app-only%29"
+          $ref: "#/definitions/Section"
       responses:
         200:
           description: "successful operation"
@@ -182,7 +184,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid section id' if the section id was not found."
+                description: "Returns an error message 'invalid section id' if the section id was not found. Returns an error message 'invalid space' if the name of the space was not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly provided. Returns an error message 'invalid app configuration' if the application configuration was not properly provided."
     delete:
       tags:
       - "section"
@@ -427,9 +429,8 @@ definitions:
         type: "integer"
         format: "int32"
         example: 4320
-  Section (app-only):
-    description: "Used when updating a section"
-    type: "object"
+  Section:
+    description: "Used when creating or updating a section"
     properties:
       app:
         type: "object"
@@ -447,12 +448,6 @@ definitions:
               cache:
                 type: "object"
                 example: {"first":{"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}, "second":{"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}}
-  Section (complete):
-    description: "Used when creating a section"
-    allOf: 
-    - $ref: "#/definitions/Section%20%28app-only%29" 
-    - type: "object"
-    properties:
       space:
         type: "string"
         description: "Name of space"

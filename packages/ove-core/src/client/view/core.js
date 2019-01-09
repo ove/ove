@@ -35,10 +35,10 @@ updateSections = function (m) {
         log.debug('Application is initialized:', window.ove.context.isInitialized);
     }
     const id = OVE.Utils.getViewId();
+    const client = id.substring(id.lastIndexOf('-') + 1);
+    const space = id.substring(0, id.lastIndexOf('-'));
     switch (m.action) {
         case Constants.Action.CREATE:
-            const client = id.substring(id.lastIndexOf('-') + 1);
-            const space = id.substring(0, id.lastIndexOf('-'));
             let geometry = (m.spaces[space] || [])[client] || {};
             if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                 log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
@@ -62,8 +62,25 @@ updateSections = function (m) {
         case Constants.Action.UPDATE:
             const frame = $(Constants.SECTION_FRAME_ID + m.id);
             if (frame.length) {
-                log.info('Updating section:', m.id);
-                if (m.app) {
+                log.info('Updating section:', m.id, ', on client:', client, ', space:', space);
+                if (m.spaces) {
+                    // If an iFrame exists, we may need to resize or remove it.
+                    let geometry = (m.spaces[space] || [])[client] || {};
+                    if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
+                        frame.css({
+                            // The height is scaled to avoid random scrollbars.
+                            height: geometry.h * 0.999,
+                            width: geometry.w,
+                            zIndex: m.id,
+                            position: 'absolute',
+                            marginLeft: geometry.offset.x,
+                            marginTop: geometry.offset.y
+                        });
+                    } else {
+                        log.debug('Removing iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
+                        frame.remove();
+                    }
+                } else if (m.app) {
                     const url = m.app.url + '/view.html?oveViewId=' + id + '.' + m.id;
                     log.info('Setting iFrame source URL:', url);
                     frame.attr('src', url);
@@ -74,6 +91,26 @@ updateSections = function (m) {
                         log.info('Removing iFrame source URL');
                     }
                 }
+            } else if (m.spaces) {
+                let geometry = (m.spaces[space] || [])[client] || {};
+                if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
+                    log.info('Updating section:', m.id, ', on client:', client, ', space:', space);
+                    log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
+                    $('<iframe>', {
+                        id: Constants.SECTION_FRAME_ID.substring(1) + m.id,
+                        allowtransparency: true,
+                        frameborder: 0,
+                        scrolling: 'no'
+                    }).css({
+                        // The height is scaled to avoid random scrollbars.
+                        height: geometry.h * 0.999,
+                        width: geometry.w,
+                        zIndex: m.id,
+                        position: 'absolute',
+                        marginLeft: geometry.offset.x,
+                        marginTop: geometry.offset.y
+                    }).appendTo('.container');
+                }
             }
             break;
         case Constants.Action.DELETE:
@@ -81,10 +118,12 @@ updateSections = function (m) {
                 const frame = $(Constants.SECTION_FRAME_ID + m.id);
                 if (frame.length) {
                     log.info('Deleting section:', m.id);
+                    log.debug('Removing iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
                     frame.remove();
                 }
             } else {
                 log.info('Deleting all sections');
+                log.debug('Removing all iFrames');
                 $('iframe').remove();
             }
             break;
