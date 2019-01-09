@@ -1332,11 +1332,13 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/section/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 20 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
         setTimeout(() => {
             expect(sockets.messages.length).toEqual(4);
@@ -1368,10 +1370,11 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/section/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));

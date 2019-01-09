@@ -355,7 +355,7 @@ module.exports = function (server, log, Utils, Constants) {
             if (req.body.app) {
                 const url = req.body.app.url.replace(/\/$/, '');
                 needsUpdate = needsUpdate || (url !== oldURL);
-                if (oldURL && needsUpdate) {
+                if (oldURL && (url !== oldURL)) {
                     log.debug('Flushing application at URL:', oldURL);
                     request.post(oldURL + '/flush');
                 }
