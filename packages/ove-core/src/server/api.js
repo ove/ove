@@ -125,7 +125,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Invalid App Configuration', 'request:', JSON.stringify(req.body.app));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
         } else {
-            let section = { w: req.body.w, h: req.body.h, spaces: {} };
+            let section = { w: req.body.w, h: req.body.h, x: req.body.x, y: req.body.y, spaces: {} };
             section.spaces[req.body.space] = _calculateSectionLayout(req.body.space, {
                 x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h
             });
@@ -202,7 +202,7 @@ module.exports = function (server, log, Utils, Constants) {
             request.post(section.app.url + '/flush');
         }
         server.groups.forEach(function (e, groupId) {
-            if (e.includes(sectionId)) {
+            if (e.includes(parseInt(sectionId, 10))) {
                 // The outcome of this operation is logged within the internal utility method
                 _deleteGroupById(groupId);
             }
@@ -270,6 +270,203 @@ module.exports = function (server, log, Utils, Constants) {
         log.debug('Existing groups (active/deleted):', server.groups.length);
     };
 
+    // Internal utility function to update section by a given id. This function is used
+    // either to update all sections belonging to a given group, or to update a specific
+    // section by its id.
+    const _updateSectionById = function (sectionId, space, geometry, app) {
+        let commands = [];
+        let oldURL = null;
+        if (server.sections[sectionId].app) {
+            oldURL = server.sections[sectionId].app.url;
+            log.debug('Deleting existing application configuration');
+            delete server.sections[sectionId].app;
+            commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
+        }
+
+        let needsUpdate = false;
+        if (space && !Object.keys(server.sections[sectionId].spaces).includes(space)) {
+            log.debug('Changing space name to:', space);
+            needsUpdate = true;
+        }
+        if (geometry.w !== undefined && geometry.w !== server.sections[sectionId].w) {
+            log.debug('Changing space width to:', geometry.w);
+            server.sections[sectionId].w = geometry.w;
+            needsUpdate = true;
+        }
+        if (geometry.h !== undefined && geometry.h !== server.sections[sectionId].h) {
+            log.debug('Changing space height to:', geometry.h);
+            server.sections[sectionId].h = geometry.h;
+            needsUpdate = true;
+        }
+
+        const spaceName = space || Object.keys(server.sections[sectionId].spaces)[0];
+        if (geometry.x !== undefined && geometry.y !== undefined) {
+            const layout = _calculateSectionLayout(spaceName, {
+                x: geometry.x, y: geometry.y, w: server.sections[sectionId].w, h: server.sections[sectionId].h
+            });
+            if (!needsUpdate && !Utils.JSON.equals(server.sections[sectionId].spaces[spaceName], layout)) {
+                server.sections[sectionId].x = geometry.x;
+                server.sections[sectionId].y = geometry.y;
+                needsUpdate = true;
+            }
+            if (needsUpdate) {
+                log.debug('Updating spaces configuration of section');
+                delete server.sections[sectionId].spaces;
+                server.sections[sectionId].spaces = {};
+                server.sections[sectionId].spaces[spaceName] = layout;
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), spaces: server.sections[sectionId].spaces } }));
+            }
+        }
+
+        if (app) {
+            const url = app.url.replace(/\/$/, '');
+            needsUpdate = needsUpdate || (url !== oldURL);
+            if (oldURL && (url !== oldURL)) {
+                log.debug('Flushing application at URL:', oldURL);
+                request.post(oldURL + '/flush');
+            }
+            server.sections[sectionId].app = { 'url': url };
+            log.debug('Got URL for app:', url);
+            if (app.states) {
+                /* istanbul ignore else */
+                // DEBUG logging is turned on by default, and only turned off in production deployments.
+                // The operation of the Constants.Logging.DEBUG flag has been tested elsewhere.
+                if (Constants.Logging.DEBUG) {
+                    log.debug('Got state configuration for app:', JSON.stringify(app.states));
+                }
+                // Cache or load states if they were provided as a part of the update request.
+                if (app.states.cache) {
+                    Object.keys(app.states.cache).forEach(function (name) {
+                        log.debug('Caching new named state for future use:', name);
+                        request.post(server.sections[sectionId].app.url + '/state/' + name, {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: app.states.cache[name]
+                        });
+                    });
+                    needsUpdate = true;
+                }
+                if (app.states.load) {
+                    // Either a named state or an in-line state configuration can be loaded.
+                    if (typeof app.states.load === 'string' || app.states.load instanceof String) {
+                        server.sections[sectionId].app.state = app.states.load;
+                        log.debug('Loading existing named state:', server.sections[sectionId].app.state);
+                    } else {
+                        log.debug('Loading state configuration');
+                        request.post(server.sections[sectionId].app.url + '/' + sectionId + '/state', {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: app.states.load
+                        });
+                    }
+                    needsUpdate = true;
+                }
+            }
+            // If nothing changed, there is no point in making an update.
+            if (needsUpdate) {
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: { 'url': server.sections[sectionId].app.url } } }));
+            } else {
+                // There is no need to check if the old url was set, because, if it was not, needsUpdate would be true anyway.
+                // Removes the first update command.
+                commands.shift();
+            }
+        } else if (oldURL) {
+            log.debug('Flushing application at URL:', oldURL);
+            request.post(oldURL + '/flush');
+        }
+
+        // Notify OVE viewers/controllers
+        server.wss.clients.forEach(function (c) {
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                commands.forEach(function (m) {
+                    c.safeSend(m);
+                });
+            }
+        });
+    };
+
+    const updateSections = function (req, res) {
+        let sectionsToUpdate = [];
+        if (req.body.space && !server.spaces[req.body.space]) {
+            log.error('Invalid Space', 'request:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+        } else if (req.body.scale && (req.body.scale.x === undefined || req.body.scale.y === undefined)) {
+            log.error('Invalid Dimensions for Scale operation', 'request:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+        } else if (req.body.translate && (req.body.translate.x === undefined || req.body.translate.y === undefined)) {
+            log.error('Invalid Dimensions for Translate operation', 'request:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+        } else {
+            const space = req.query.space;
+            const groupId = req.query.groupId;
+            if (groupId) {
+                if (!Utils.isNullOrEmpty(server.groups[groupId])) {
+                    log.info('Updating sections of group:', groupId);
+                    const group = server.groups[groupId].slice();
+                    group.forEach(function (e) {
+                        let i = parseInt(e, 10);
+                        sectionsToUpdate.push(i);
+                    });
+                }
+            } else if (space) {
+                log.info('Updating sections of space:', space);
+                let i = -1;
+                let findSectionsBySpace = function (e, x) {
+                    return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
+                };
+                i = server.sections.findIndex(findSectionsBySpace);
+                while (i !== -1) {
+                    sectionsToUpdate.push(i);
+                    i = server.sections.findIndex(findSectionsBySpace);
+                }
+            } else {
+                server.sections.forEach(function (e, i) {
+                    if (!Utils.isNullOrEmpty(e)) {
+                        sectionsToUpdate.push(i);
+                    }
+                });
+            }
+        }
+        // Check whether any operation has to be made.
+        if (!Utils.isNullOrEmpty(sectionsToUpdate) && (req.body.space || req.body.scale || req.body.translate)) {
+            let rangeError = false;
+            let geometries = {};
+            sectionsToUpdate.forEach(function (e) {
+                const section = server.sections[e];
+                geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
+                const space = req.body.space || Object.keys(section.spaces)[0];
+                const bounds = _getSpaceGeometries()[space];
+                if (req.body.scale) {
+                    geometries[e].w = (geometries[e].w * req.body.scale.x) << 0;
+                    geometries[e].h = (geometries[e].h * req.body.scale.y) << 0;
+                }
+                if (req.body.translate) {
+                    geometries[e].x = (geometries[e].x + req.body.translate.x) << 0;
+                    geometries[e].y = (geometries[e].y + req.body.translate.y) << 0;
+                }
+                if (geometries[e].x < 0 || geometries[e].y < 0 || Math.max(geometries[e].x, geometries[e].w) > bounds.w || Math.max(geometries[e].y, geometries[e].h) > bounds.h) {
+                    log.error('Section no longer fits within space after transformation for section id:', e, 'space:', space, 'geometry:', JSON.stringify(geometries[e]));
+                    rangeError = true;
+                }
+            });
+            if (rangeError) {
+                log.error('Unable to update sections due to one or more range errors');
+                Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+            } else {
+                sectionsToUpdate.forEach(function (e) {
+                    const section = server.sections[e];
+                    _updateSectionById(e, req.body.space, geometries[e], section.app);
+                });
+                if (sectionsToUpdate.length === server.sections.length) {
+                    log.info('Successfully updated all sections');
+                } else {
+                    log.info('Successfully updated sections:', sectionsToUpdate);
+                }
+                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToUpdate }));
+            }
+        } else {
+            Utils.sendEmptySuccess(res);
+        }
+    };
+
     // Fetches details of an individual section
     const readSectionById = function (req, res) {
         let sectionId = req.params.id;
@@ -309,112 +506,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Both x and y positions are required for a resize operation', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
         } else {
-            // Redeploys an App into a section
-            let commands = [];
-            let oldURL = null;
-            if (server.sections[sectionId].app) {
-                oldURL = server.sections[sectionId].app.url;
-                log.debug('Deleting existing application configuration');
-                delete server.sections[sectionId].app;
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
-            }
-
-            let needsUpdate = false;
-            if (req.body.space && !Object.keys(server.sections[sectionId].spaces).includes(req.body.space)) {
-                log.debug('Changing space name to:', req.body.space);
-                needsUpdate = true;
-            }
-            if (req.body.w !== undefined && req.body.w !== server.sections[sectionId].w) {
-                log.debug('Changing space width to:', req.body.w);
-                server.sections[sectionId].w = req.body.w;
-                needsUpdate = true;
-            }
-            if (req.body.h !== undefined && req.body.h !== server.sections[sectionId].h) {
-                log.debug('Changing space height to:', req.body.h);
-                server.sections[sectionId].h = req.body.h;
-                needsUpdate = true;
-            }
-
-            const spaceName = req.body.space || Object.keys(server.sections[sectionId].spaces)[0];
-            if (req.body.x !== undefined && req.body.y !== undefined) {
-                const layout = _calculateSectionLayout(spaceName, {
-                    x: req.body.x, y: req.body.y, w: server.sections[sectionId].w, h: server.sections[sectionId].h
-                });
-                if (!needsUpdate && !Utils.JSON.equals(server.sections[sectionId].spaces[spaceName], layout)) {
-                    needsUpdate = true;
-                }
-                if (needsUpdate) {
-                    log.debug('Updating spaces configuration of section');
-                    delete server.sections[sectionId].spaces;
-                    server.sections[sectionId].spaces = {};
-                    server.sections[sectionId].spaces[spaceName] = layout;
-                    commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), spaces: server.sections[sectionId].spaces } }));
-                }
-            }
-
-            if (req.body.app) {
-                const url = req.body.app.url.replace(/\/$/, '');
-                needsUpdate = needsUpdate || (url !== oldURL);
-                if (oldURL && (url !== oldURL)) {
-                    log.debug('Flushing application at URL:', oldURL);
-                    request.post(oldURL + '/flush');
-                }
-                server.sections[sectionId].app = { 'url': url };
-                log.debug('Got URL for app:', url);
-                if (req.body.app.states) {
-                    /* istanbul ignore else */
-                    // DEBUG logging is turned on by default, and only turned off in production deployments.
-                    // The operation of the Constants.Logging.DEBUG flag has been tested elsewhere.
-                    if (Constants.Logging.DEBUG) {
-                        log.debug('Got state configuration for app:', JSON.stringify(req.body.app.states));
-                    }
-                    // Cache or load states if they were provided as a part of the update request.
-                    if (req.body.app.states.cache) {
-                        Object.keys(req.body.app.states.cache).forEach(function (name) {
-                            log.debug('Caching new named state for future use:', name);
-                            request.post(server.sections[sectionId].app.url + '/state/' + name, {
-                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: req.body.app.states.cache[name]
-                            });
-                        });
-                        needsUpdate = true;
-                    }
-                    if (req.body.app.states.load) {
-                        // Either a named state or an in-line state configuration can be loaded.
-                        if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
-                            server.sections[sectionId].app.state = req.body.app.states.load;
-                            log.debug('Loading existing named state:', server.sections[sectionId].app.state);
-                        } else {
-                            log.debug('Loading state configuration');
-                            request.post(server.sections[sectionId].app.url + '/' + sectionId + '/state', {
-                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: req.body.app.states.load
-                            });
-                        }
-                        needsUpdate = true;
-                    }
-                }
-                // If nothing changed, there is no point in making an update.
-                if (needsUpdate) {
-                    commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: { 'url': server.sections[sectionId].app.url } } }));
-                } else {
-                    // There is no need to check if the old url was set, because, if it was not, needsUpdate would be true anyway.
-                    // Removes the first update command.
-                    commands.shift();
-                }
-            } else if (oldURL) {
-                log.debug('Flushing application at URL:', oldURL);
-                request.post(oldURL + '/flush');
-            }
-
-            // Notify OVE viewers/controllers
-            server.wss.clients.forEach(function (c) {
-                if (c.readyState === Constants.WEBSOCKET_READY) {
-                    commands.forEach(function (m) {
-                        c.safeSend(m);
-                    });
-                }
-            });
+            _updateSectionById(sectionId, req.body.space, { x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h }, req.body.app);
             log.info('Successfully updated section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
         }
@@ -509,6 +601,7 @@ module.exports = function (server, log, Utils, Constants) {
 
     server.app.get('/spaces', listSpaces);
     server.app.get('/spaces/:name/geometry', getSpaceGeometry);
+    server.app.post('/sections', updateSections);
     server.app.delete('/sections', deleteSections);
     server.app.post('/section', createSection);
     server.app.get('/section/:id', readSectionById);
