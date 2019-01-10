@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <link rel="shortcut icon" href="#">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.2.1/css/bootstrap.min.css" type="text/css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>
+        $(() => {
+            const displayError = () => {
+                $('<div>').addClass('alert alert-danger').css({ display: 'table-cell' })
+                    .html('<strong>Error:</strong> Please provide <strong>oveHost</strong>, <strong>oveAppId</strong>, and <strong>oveSectionId</strong> query parameters.')
+                    .appendTo('.outer');
+            };
+            $('.outer').css({ margin: '0.5vw', display: 'block', width: '85vw' });
+            let hostname = new URLSearchParams(location.search.slice(1)).get('oveHost');
+            if (!hostname) {
+                displayError();
+            } else {
+                hostname = hostname.substring(hostname.indexOf('//') + 2);
+                $.getScript('http://' + hostname + '/ove.js', () => {
+                    if (!OVE.Utils.getQueryParam('oveAppId') || !OVE.Utils.getQueryParam('oveSectionId')) {
+                        displayError();
+                    } else {
+                        const content = $('<textarea>').css({ height: '10vw', width: '85vw', fontSize: '1.5vw', background: 'lightyellow', borderRadius: '.2rem', padding: '0.5vw' }).appendTo('.outer');
+                        const send = $('<button>').addClass('btn btn-primary btn-sm').text('Send').appendTo('.outer');
+                        const ove = new OVE(OVE.Utils.getQueryParam('oveAppId'), hostname, OVE.Utils.getQueryParam('oveSectionId'));
+                        ove.socket.on(m => { content.val(JSON.stringify(m)); });
+                        send.click(() => { ove.socket.send(JSON.parse(content.val())); });
+                    }
+                });
+            }
+        });
+    </script>
+</head>
+
+<body unselectable="on" class="unselectable bg-dark">
+    <div class="outer"></div>
+</body>
+
+</html>
