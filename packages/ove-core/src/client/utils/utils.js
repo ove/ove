@@ -182,7 +182,7 @@ function OVEUtils () {
 
     $(document).on(OVE.Event.LOADED, function () {
         const sectionId = __self.getSectionId();
-        if (window.ove.geometry && !__self.getSpace() && sectionId !== undefined) {
+        if (window.ove && window.ove.geometry && !__self.getSpace() && sectionId !== undefined) {
             fetch(window.ove.context.hostname + '/spaces?oveSectionId=' + sectionId)
                 .then(function (r) { return r.text(); }).then(function (text) {
                     const spaces = Object.keys(JSON.parse(text));
@@ -230,9 +230,9 @@ function OVEUtils () {
     };
 
     $(document).on(OVE.Event.LOADED, function () {
-        const sectionId = __self.getSectionId();
-        const hostname = window.ove.context.hostname;
-        if (window.ove.geometry && __self.getSpace(false)) {
+        if (window.ove && window.ove.geometry && __self.getSpace(false)) {
+            const sectionId = __self.getSectionId();
+            const hostname = window.ove.context.hostname;
             fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
                 const allClients = JSON.parse(text)[__self.getSpace()] || [];
                 if (allClients.length > 0) {
