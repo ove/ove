@@ -67,6 +67,38 @@ paths:
                 type: "string"
                 description: "Returns an error message 'invalid space' if the name of the space was not provided or not found."
   /sections:
+    get:
+      tags:
+      - "sections"
+      summary: "Reads details of multiple sections within a group or space"
+      description: "Will return an empty array if no sections exist within the provided group, space or geometry."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "space"
+        in: "query"
+        type: "string"
+        description: "Name of space"
+        required: false
+      - name: "groupId"
+        in: "query"
+        type: "integer"
+        format: "int32"
+        description: "Group ID"
+        required: false
+      - name: "geometry"
+        in: "query"
+        type: "string"
+        example: "x,y,w,h"
+        description: "Geometry used to filter result"
+        required: false
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Section%20Metadata"
     post:
       tags:
       - "sections"
@@ -544,10 +576,16 @@ definitions:
         type: "integer"
         format: "int32"
         example: 4320
-      state:
-        type: "string"
-        description: "Name of the state will only be returned if a named state was loaded."
-        example: "DSI"
+      app:
+        type: "object"
+        properties:
+          url:
+            type: "string"
+            example: "http://localhost:8084"
+          state:
+            type: "string"
+            description: "Name of the state will only be returned if a named state was loaded."
+            example: "DSI"
 externalDocs:
   description: "Find out more about OVE"
   url: "https://dsi.gitbook.io/ove"

@@ -27,6 +27,7 @@ function Utils (appName, app, dirs) {
         return JSON.stringify(param1) === JSON.stringify(param2);
     };
     this.JSON.EMPTY = JSON.stringify({});
+    this.JSON.EMPTY_ARRAY = JSON.stringify([]);
 
     /**************************************************************
                            Logging Functions

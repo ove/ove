@@ -103,7 +103,8 @@ function OVE (appId, hostname, sectionId) {
                     .then(function (r) { return r.text(); }).then(function (text) {
                         const section = JSON.parse(text);
                         __self.geometry.section = { w: section.w, h: section.h };
-                        __self.state.name = OVE.Utils.getQueryParam('state', section.state);
+                        __self.state.name = OVE.Utils.getQueryParam('state',
+                            (section.app && section.app.state) ? section.app.state : undefined);
                         //-- Always store section id as a string to avoid if-checks      --//
                         //-- failing on '0'                                              --//
                         if (section.id !== undefined) {

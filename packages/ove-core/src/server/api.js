@@ -3,9 +3,8 @@ const request = require('request');
 const HttpStatus = require('http-status-codes');
 
 module.exports = function (server, log, Utils, Constants) {
-    let __private = {
-        spaceGeometries: {}
-    };
+    // It is required that we are able to clean-up variables like these during testing.
+    server.spaceGeometries = {};
 
     // Lists details of all spaces, and accepts filters as a part of its query string.
     const listSpaces = function (req, res) {
@@ -26,7 +25,7 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Internal utility function to calculate space geometries.
     const _getSpaceGeometries = function () {
-        if (Utils.isNullOrEmpty(__private.spaceGeometries) && !Utils.isNullOrEmpty(server.spaces)) {
+        if (Utils.isNullOrEmpty(server.spaceGeometries) && !Utils.isNullOrEmpty(server.spaces)) {
             Object.keys(server.spaces).forEach(function (s) {
                 const geometry = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
                 server.spaces[s].forEach(function (e) {
@@ -34,10 +33,10 @@ module.exports = function (server, log, Utils, Constants) {
                     geometry.h = Math.max(e.y + e.h, geometry.h);
                 });
                 log.debug('Successfully computed geometry for space:', s);
-                __private.spaceGeometries[s] = geometry;
+                server.spaceGeometries[s] = geometry;
             });
         }
-        return __private.spaceGeometries;
+        return server.spaceGeometries;
     };
 
     // Gets geometry of a named space.
@@ -270,6 +269,66 @@ module.exports = function (server, log, Utils, Constants) {
         log.debug('Existing groups (active/deleted):', server.groups.length);
     };
 
+    // Returns details of sections
+    const readSections = function (req, res) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        const geometry = req.query.geometry;
+        let sectionsToFetch = [];
+        if (groupId) {
+            if (!Utils.isNullOrEmpty(server.groups[groupId])) {
+                log.info('Fetching sections of group:', groupId);
+                const group = server.groups[groupId].slice();
+                group.forEach(function (e) {
+                    let i = parseInt(e, 10);
+                    sectionsToFetch.push(i);
+                });
+            }
+        } else if (space) {
+            log.info('Fetching sections of space:', space);
+            let i = -1;
+            let findSectionsBySpace = function (e, x) {
+                return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
+            };
+            i = server.sections.findIndex(findSectionsBySpace);
+            while (i !== -1) {
+                sectionsToFetch.push(i);
+                i = server.sections.findIndex(findSectionsBySpace);
+            }
+        } else {
+            server.sections.forEach(function (e, i) {
+                if (!Utils.isNullOrEmpty(e)) {
+                    sectionsToFetch.push(i);
+                }
+            });
+        }
+        if (geometry) {
+            const g = geometry.split(',');
+            const r = { x: g[0], y: g[1], w: g[2], h: g[3] };
+            if (g.length !== 4) {
+                log.warn('Ignoring invalid geometry:', r);
+            } else {
+                log.info('Filtering list of sections using geometry:', r);
+                sectionsToFetch = sectionsToFetch.filter(function (i) {
+                    const e = server.sections[i];
+                    // Top-Left and Bottom-Right of section should be within the given range.
+                    return (e.x >= r.x && e.y >= r.y && (e.x + e.w) <= (r.x + r.w) && (e.y + e.h) <= (r.y + r.h));
+                });
+            }
+        }
+        let result = [];
+        sectionsToFetch.forEach(function (i) {
+            let section = { id: i, w: server.sections[i].w, h: server.sections[i].h };
+            const app = server.sections[i].app;
+            if (app) {
+                section.app = { url: app.url, state: app.state };
+            }
+            result.push(section);
+        });
+        log.debug('Successfully read configuration for sections:', sectionsToFetch);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+    };
+
     // Internal utility function to update section by a given id. This function is used
     // either to update all sections belonging to a given group, or to update a specific
     // section by its id.
@@ -384,7 +443,6 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     const updateSections = function (req, res) {
-        let sectionsToUpdate = [];
         if (req.body.space && !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
@@ -395,6 +453,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Invalid Dimensions for Translate operation', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
         } else {
+            let sectionsToUpdate = [];
             const space = req.query.space;
             const groupId = req.query.groupId;
             if (groupId) {
@@ -424,46 +483,46 @@ module.exports = function (server, log, Utils, Constants) {
                     }
                 });
             }
-        }
-        // Check whether any operation has to be made.
-        if (!Utils.isNullOrEmpty(sectionsToUpdate) && (req.body.space || req.body.scale || req.body.translate)) {
-            let rangeError = false;
-            let geometries = {};
-            sectionsToUpdate.forEach(function (e) {
-                const section = server.sections[e];
-                geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
-                const space = req.body.space || Object.keys(section.spaces)[0];
-                const bounds = _getSpaceGeometries()[space];
-                if (req.body.scale) {
-                    geometries[e].w = (geometries[e].w * req.body.scale.x) << 0;
-                    geometries[e].h = (geometries[e].h * req.body.scale.y) << 0;
-                }
-                if (req.body.translate) {
-                    geometries[e].x = (geometries[e].x + req.body.translate.x) << 0;
-                    geometries[e].y = (geometries[e].y + req.body.translate.y) << 0;
-                }
-                if (geometries[e].x < 0 || geometries[e].y < 0 || Math.max(geometries[e].x, geometries[e].w) > bounds.w || Math.max(geometries[e].y, geometries[e].h) > bounds.h) {
-                    log.error('Section no longer fits within space after transformation for section id:', e, 'space:', space, 'geometry:', JSON.stringify(geometries[e]));
-                    rangeError = true;
-                }
-            });
-            if (rangeError) {
-                log.error('Unable to update sections due to one or more range errors');
-                Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-            } else {
+            // Check whether any operation has to be made.
+            if (!Utils.isNullOrEmpty(sectionsToUpdate) && (req.body.space || req.body.scale || req.body.translate)) {
+                let rangeError = false;
+                let geometries = {};
                 sectionsToUpdate.forEach(function (e) {
                     const section = server.sections[e];
-                    _updateSectionById(e, req.body.space, geometries[e], section.app);
+                    geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
+                    const space = req.body.space || Object.keys(section.spaces)[0];
+                    const bounds = _getSpaceGeometries()[space];
+                    if (req.body.scale) {
+                        geometries[e].w = (geometries[e].w * req.body.scale.x) << 0;
+                        geometries[e].h = (geometries[e].h * req.body.scale.y) << 0;
+                    }
+                    if (req.body.translate) {
+                        geometries[e].x = (geometries[e].x + req.body.translate.x) << 0;
+                        geometries[e].y = (geometries[e].y + req.body.translate.y) << 0;
+                    }
+                    if (geometries[e].x < 0 || geometries[e].y < 0 || Math.max(geometries[e].x, geometries[e].w) > bounds.w || Math.max(geometries[e].y, geometries[e].h) > bounds.h) {
+                        log.error('Section no longer fits within space after transformation for section id:', e, 'space:', space, 'geometry:', JSON.stringify(geometries[e]));
+                        rangeError = true;
+                    }
                 });
-                if (sectionsToUpdate.length === server.sections.length) {
-                    log.info('Successfully updated all sections');
+                if (rangeError) {
+                    log.error('Unable to update sections due to one or more range errors');
+                    Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
                 } else {
-                    log.info('Successfully updated sections:', sectionsToUpdate);
+                    sectionsToUpdate.forEach(function (e) {
+                        const section = server.sections[e];
+                        _updateSectionById(e, req.body.space, geometries[e], section.app);
+                    });
+                    if (sectionsToUpdate.length === server.sections.length) {
+                        log.info('Successfully updated all sections');
+                    } else {
+                        log.info('Successfully updated sections:', sectionsToUpdate);
+                    }
+                    Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToUpdate }));
                 }
-                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToUpdate }));
+            } else {
+                Utils.sendEmptySuccess(res);
             }
-        } else {
-            Utils.sendEmptySuccess(res);
         }
     };
 
@@ -475,8 +534,9 @@ module.exports = function (server, log, Utils, Constants) {
             Utils.sendEmptySuccess(res);
         } else {
             let section = { id: parseInt(sectionId, 10), w: server.sections[sectionId].w, h: server.sections[sectionId].h };
-            if (server.sections[sectionId].app && server.sections[sectionId].app.state) {
-                section.state = server.sections[sectionId].app.state;
+            const app = server.sections[sectionId].app;
+            if (app) {
+                section.app = { url: app.url, state: app.state };
             }
             log.debug('Successfully read configuration for section id:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
@@ -601,6 +661,7 @@ module.exports = function (server, log, Utils, Constants) {
 
     server.app.get('/spaces', listSpaces);
     server.app.get('/spaces/:name/geometry', getSpaceGeometry);
+    server.app.get('/sections', readSections);
     server.app.post('/sections', updateSections);
     server.app.delete('/sections', deleteSections);
     server.app.post('/section', createSection);
