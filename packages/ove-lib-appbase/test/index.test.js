@@ -50,6 +50,12 @@ describe('The OVE App Base library', () => {
         expect(newBase.config).toEqual([]);
     });
 
+    it('should return its name', async () => {
+        let res = await request(app).get('/name');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify('dummy'));
+    });
+
     it('should be able to perform a flush operation', async () => {
         let res = await request(app).post('/flush');
         expect(res.statusCode).toEqual(HttpStatus.OK);

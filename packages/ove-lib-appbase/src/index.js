@@ -102,12 +102,17 @@ module.exports = function (baseDir, appName) {
         Utils.sendEmptySuccess(res);
     };
 
+    const name = function (_req, res) {
+        return Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(appName));
+    };
+
     app.post('/state/:name', createStateByName);
     app.get('/state/:name', readStateByName);
     app.get('/state', readState);
     app.get('/:id/state', readStateOfSection);
     app.post('/:id/state', updateStateOfSection);
     app.post('/flush', flush);
+    app.get('/name', name);
 
     // Swagger API documentation
     const swaggerPath = path.join(__dirname, 'swagger.yaml');
