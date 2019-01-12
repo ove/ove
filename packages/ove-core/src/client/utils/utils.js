@@ -6,6 +6,13 @@ function OVEUtils () {
 
     let __self = this;
     let __private = {};
+
+    //-- It may be required to change the default OVE instance used by OVE.Utils --//
+    //-- This function cannot be used unless it has been overridden.             --//
+    __private.getOVEInstance = function () {
+        return __self.__getOVEInstance ? __self.__getOVEInstance() : window.ove;
+    };
+
     //-----------------------------------------------------------//
     //--                   Utilities for JSON                  --//
     //-----------------------------------------------------------//
@@ -109,16 +116,16 @@ function OVEUtils () {
         if (arguments.length > 0 && message) {
             //-- Sometimes, state is not the only message that is broadcasted and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
-            window.ove.socket.send(message);
+            __private.getOVEInstance().socket.send(message);
         } else {
-            window.ove.socket.send(window.ove.state.current);
+            __private.getOVEInstance().socket.send(__private.getOVEInstance().state.current);
         }
-        window.ove.state.cache();
+        __private.getOVEInstance().state.cache();
     };
 
     this.setOnStateUpdate = function (callback) {
-        window.ove.socket.on(function (message) {
-            window.ove.state.current = message;
+        __private.getOVEInstance().socket.on(function (message) {
+            __private.getOVEInstance().state.current = message;
             callback();
         });
     };
@@ -130,7 +137,7 @@ function OVEUtils () {
     //-- The difference between the two methods below is that the on-demand option does  --//
     //-- not wait for OVE to load.                                                       --//
     this.initControlOnDemand = function (defaultState, initMethod) {
-        const state = window.ove.state.name || defaultState;
+        const state = __private.getOVEInstance().state.name || defaultState;
         log.info('Initializing controller with state:', state);
         //-- The default state URL is used here. --//
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initMethod).catch(log.error);
@@ -153,9 +160,9 @@ function OVEUtils () {
         const shouldSetupSection = arguments.length > 2 && setupSectionMethod;
         $(document).on(OVE.Event.LOADED, function () {
             log.debug('Invoking OVE.Event.Loaded handler');
-            if (!window.ove.context.isInitialized) {
+            if (!__private.getOVEInstance().context.isInitialized) {
                 //-- Ignore promise rejection, as it is expected if no state exists.     --//
-                window.ove.state.load().then(loadContentMethod).catch(function (_err) { });
+                __private.getOVEInstance().state.load().then(loadContentMethod).catch(function (_err) { });
             }
             if (shouldSetupSection) {
                 log.debug('Running post-initialization section setup operation');
@@ -182,8 +189,8 @@ function OVEUtils () {
 
     $(document).on(OVE.Event.LOADED, function () {
         const sectionId = __self.getSectionId();
-        if (window.ove && window.ove.geometry && !__self.getSpace() && sectionId !== undefined) {
-            fetch(window.ove.context.hostname + '/spaces?oveSectionId=' + sectionId)
+        if (__private.getOVEInstance() && __private.getOVEInstance().geometry && !__self.getSpace() && sectionId !== undefined) {
+            fetch(__private.getOVEInstance().context.hostname + '/spaces?oveSectionId=' + sectionId)
                 .then(function (r) { return r.text(); }).then(function (text) {
                     const spaces = Object.keys(JSON.parse(text));
                     if (spaces.length > 0) {
@@ -230,9 +237,9 @@ function OVEUtils () {
     };
 
     $(document).on(OVE.Event.LOADED, function () {
-        if (window.ove && window.ove.geometry && __self.getSpace(false)) {
+        if (__private.getOVEInstance() && __private.getOVEInstance().geometry && __self.getSpace(false)) {
             const sectionId = __self.getSectionId();
-            const hostname = window.ove.context.hostname;
+            const hostname = __private.getOVEInstance().context.hostname;
             fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
                 const allClients = JSON.parse(text)[__self.getSpace()] || [];
                 if (allClients.length > 0) {
@@ -240,12 +247,12 @@ function OVEUtils () {
                     //-- duplication of code/effort in ove.js. The dimensions of the   --//
                     //-- space is calculated using the clients that are furthest from  --//
                     //-- the top-left of the space along the x and y axes.             --//
-                    window.ove.geometry.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
+                    __private.getOVEInstance().geometry.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
                     allClients.forEach(function (e) {
-                        window.ove.geometry.space.w = Math.max(e.x + e.w, window.ove.geometry.space.w);
-                        window.ove.geometry.space.h = Math.max(e.y + e.h, window.ove.geometry.space.h);
+                        __private.getOVEInstance().geometry.space.w = Math.max(e.x + e.w, __private.getOVEInstance().geometry.space.w);
+                        __private.getOVEInstance().geometry.space.h = Math.max(e.y + e.h, __private.getOVEInstance().geometry.space.h);
                     });
-                    if (sectionId !== undefined && window.ove.geometry.offset) {
+                    if (sectionId !== undefined && __private.getOVEInstance().geometry.offset) {
                         fetch(hostname + '/spaces?oveSectionId=' + sectionId)
                             .then(function (r) { return r.text(); }).then(function (text) {
                                 const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
@@ -256,14 +263,14 @@ function OVEUtils () {
                                 //-- axes.                                             --//
                                 sectionClients.forEach(function (e, i) {
                                     if (!__self.JSON.equals(e, {}) && allClients[i]) {
-                                        section.x = Math.min(allClients[i].x + window.ove.geometry.offset.x, section.x);
-                                        section.y = Math.min(allClients[i].y + window.ove.geometry.offset.y, section.y);
+                                        section.x = Math.min(allClients[i].x + __private.getOVEInstance().geometry.offset.x, section.x);
+                                        section.y = Math.min(allClients[i].y + __private.getOVEInstance().geometry.offset.y, section.y);
                                     }
                                 });
                                 if (section.x !== Number.MAX_VALUE && section.y !== Number.MAX_VALUE) {
                                     __private.section = {
-                                        x: section.x + window.ove.geometry.offset.x,
-                                        y: section.y + window.ove.geometry.offset.y
+                                        x: section.x + __private.getOVEInstance().geometry.offset.x,
+                                        y: section.y + __private.getOVEInstance().geometry.offset.y
                                     };
                                 }
                             });
@@ -279,7 +286,7 @@ function OVEUtils () {
             return undefined;
         }
         const section = __private.section;
-        const g = window.ove.geometry;
+        const g = __private.getOVEInstance().geometry;
         if ((inputType === OVE.Utils.Coordinates.SCREEN || outputType === OVE.Utils.Coordinates.SCREEN) &&
             (g.x === undefined || g.y === undefined || !g.offset)) {
             log.error('Unable to transform coordinates, screen geometry information not available');
@@ -334,7 +341,7 @@ function OVEUtils () {
     };
 
     this.resizeController = function (contentDivName) {
-        const g = window.ove.geometry;
+        const g = __private.getOVEInstance().geometry;
         //-- The element with id contentDivName is scaled to fit inside both the client  --//
         //-- and window, whilst maintaining the aspect ratio of the section/content.     --//
         const maxWidth = Math.min(document.documentElement.clientWidth, window.innerWidth);
@@ -352,7 +359,7 @@ function OVEUtils () {
     };
 
     this.resizeViewer = function (contentDivName) {
-        const g = window.ove.geometry;
+        const g = __private.getOVEInstance().geometry;
         //-- The element with id contentDivName is resized to the size of the            --//
         //-- corresponding section (which may span multiple clients), and then           --//
         //-- translated based on the client's coordinates.                               --//
