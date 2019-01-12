@@ -54,6 +54,18 @@ module.exports = function (baseDir, appName) {
         Utils.sendEmptySuccess(res);
     };
 
+    const deleteStateByName = function (req, res) {
+        const namedState = module.exports.config.states[req.params.name];
+        if (!namedState) {
+            log.error('Invalid state name:', req.params.name);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
+        } else {
+            log.debug('Deleting named state:', req.params.name);
+            delete module.exports.config.states[req.params.name];
+            Utils.sendEmptySuccess(res);
+        }
+    };
+
     const readStateByName = function (req, res) {
         const namedState = module.exports.config.states[req.params.name];
         if (!namedState) {
@@ -106,8 +118,9 @@ module.exports = function (baseDir, appName) {
         return Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(appName));
     };
 
-    app.post('/state/:name', createStateByName);
     app.get('/state/:name', readStateByName);
+    app.post('/state/:name', createStateByName);
+    app.delete('/state/:name', deleteStateByName);
     app.get('/state', readState);
     app.get('/:id/state', readStateOfSection);
     app.post('/:id/state', updateStateOfSection);

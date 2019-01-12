@@ -91,6 +91,31 @@ paths:
       responses:
         200:
           description: "successful operation"
+    delete:
+      tags:
+      - "named state"
+      summary: "Deletes configuration of named state"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "name"
+        in: "path"
+        type: "string"
+        description: "Name of state"
+        required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid state name' if no state by the given name was found."
   /{sectionId}/state:
     get:
       tags:

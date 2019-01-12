@@ -172,20 +172,36 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
 
-    it('should be able to store/return a named state', async () => {
+    it('should be able to store, return or delete a named state', async () => {
         let res = await request(app).get('/state/foo');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
+
+        res = await request(app).delete('/state/foo');
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
 
         const payload1 = { url: 'http://dummy.com' };
         await request(app).post('/state/foo').send(payload1);
+        await request(app).post('/state/bar').send({ url: 'http://dummy.com' });
 
         res = await request(app).get('/state/foo');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload1));
 
-        await request(app).post('/flush');
+        res = await request(app).delete('/state/foo');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+
         res = await request(app).get('/state/foo');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
+        res = await request(app).get('/state/bar');
+        expect(res.statusCode).not.toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).not.toEqual(JSON.stringify({ error: 'invalid state name' }));
+
+        await request(app).post('/flush');
+        res = await request(app).get('/state/bar');
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
     });
