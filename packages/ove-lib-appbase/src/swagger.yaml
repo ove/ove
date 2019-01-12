@@ -14,17 +14,16 @@ tags:
   description: "Named state configurations stored within the application"
 - name: "runtime state"
   description: "Runtime state information cached within the application"
-- name: "flush"
-  description: "Restores the application state and configuration to what they were when the application started"
-- name: "name"
-  description: "Name of application"
+- name: "common operations"
+  description: "Operations that can be performed on any application"
 schemes:
 - "http"
 paths:
   /flush:
     post:
       tags:
-      - "flush"
+      - "common operations"
+      summary: "Restores the application state and configuration to what they were when the application started"
       produces:
       - "application/json"
       responses:
@@ -33,7 +32,8 @@ paths:
   /name:
     get:
       tags:
-      - "name"
+      - "common operations"
+      summary: "Reads the name of the application"
       produces:
       - "application/json"
       responses:
