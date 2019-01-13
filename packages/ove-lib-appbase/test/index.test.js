@@ -6,10 +6,39 @@ const HttpStatus = require('http-status-codes');
 // We always test against the distribution not the source.
 const srcDir = path.join(__dirname, '..', 'lib');
 const index = require(path.join(srcDir, 'index'));
+
+const op1 = function (source, target, z) {
+    return {
+        zoom: z === 1 ? source.zoom * target.zoom : source.zoom / target.zoom,
+        pan: {
+            x: target.pan.x + z * source.pan.x,
+            y: target.pan.y + z * source.pan.y
+        }
+    };
+};
+const op2 = function (source, target) {
+    return !Utils.isNullOrEmpty(source) && !Utils.isNullOrEmpty(target) &&
+        !Utils.isNullOrEmpty(source.zoom) && !Utils.isNullOrEmpty(target.zoom) &&
+        !Utils.isNullOrEmpty(source.pan) && !Utils.isNullOrEmpty(target.pan) &&
+        !Utils.isNullOrEmpty(source.pan.x) && !Utils.isNullOrEmpty(target.pan.x) &&
+        !Utils.isNullOrEmpty(source.pan.y) && !Utils.isNullOrEmpty(target.pan.y);
+};
+
+const commonOperations = {
+    transform: function (state, transformation) {
+        return op1(state, transformation, 1);
+    },
+    canTransform: op2,
+    diff: function (source, target) {
+        return op1(source, target, -1);
+    },
+    canDiff: op2
+};
+
 // There is a src folder inside test/resources, since this is typically what
 // applications would have. The name of the folder could actually be anything,
 // but we are not using dist, since Git ignores it.
-const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
+const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy', commonOperations);
 const { app, Utils, log } = base;
 
 describe('The OVE App Base library', () => {
@@ -232,6 +261,245 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.NOT_FOUND);
         res = await request(app).get('/bar.txt');
         expect(res.statusCode).toEqual(HttpStatus.NOT_FOUND);
+    });
+    /* jshint ignore:end */
+});
+
+// Separate section for process.env tests
+describe('The OVE App Base library', () => {
+    /* jshint ignore:start */
+    // current version of JSHint does not support async/await
+    it('should fail to transform when parameters were incorrect', async () => {
+        const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
+        let res = await request(app).post('/state/foo/transform').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
+
+        res = await request(app).post('/0/state/transform').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid section id' }));
+
+        await request(app).post('/state/foo').send(payload1);
+        await request(app).post('/0/state').send(payload1);
+
+        res = await request(app).post('/state/foo/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid transformation' }));
+
+        res = await request(app).post('/0/state/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid transformation' }));
+
+        const payload2 = { pan: { x: 10, y: 10 } };
+        res = await request(app).post('/state/foo/transform').send(payload2);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid transformation' }));
+
+        res = await request(app).post('/0/state/transform').send(payload2);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid transformation' }));
+
+        await request(app).post('/flush');
+        res = await request(app).get('/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should fail to diff when parameters were incorrect', async () => {
+        const payload1 = { target: { zoom: 1, pan: { x: 10, y: 10 } } };
+        let res = await request(app).post('/state/foo/diff').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
+
+        res = await request(app).post('/0/state/diff').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid section id' }));
+
+        res = await request(app).post('/diff').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        const payload2 = { zoom: 1, pan: { x: 10, y: 10 } };
+        await request(app).post('/state/foo').send(payload2);
+        await request(app).post('/0/state').send(payload2);
+
+        const payload3 = { source: { zoom: 1, pan: { x: 10, y: 10 } } };
+        res = await request(app).post('/diff').send(payload3);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        res = await request(app).post('/state/foo/diff').send(payload3);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        res = await request(app).post('/0/state/diff').send(payload3);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        const payload4 = { target: { pan: { x: 10, y: 10 } } };
+
+        res = await request(app).post('/state/foo/diff').send(payload4);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        res = await request(app).post('/0/state/diff').send(payload4);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        res = await request(app).post('/diff').send({ source: { zoom: 1, pan: { x: 10, y: 10 } }, target: { pan: { x: 10, y: 10 } } });
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
+
+        await request(app).post('/flush');
+        res = await request(app).get('/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should fail to transform or diff if the application does not support it', async () => {
+        const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
+        await request(app).post('/state/foo').send(payload1);
+        await request(app).post('/0/state').send(payload1);
+
+        let transform = commonOperations.transform;
+        let diff = commonOperations.diff;
+
+        commonOperations.transform = undefined;
+        let res = await request(app).post('/state/foo/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(app).post('/0/state/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+        commonOperations.transform = transform;
+
+        commonOperations.canTransform = undefined;
+        res = await request(app).post('/state/foo/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(app).post('/0/state/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+        commonOperations.canTransform = op2;
+
+        const payload3 = { source: { zoom: 1, pan: { x: 10, y: 10 } } };
+        commonOperations.diff = undefined;
+        res = await request(app).post('/state/foo/diff').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(app).post('/0/state/diff').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(app).post('/diff').send(payload3);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+        commonOperations.diff = diff;
+
+        commonOperations.canDiff = undefined;
+        res = await request(app).post('/state/foo/diff').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(app).post('/0/state/diff').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(app).post('/diff').send(payload3);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+        commonOperations.canDiff = op2;
+
+        await request(app).post('/flush');
+        res = await request(app).get('/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should successfully transform and diff payloads', async () => {
+        const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
+        await request(app).post('/state/foo').send(payload1);
+        await request(app).post('/0/state').send(payload1);
+
+        let res = await request(app).get('/state/foo');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload1));
+
+        res = await request(app).get('/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload1));
+
+        const payload2 = { zoom: 1, pan: { x: 20, y: 20 } };
+
+        res = await request(app).post('/state/foo/transform').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload2));
+
+        res = await request(app).post('/0/state/transform').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload2));
+
+        res = await request(app).get('/state/foo');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload2));
+
+        res = await request(app).get('/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload2));
+
+        const payload3 = { zoom: 1, pan: { x: -10, y: -10 } };
+        res = await request(app).post('/state/foo/diff').send({ target: payload1 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload3));
+
+        res = await request(app).post('/0/state/diff').send({ target: payload1 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload3));
+
+        res = await request(app).post('/diff').send({ source: payload2, target: payload1 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload3));
+
+        await request(app).post('/flush');
+        res = await request(app).get('/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should fail to transform or diff if the application does not support any common operation', async () => {
+        // We are loading the module once again here, so the line below is important.
+        jest.resetModules();
+        const newIndex = require(path.join(srcDir, 'index'));
+        const newBase = newIndex(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
+        const { app: newApp } = newBase;
+
+        const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
+        await request(newApp).post('/state/foo').send(payload1);
+        await request(newApp).post('/0/state').send(payload1);
+
+        let res = await request(newApp).post('/state/foo/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(newApp).post('/0/state/transform').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        const payload3 = { source: { zoom: 1, pan: { x: 10, y: 10 } } };
+        res = await request(newApp).post('/state/foo/diff').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(newApp).post('/0/state/diff').send(Utils.JSON.EMPTY);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        res = await request(newApp).post('/diff').send(payload3);
+        expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
+        expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
+
+        await request(newApp).post('/flush');
+        res = await request(newApp).get('/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
     /* jshint ignore:end */
 });

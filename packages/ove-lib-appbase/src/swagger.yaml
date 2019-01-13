@@ -14,6 +14,8 @@ tags:
   description: "Named state configurations stored within the application"
 - name: "runtime state"
   description: "Runtime state information cached within the application"
+- name: "state transformations"
+  description: "Operations related to transforming states"
 - name: "common operations"
   description: "Operations that can be performed on any application"
 schemes:
@@ -29,6 +31,47 @@ paths:
       responses:
         200:
           description: "successful operation"
+  /diff:
+    post:
+      tags:
+      - "state transformations"
+      summary: "Calculates difference between provided source and target states"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: "object"
+          properties:
+            source:
+              type: "object"
+              description: "Source state"
+            target:
+              type: "object"
+              description: "Target state"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Transformation"
+        501:
+          description: "not implemented"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'operation not implemented' if the operation was not implemented."
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid states' if either source or target state was not provided or if the operation failed."
   /name:
     get:
       tags:
@@ -42,6 +85,89 @@ paths:
             type: "string"
             description: "Name of application"
           description: "successful operation"
+  /state/{name}/diff:
+    post:
+      tags:
+      - "state transformations"
+      summary: "Calculates difference between a named state and a target state"
+      parameters:
+      - name: "name"
+        in: "path"
+        type: "string"
+        description: "Name of state"
+        required: true
+      - name: "body"
+        in: "body"
+        schema:
+          type: "object"
+          properties:
+            target:
+              type: "object"
+              description: "Target state"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Transformation"
+        501:
+          description: "not implemented"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'operation not implemented' if the operation was not implemented."
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid state name' if no state by the given name was found. Returns an error message 'invalid states' if the target state was not provided or if the operation failed."
+  /state/{name}/transform:
+    post:
+      tags:
+      - "state transformations"
+      summary: "Applies given transformation on a named state and returns the new configuration of named state"
+      parameters:
+      - name: "name"
+        in: "path"
+        type: "string"
+        description: "Name of state"
+        required: true
+      - name: "body"
+        in: "body"
+        description: "Transformation"
+        schema:
+          $ref: "#/definitions/Transformation"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        501:
+          description: "not implemented"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'operation not implemented' if the operation was not implemented."
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid state name' if no state by the given name was found. Returns an error message 'invalid transformation' if the transformation was not provided or cannot be made."
   /state/{name}:
     get:
       tags:
@@ -116,6 +242,89 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid state name' if no state by the given name was found."
+  /{sectionId}/state/diff:
+    post:
+      tags:
+      - "state transformations"
+      summary: "Calculates difference between a configuration of given section and a target state"
+      parameters:
+      - name: "sectionId"
+        in: "path"
+        type: "string"
+        description: "Section ID"
+        required: true
+      - name: "body"
+        in: "body"
+        schema:
+          type: "object"
+          properties:
+            target:
+              type: "object"
+              description: "Target state"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Transformation"
+        501:
+          description: "not implemented"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'operation not implemented' if the operation was not implemented."
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid section id' if no state configuration was found for the given section. Returns an error message 'invalid states' if the target state was not provided or if the operation failed."
+  /{sectionId}/state/transform:
+    post:
+      tags:
+      - "state transformations"
+      summary: "Applies given transformation on the state configuration of given section and returns the new state configuration of given section"
+      parameters:
+      - name: "sectionId"
+        in: "path"
+        type: "string"
+        description: "Section ID"
+        required: true
+      - name: "body"
+        in: "body"
+        description: "Transformation"
+        schema:
+          $ref: "#/definitions/Transformation"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Transformation"
+        501:
+          description: "not implemented"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'operation not implemented' if the operation was not implemented."
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid section id' if no state configuration was found for the given section. Returns an error message 'invalid transformation' if the transformation was not provided or cannot be made."
   /{sectionId}/state:
     get:
       tags:
@@ -175,6 +384,26 @@ paths:
               type: "object"
         204:
           description: "no state found"
+definitions:
+  Transformation:
+    description: "A transformation from one state to another"
+    type: "object"
+    properties:
+      zoom:
+        type: "number"
+        format: "float"
+        example: 1.234
+      pan:
+        type: "object"
+        properties:
+          x:
+            type: "integer"
+            format: "int32"
+            example: 100
+          y:
+            type: "integer"
+            format: "int32"
+            example: 100
 externalDocs:
   description: "Find out more about OVE"
   url: "https://dsi.gitbook.io/ove"

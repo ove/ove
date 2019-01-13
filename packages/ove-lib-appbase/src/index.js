@@ -5,7 +5,7 @@ const cors = require('cors');
 const HttpStatus = require('http-status-codes');
 const app = express();
 
-module.exports = function (baseDir, appName) {
+module.exports = function (baseDir, appName, commonOperations) {
     const dirs = {
         base: baseDir,
         nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
@@ -103,6 +103,92 @@ module.exports = function (baseDir, appName) {
         Utils.sendEmptySuccess(res);
     };
 
+    // Internal utility function to transform a state
+    const _transformState = function (state, transformation, res) {
+        if (!commonOperations || !commonOperations.canTransform || !commonOperations.transform) {
+            log.warn('Transform State operation not implemented by application');
+            Utils.sendMessage(res, HttpStatus.NOT_IMPLEMENTED, JSON.stringify({ error: 'operation not implemented' }));
+        } else if (Utils.isNullOrEmpty(transformation)) {
+            log.error('Transformation not provided');
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid transformation' }));
+        } else if (!commonOperations.canTransform(state, transformation)) {
+            log.error('Unable to apply transformation:', transformation);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid transformation' }));
+        } else {
+            const result = commonOperations.transform(state, transformation);
+            log.info('Successfully transformed state');
+            log.debug('Transformed state from:', state, 'into:', result, 'using transformation:', transformation);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+            return result;
+        }
+        return state;
+    };
+
+    const transformStateByName = function (req, res) {
+        const namedState = module.exports.config.states[req.params.name];
+        if (Utils.isNullOrEmpty(namedState)) {
+            log.error('No state configurations found for section:', req.params.name);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
+        } else {
+            module.exports.config.states[req.params.name] = _transformState(namedState, req.body, res);
+        }
+    };
+
+    const transformStateOfSection = function (req, res) {
+        if (Utils.isNullOrEmpty(state[req.params.id])) {
+            log.error('No state configurations found for section:', req.params.id);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        } else {
+            state[req.params.id] = _transformState(state[req.params.id], req.body, res);
+        }
+    };
+
+    // Internal utility function to calculate difference between two states
+    const _diff = function (source, target, res) {
+        if (!commonOperations || !commonOperations.canDiff || !commonOperations.diff) {
+            log.warn('Difference operation not implemented by application');
+            Utils.sendMessage(res, HttpStatus.NOT_IMPLEMENTED, JSON.stringify({ error: 'operation not implemented' }));
+        } else if (Utils.isNullOrEmpty(target)) {
+            log.error('Target state not provided');
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid states' }));
+        } else if (!commonOperations.canDiff(source, target)) {
+            log.error('Unable to get difference from source:', source, 'to target:', target);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid states' }));
+        } else {
+            const result = commonOperations.diff(source, target);
+            log.debug('Successfully computed difference', result, 'from source:', source, 'to target:', target);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+        }
+    };
+
+    const diffForStateByName = function (req, res) {
+        const namedState = module.exports.config.states[req.params.name];
+        if (Utils.isNullOrEmpty(namedState)) {
+            log.debug('No state configurations found for section:', req.params.id);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
+        } else {
+            _diff(namedState, req.body.target, res);
+        }
+    };
+
+    const diffForStateOfSection = function (req, res) {
+        if (Utils.isNullOrEmpty(state[req.params.id])) {
+            log.debug('No state configurations found for section:', req.params.id);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        } else {
+            _diff(state[req.params.id], req.body.target, res);
+        }
+    };
+
+    const diff = function (req, res) {
+        if (Utils.isNullOrEmpty(req.body.source)) {
+            log.error('Source state not provided');
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid states' }));
+        } else {
+            _diff(req.body.source, req.body.target, res);
+        }
+    };
+
     const flush = function (_req, res) {
         log.debug('Flushing application');
         state = [];
@@ -121,9 +207,14 @@ module.exports = function (baseDir, appName) {
     app.get('/state/:name', readStateByName);
     app.post('/state/:name', createStateByName);
     app.delete('/state/:name', deleteStateByName);
+    app.post('/state/:name/transform', transformStateByName);
+    app.post('/state/:name/diff', diffForStateByName);
     app.get('/state', readState);
     app.get('/:id/state', readStateOfSection);
     app.post('/:id/state', updateStateOfSection);
+    app.post('/:id/state/transform', transformStateOfSection);
+    app.post('/:id/state/diff', diffForStateOfSection);
+    app.post('/diff', diff);
     app.post('/flush', flush);
     app.get('/name', name);
 
