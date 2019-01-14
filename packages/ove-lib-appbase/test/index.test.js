@@ -7,50 +7,23 @@ const HttpStatus = require('http-status-codes');
 const srcDir = path.join(__dirname, '..', 'lib');
 const index = require(path.join(srcDir, 'index'));
 
-const op1 = function (source, target, z) {
-    return {
-        zoom: z === 1 ? source.zoom * target.zoom : source.zoom / target.zoom,
-        pan: {
-            x: target.pan.x + z * source.pan.x,
-            y: target.pan.y + z * source.pan.y
-        }
-    };
-};
-const op2 = function (source, target) {
-    return !Utils.isNullOrEmpty(source) && !Utils.isNullOrEmpty(target) &&
-        !Utils.isNullOrEmpty(source.zoom) && !Utils.isNullOrEmpty(target.zoom) &&
-        !Utils.isNullOrEmpty(source.pan) && !Utils.isNullOrEmpty(target.pan) &&
-        !Utils.isNullOrEmpty(source.pan.x) && !Utils.isNullOrEmpty(target.pan.x) &&
-        !Utils.isNullOrEmpty(source.pan.y) && !Utils.isNullOrEmpty(target.pan.y);
-};
-
-const commonOperations = {
-    transform: function (state, transformation) {
-        return op1(state, transformation, 1);
-    },
-    canTransform: op2,
-    diff: function (source, target) {
-        return op1(source, target, -1);
-    },
-    canDiff: op2
-};
-
 // There is a src folder inside test/resources, since this is typically what
 // applications would have. The name of the folder could actually be anything,
 // but we are not using dist, since Git ignores it.
-const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy', commonOperations);
+const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
 const { app, Utils, log } = base;
 
 describe('The OVE App Base library', () => {
     it('should export utilities for OVE applications', () => {
         // Precise validation of number of items exported and then check their
         // names one by one.
-        expect(Object.keys(base).length).toEqual(6);
+        expect(Object.keys(base).length).toEqual(7);
         expect(Object.keys(base)).toContain('express');
         expect(Object.keys(base)).toContain('app');
         expect(Object.keys(base)).toContain('config');
         expect(Object.keys(base)).toContain('nodeModules');
         expect(Object.keys(base)).toContain('log');
+        expect(Object.keys(base)).toContain('operations');
         expect(Object.keys(base)).toContain('Utils');
     });
 
@@ -267,6 +240,35 @@ describe('The OVE App Base library', () => {
 
 // Separate section for process.env tests
 describe('The OVE App Base library', () => {
+    beforeAll(() => {
+        const op1 = function (source, target, z) {
+            return {
+                zoom: z === 1 ? target.zoom * source.zoom : target.zoom / source.zoom,
+                pan: {
+                    x: target.pan.x + z * source.pan.x,
+                    y: target.pan.y + z * source.pan.y
+                }
+            };
+        };
+        const op2 = function (source, target) {
+            return !Utils.isNullOrEmpty(source) && !Utils.isNullOrEmpty(target) &&
+                !Utils.isNullOrEmpty(source.zoom) && !Utils.isNullOrEmpty(target.zoom) &&
+                !Utils.isNullOrEmpty(source.pan) && !Utils.isNullOrEmpty(target.pan) &&
+                !Utils.isNullOrEmpty(source.pan.x) && !Utils.isNullOrEmpty(target.pan.x) &&
+                !Utils.isNullOrEmpty(source.pan.y) && !Utils.isNullOrEmpty(target.pan.y);
+        };
+        base.operations = {
+            transform: function (state, transformation) {
+                return op1(state, transformation, 1);
+            },
+            canTransform: op2,
+            diff: function (source, target) {
+                return op1(source, target, -1);
+            },
+            canDiff: op2
+        };
+    });
+
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should fail to transform when parameters were incorrect', async () => {
@@ -359,10 +361,12 @@ describe('The OVE App Base library', () => {
         await request(app).post('/state/foo').send(payload1);
         await request(app).post('/0/state').send(payload1);
 
-        let transform = commonOperations.transform;
-        let diff = commonOperations.diff;
+        let transform = base.operations.transform;
+        let diff = base.operations.diff;
+        let canTransform = base.operations.canTransform;
+        let canDiff = base.operations.canDiff;
 
-        commonOperations.transform = undefined;
+        base.operations.transform = undefined;
         let res = await request(app).post('/state/foo/transform').send(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
@@ -370,9 +374,9 @@ describe('The OVE App Base library', () => {
         res = await request(app).post('/0/state/transform').send(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
-        commonOperations.transform = transform;
+        base.operations.transform = transform;
 
-        commonOperations.canTransform = undefined;
+        base.operations.canTransform = undefined;
         res = await request(app).post('/state/foo/transform').send(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
@@ -380,10 +384,10 @@ describe('The OVE App Base library', () => {
         res = await request(app).post('/0/state/transform').send(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
-        commonOperations.canTransform = op2;
+        base.operations.canTransform = canTransform;
 
         const payload3 = { source: { zoom: 1, pan: { x: 10, y: 10 } } };
-        commonOperations.diff = undefined;
+        base.operations.diff = undefined;
         res = await request(app).post('/state/foo/diff').send(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
@@ -395,9 +399,9 @@ describe('The OVE App Base library', () => {
         res = await request(app).post('/diff').send(payload3);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
-        commonOperations.diff = diff;
+        base.operations.diff = diff;
 
-        commonOperations.canDiff = undefined;
+        base.operations.canDiff = undefined;
         res = await request(app).post('/state/foo/diff').send(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
@@ -409,7 +413,7 @@ describe('The OVE App Base library', () => {
         res = await request(app).post('/diff').send(payload3);
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
-        commonOperations.canDiff = op2;
+        base.operations.canDiff = canDiff;
 
         await request(app).post('/flush');
         res = await request(app).get('/state');

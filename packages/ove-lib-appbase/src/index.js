@@ -5,7 +5,7 @@ const cors = require('cors');
 const HttpStatus = require('http-status-codes');
 const app = express();
 
-module.exports = function (baseDir, appName, commonOperations) {
+module.exports = function (baseDir, appName) {
     const dirs = {
         base: baseDir,
         nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
@@ -31,6 +31,7 @@ module.exports = function (baseDir, appName, commonOperations) {
     }
     module.exports.nodeModules = dirs.nodeModules;
     module.exports.log = log;
+    module.exports.operations = {};
 
     // Exported functionality from Utils
     module.exports.Utils = {
@@ -105,17 +106,17 @@ module.exports = function (baseDir, appName, commonOperations) {
 
     // Internal utility function to transform a state
     const _transformState = function (state, transformation, res) {
-        if (!commonOperations || !commonOperations.canTransform || !commonOperations.transform) {
+        if (!module.exports.operations.canTransform || !module.exports.operations.transform) {
             log.warn('Transform State operation not implemented by application');
             Utils.sendMessage(res, HttpStatus.NOT_IMPLEMENTED, JSON.stringify({ error: 'operation not implemented' }));
         } else if (Utils.isNullOrEmpty(transformation)) {
             log.error('Transformation not provided');
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid transformation' }));
-        } else if (!commonOperations.canTransform(state, transformation)) {
+        } else if (!module.exports.operations.canTransform(state, transformation)) {
             log.error('Unable to apply transformation:', transformation);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid transformation' }));
         } else {
-            const result = commonOperations.transform(state, transformation);
+            const result = module.exports.operations.transform(state, transformation);
             log.info('Successfully transformed state');
             log.debug('Transformed state from:', state, 'into:', result, 'using transformation:', transformation);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
@@ -145,17 +146,17 @@ module.exports = function (baseDir, appName, commonOperations) {
 
     // Internal utility function to calculate difference between two states
     const _diff = function (source, target, res) {
-        if (!commonOperations || !commonOperations.canDiff || !commonOperations.diff) {
+        if (!module.exports.operations.canDiff || !module.exports.operations.diff) {
             log.warn('Difference operation not implemented by application');
             Utils.sendMessage(res, HttpStatus.NOT_IMPLEMENTED, JSON.stringify({ error: 'operation not implemented' }));
         } else if (Utils.isNullOrEmpty(target)) {
             log.error('Target state not provided');
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid states' }));
-        } else if (!commonOperations.canDiff(source, target)) {
+        } else if (!module.exports.operations.canDiff(source, target)) {
             log.error('Unable to get difference from source:', source, 'to target:', target);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid states' }));
         } else {
-            const result = commonOperations.diff(source, target);
+            const result = module.exports.operations.diff(source, target);
             log.debug('Successfully computed difference', result, 'from source:', source, 'to target:', target);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
         }
