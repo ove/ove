@@ -174,17 +174,9 @@ function OVEUtils () {
     //-----------------------------------------------------------//
     //--                   Geometry Related                    --//
     //-----------------------------------------------------------//
-    this.getSpace = function (getSpaceFromSection) {
+    this.getSpace = function () {
         const viewId = OVE.Utils.getViewId();
-        if (!viewId) {
-            //-- We will attempt to get the space from the section details by default.   --//
-            //-- This can be prevented by setting 'getSpaceFromSection' to false.        --//
-            if (arguments.length > 0 && !getSpaceFromSection) {
-                return null;
-            }
-            return __private.space;
-        }
-        return viewId.substring(0, viewId.lastIndexOf('-'));
+        return !viewId ? __private.space : viewId.substring(0, viewId.lastIndexOf('-'));
     };
 
     $(document).on(OVE.Event.LOADED, function () {
@@ -195,6 +187,10 @@ function OVEUtils () {
                     const spaces = Object.keys(JSON.parse(text));
                     if (spaces.length > 0) {
                         __private.space = spaces[0];
+                        //-- Try to load geometry if it was not loaded before --//
+                        if (!__private.getOVEInstance().geometry.space) {
+                            loadGeometry();
+                        }
                     }
                 });
         }
@@ -213,7 +209,7 @@ function OVEUtils () {
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
         if (!id) {
-            return OVE.Utils.getSectionId();
+            return OVE.Utils.getQueryParam('oveSectionId');
         }
         const sectionId = id.substring(id.lastIndexOf('.') + 1);
         id = id.substring(0, id.lastIndexOf('.'));
@@ -221,7 +217,7 @@ function OVEUtils () {
             //-- sectionId has not been provided as a part of oveViewId  --//
             //-- oveViewId has the format "{space}-{client}.{sectionId}" --//
             //-- the ".{sectionId}" portion is optional and can be omitted --//
-            return OVE.Utils.getSectionId();
+            return OVE.Utils.getQueryParam('oveSectionId');
         } else {
             return sectionId;
         }
@@ -236,8 +232,8 @@ function OVEUtils () {
         SPACE: 'SPACE'
     };
 
-    $(document).on(OVE.Event.LOADED, function () {
-        if (__private.getOVEInstance() && __private.getOVEInstance().geometry && __self.getSpace(false)) {
+    const loadGeometry = function () {
+        if (__private.getOVEInstance() && __private.getOVEInstance().geometry && __self.getSpace()) {
             const sectionId = __self.getSectionId();
             const hostname = __private.getOVEInstance().context.hostname;
             fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
@@ -252,7 +248,7 @@ function OVEUtils () {
                         __private.getOVEInstance().geometry.space.w = Math.max(e.x + e.w, __private.getOVEInstance().geometry.space.w);
                         __private.getOVEInstance().geometry.space.h = Math.max(e.y + e.h, __private.getOVEInstance().geometry.space.h);
                     });
-                    if (sectionId !== undefined && __private.getOVEInstance().geometry.offset) {
+                    if (sectionId !== undefined) {
                         fetch(hostname + '/spaces?oveSectionId=' + sectionId)
                             .then(function (r) { return r.text(); }).then(function (text) {
                                 const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
@@ -263,22 +259,20 @@ function OVEUtils () {
                                 //-- axes.                                             --//
                                 sectionClients.forEach(function (e, i) {
                                     if (!__self.JSON.equals(e, {}) && allClients[i]) {
-                                        section.x = Math.min(allClients[i].x + __private.getOVEInstance().geometry.offset.x, section.x);
-                                        section.y = Math.min(allClients[i].y + __private.getOVEInstance().geometry.offset.y, section.y);
+                                        section.x = Math.min(allClients[i].x - e.x + e.offset.x, section.x);
+                                        section.y = Math.min(allClients[i].y - e.y + e.offset.y, section.y);
                                     }
                                 });
                                 if (section.x !== Number.MAX_VALUE && section.y !== Number.MAX_VALUE) {
-                                    __private.section = {
-                                        x: section.x + __private.getOVEInstance().geometry.offset.x,
-                                        y: section.y + __private.getOVEInstance().geometry.offset.y
-                                    };
+                                    __private.section = section;
                                 }
                             });
                     }
                 }
             });
         }
-    });
+    };
+    $(document).on(OVE.Event.LOADED, loadGeometry);
 
     this.Coordinates.transform = function (vector, inputType, outputType) {
         if (!__private.section) {
@@ -299,14 +293,19 @@ function OVEUtils () {
         }
 
         //-- No conversions along the z-axis as yet --//
-        const Conversions = {
-            SCREEN_TO_SECTION: [g.x - g.offset.x, g.y - g.offset.y, 0],
-            SECTION_TO_SCREEN: [g.offset.x - g.x, g.offset.y - g.y, 0],
-            SECTION_TO_SPACE: [section.x, section.y, 0],
-            SPACE_TO_SECTION: [-section.x, -section.y, 0],
-            SCREEN_TO_SPACE: [g.x - g.offset.x + section.x, g.y - g.offset.y + section.y, 0],
-            SPACE_TO_SCREEN: [g.offset.x - g.x - section.x, g.offset.y - g.y - section.y, 0]
-        };
+        const Conversions = {};
+        if (g.x !== undefined && g.y !== undefined && !g.offset) {
+            Conversions.SCREEN_TO_SECTION = [g.x - g.offset.x, g.y - g.offset.y, 0];
+            Conversions.SECTION_TO_SCREEN = [g.offset.x - g.x, g.offset.y - g.y, 0];
+            if (section !== undefined) {
+                Conversions.SCREEN_TO_SPACE = [g.x - g.offset.x + section.x, g.y - g.offset.y + section.y, 0];
+                Conversions.SPACE_TO_SCREEN = [g.offset.x - g.x - section.x, g.offset.y - g.y - section.y, 0];
+            }
+        }
+        if (section !== undefined) {
+            Conversions.SECTION_TO_SPACE = [section.x, section.y, 0];
+            Conversions.SPACE_TO_SECTION = [-section.x, -section.y, 0];
+        }
 
         //-- Logic to run the corresponding conversion --//
         const conversion = Conversions[inputType + '_TO_' + outputType];
@@ -334,10 +333,6 @@ function OVEUtils () {
     this.getViewId = function () {
         //-- BACKWARDS-COMPATIBILITY: For < v0.2.0 --//
         return OVE.Utils.getQueryParam('oveViewId') || OVE.Utils.getQueryParam('oveClientId');
-    };
-
-    this.getSectionId = function () {
-        return OVE.Utils.getQueryParam('oveSectionId');
     };
 
     this.resizeController = function (contentDivName) {
