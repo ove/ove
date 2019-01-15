@@ -20,6 +20,17 @@ initView = function () {
             window.ove.socket.send({ action: Constants.Action.READ });
         }
     };
+    window.addEventListener('message', function (event) {
+        if (event.data && event.data.filters) {
+            if (event.data.filters.includeOnly) {
+                window.ove.context.includeOnlyFilter = event.data.filters.includeOnly;
+                log.debug('Configured \'includeOnly\' filter:', window.ove.context.includeOnlyFilter);
+            } else if (event.data.filters.exclude) {
+                window.ove.context.excludeFilter = event.data.filters.exclude;
+                log.debug('Configured \'exclude\' filter:', window.ove.context.excludeFilter);
+            }
+        }
+    });
     window.addEventListener('resize', function () {
         // We are waiting to allow Windows to finish resizing the browser.
         setTimeout(loadFunction, Constants.BROWSER_RESIZE_WAIT);
@@ -33,6 +44,13 @@ updateSections = function (m) {
     if (!window.ove.context.isInitialized) {
         window.ove.context.isInitialized = true;
         log.debug('Application is initialized:', window.ove.context.isInitialized);
+    }
+    if (window.ove.context.includeOnlyFilter && window.ove.context.includeOnlyFilter.indexOf(m.id) === -1) {
+        log.info('Using \'includeOnly\' filter. Ignoring Section:', m.id);
+        return;
+    } else if (window.ove.context.excludeFilter && window.ove.context.excludeFilter.indexOf(m.id) !== -1) {
+        log.info('Using \'exclude\' filter. Ignoring Section:', m.id);
+        return;
     }
     const id = OVE.Utils.getViewId();
     const client = id.substring(id.lastIndexOf('-') + 1);
