@@ -21,13 +21,18 @@ initView = function () {
         }
     };
     window.addEventListener('message', function (event) {
-        if (event.data && event.data.filters) {
-            if (event.data.filters.includeOnly) {
-                window.ove.context.includeOnlyFilter = event.data.filters.includeOnly;
-                log.debug('Configured \'includeOnly\' filter:', window.ove.context.includeOnlyFilter);
-            } else if (event.data.filters.exclude) {
-                window.ove.context.excludeFilter = event.data.filters.exclude;
-                log.debug('Configured \'exclude\' filter:', window.ove.context.excludeFilter);
+        if (event.data) {
+            if (event.data.filters) {
+                if (event.data.filters.includeOnly) {
+                    window.ove.context.includeOnlyFilter = event.data.filters.includeOnly;
+                    log.debug('Configured \'includeOnly\' filter:', window.ove.context.includeOnlyFilter);
+                } else if (event.data.filters.exclude) {
+                    window.ove.context.excludeFilter = event.data.filters.exclude;
+                    log.debug('Configured \'exclude\' filter:', window.ove.context.excludeFilter);
+                }
+            }
+            if (event.data.load) {
+                loadFunction();
             }
         }
     });
