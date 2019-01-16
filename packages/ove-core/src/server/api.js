@@ -318,7 +318,14 @@ module.exports = function (server, log, Utils, Constants) {
         }
         let result = [];
         sectionsToFetch.forEach(function (i) {
-            let section = { id: i, w: server.sections[i].w, h: server.sections[i].h };
+            let section = {
+                id: i,
+                x: server.sections[i].x,
+                y: server.sections[i].y,
+                w: server.sections[i].w,
+                h: server.sections[i].h,
+                space: Object.keys(server.sections[i].spaces)[0]
+            };
             const app = server.sections[i].app;
             if (app) {
                 section.app = { url: app.url, state: app.state };
@@ -533,7 +540,14 @@ module.exports = function (server, log, Utils, Constants) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
-            let section = { id: parseInt(sectionId, 10), w: server.sections[sectionId].w, h: server.sections[sectionId].h };
+            let section = {
+                id: parseInt(sectionId, 10),
+                x: server.sections[sectionId].x,
+                y: server.sections[sectionId].y,
+                w: server.sections[sectionId].w,
+                h: server.sections[sectionId].h,
+                space: Object.keys(server.sections[sectionId].spaces)[0]
+            };
             const app = server.sections[sectionId].app;
             if (app) {
                 section.app = { url: app.url, state: app.state };

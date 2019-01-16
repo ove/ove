@@ -119,11 +119,11 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections?groupId=1');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'w': 10, 'h': 10 } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' } ]));
 
         res = await request(app).get('/sections?groupId=1&geometry=10,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'w': 10, 'h': 10 } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' } ]));
 
         res = await request(app).get('/sections?groupId=1&geometry=0,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -131,7 +131,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections?groupId=2');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10 }, { 'id': 1, 'w': 10, 'h': 10 } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }, { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' } ]));
 
         res = await request(app).get('/sections?groupId=3');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -201,11 +201,11 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections?space=TestingNine');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10 } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' } ]));
 
         res = await request(app).get('/sections?space=TestingNine&geometry=10,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10 } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' } ]));
 
         res = await request(app).get('/sections?space=TestingNine&geometry=0,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -239,14 +239,14 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         await request(app).post('/sections').send({ 'translate': { x: -11, y: 0 } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         res = await request(app).post('/sections').send({ 'scale': { x: 10, y: 1 } });
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -254,7 +254,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 100, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 100, 'h': 10, 'space': 'TestingNine' }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -339,7 +339,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         res = await request(app).post('/section/0')
             .send({ 'h': 100, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 });
@@ -348,7 +348,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 100, 'h': 100 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 100, 'h': 100, 'space': 'TestingNine' }));
 
         res = await request(app).post('/section/0')
             .send({ 'h': 200, 'y': 10, 'x': 0 });
@@ -357,7 +357,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 100, 'h': 200 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 100, 'h': 200, 'space': 'TestingNine' }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -375,7 +375,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         await request(app).post('/section/0')
             .send({ 'h': 10, 'space': 'FakeSpace', 'w': 10, 'y': 0, 'x': 10 })
@@ -410,7 +410,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         await request(app).post('/section/0')
             .send({ 'h': 100, 'space': 'TestingNine', 'w': 100 })

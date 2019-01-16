@@ -568,6 +568,12 @@ definitions:
         type: "integer"
         format: "int32"
         example: 0
+      x:
+        type: "integer"
+        format: "int32"
+      y:
+        type: "integer"
+        format: "int32"
       w:
         type: "integer"
         format: "int32"
@@ -576,6 +582,9 @@ definitions:
         type: "integer"
         format: "int32"
         example: 4320
+      space:
+        type: "string"
+        example: "LocalNine"
       app:
         type: "object"
         properties:
@@ -586,6 +595,7 @@ definitions:
             type: "string"
             description: "Name of the state will only be returned if a named state was loaded."
             example: "DSI"
+
 externalDocs:
   description: "Find out more about OVE"
   url: "https://dsi.gitbook.io/ove"

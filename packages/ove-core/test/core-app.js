@@ -42,7 +42,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/section/0')
@@ -146,11 +146,11 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections?groupId=1');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } } ]));
 
         res = await request(app).get('/sections?groupId=1&geometry=10,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } } ]));
 
         res = await request(app).get('/sections?groupId=1&geometry=0,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -158,7 +158,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections?groupId=2');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }, { 'id': 1, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }, { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } } ]));
 
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_WARN = log.warn;
@@ -167,7 +167,7 @@ describe('The OVE Core server', () => {
         log.warn = OLD_LOG_WARN;
         expect(mockCallback.mock.calls[0][0]).toBe('Ignoring invalid geometry:');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } } ]));
 
         res = await request(app).get('/sections?groupId=3');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -246,11 +246,11 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections?space=TestingNine');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } } ]));
 
         res = await request(app).get('/sections?space=TestingNine&geometry=10,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } } ]));
 
         res = await request(app).get('/sections?space=TestingNine&geometry=0,0,10,10');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -263,7 +263,7 @@ describe('The OVE Core server', () => {
         log.warn = OLD_LOG_WARN;
         expect(mockCallback.mock.calls[0][0]).toBe('Ignoring invalid geometry:');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } } ]));
 
         res = await request(app).get('/sections?space=Fake');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -296,14 +296,14 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } } ]));
 
         await request(app).post('/sections').send({ 'translate': { x: -11, y: 0 } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         res = await request(app).post('/sections').send({ 'scale': { x: 10, y: 1 } });
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -311,7 +311,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 100, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 100, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         res = await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
@@ -324,7 +324,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/sections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } } ]));
+        expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } } ]));
 
         nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
@@ -346,7 +346,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -364,7 +364,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081', state: 'foo' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081', state: 'foo' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -384,7 +384,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -399,7 +399,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
@@ -416,7 +416,7 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // dimensions should not change as the update only changes the app.
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
         scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
@@ -436,7 +436,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/section/0')
@@ -448,7 +448,7 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // dimensions should not change as the update only changes the app.
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
         scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
@@ -468,7 +468,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
@@ -485,7 +485,7 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // dimensions should not change as the update only changes the app.
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
         scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
@@ -505,7 +505,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
@@ -524,7 +524,7 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // dimensions should not change as the update only changes the app.
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -543,7 +543,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
@@ -560,7 +560,7 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // dimensions should not change as the update only changes the app.
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10 }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -578,7 +578,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         // We know by now that /flush works as expected.
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -592,7 +592,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -606,7 +606,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         // We know by now that /flush works as expected.
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -620,7 +620,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082', state: 'foo' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082', state: 'foo' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -634,7 +634,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8081' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         // We know by now that /flush works as expected.
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -650,7 +650,7 @@ describe('The OVE Core server', () => {
 
         res = await request(app).get('/section/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'w': 10, 'h': 10, 'app': { 'url': 'http://localhost:8082' } }));
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
