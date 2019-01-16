@@ -28,8 +28,57 @@ function OVE (appId, hostname, sectionId) {
     };
 
     //-----------------------------------------------------------//
-    //--                 Messaging Functions                   --//
+    //--                  Messaging Functions                  --//
     //-----------------------------------------------------------//
+
+    const OVEFrame = function (__self, __private) {
+        let onMessage = __self.socket.on;
+
+        window.addEventListener('message', function (m) {
+            const data = m.data;
+            //-- Apps receive the message if either it was sent to all sections or the specific section --//
+            //-- of the app. Apps will not receive messages sent to other apps.                         --//
+            if (data.appId === __private.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
+                if (Constants.Logging.TRACE) {
+                    log.trace('Reading message:', JSON.stringify(data));
+                }
+                onMessage(data.message);
+            }
+        });
+
+        //-- SDK functions --//
+        this.on = function (func) {
+            onMessage = func;
+        };
+        this.send = function (target, message, appId) {
+            //-- The identifier of the target application could be omitted if the message was sent to self. --//
+            const targetAppId = (arguments.length > 2 && appId) ? appId : __private.appId;
+
+            const postMessage = function (frame, message, appId) {
+                const data = { appId: appId, message: message };
+                log.trace('Sending message:', data);
+                frame.postMessage(data, '*');
+            };
+
+            switch (target) {
+                case Constants.Frame.PEER:
+                    if (window.parent !== window) {
+                        for (let i = 0; i < window.parent.frames.length; i++) {
+                            postMessage(window.parent.frames[i], message, targetAppId);
+                        }
+                    }
+                    break;
+                case Constants.Frame.CHILD:
+                    for (let i = 0; i < window.frames.length; i++) {
+                        postMessage(window.frames[i], message, appId);
+                    }
+                    break;
+                default:
+                    log.warn('Unable to handle target:', target);
+            }
+        };
+    };
+
     const OVESocket = function (__private) {
         //-- Default onMessage handler does nothing --//
         let onMessage = function () { return 0; };
@@ -92,7 +141,7 @@ function OVE (appId, hostname, sectionId) {
     };
 
     //-----------------------------------------------------------//
-    //--                   Geometry Variables                    --//
+    //--                  Geometry Variables                   --//
     //-----------------------------------------------------------//
     const setGeometry = function (__self, __private) {
         __self.geometry = {};
@@ -201,6 +250,7 @@ function OVE (appId, hostname, sectionId) {
     };
 
     this.socket = new OVESocket(__private);
+    this.frame = new OVEFrame(this, __private);
     this.state = new OVEState(__private);
     setGeometry(this, __private);
 }

@@ -20,20 +20,21 @@ initView = function () {
             window.ove.socket.send({ action: Constants.Action.READ });
         }
     };
-    window.addEventListener('message', function (event) {
-        if (event.data) {
-            if (event.data.filters) {
-                if (event.data.filters.includeOnly) {
-                    window.ove.context.includeOnlyFilter = event.data.filters.includeOnly;
-                    log.debug('Configured \'includeOnly\' filter:', window.ove.context.includeOnlyFilter);
-                } else if (event.data.filters.exclude) {
-                    window.ove.context.excludeFilter = event.data.filters.exclude;
-                    log.debug('Configured \'exclude\' filter:', window.ove.context.excludeFilter);
-                }
+    window.ove.frame.on(function (message) {
+        if (message.filters) {
+            if (message.filters.includeOnly) {
+                window.ove.context.includeOnlyFilter = message.filters.includeOnly;
+                log.debug('Configured \'includeOnly\' filter:', window.ove.context.includeOnlyFilter);
+            } else if (message.filters.exclude) {
+                window.ove.context.excludeFilter = message.filters.exclude;
+                log.debug('Configured \'exclude\' filter:', window.ove.context.excludeFilter);
             }
-            if (event.data.load) {
-                loadFunction();
-            }
+        }
+        if (message.load) {
+            loadFunction();
+        }
+        if (message.transparentBackground) {
+            $('body').css('background', 'none');
         }
     });
     window.addEventListener('resize', function () {

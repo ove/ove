@@ -51,6 +51,11 @@ Constants.RegExp.Annotation = {
     AUTHOR: /@AUTHOR/g
 };
 
+Constants.Frame = {
+    PEER: 'peer',
+    CHILD: 'child'
+};
+
 /**************************************************************
                         Logging Levels
 **************************************************************/
