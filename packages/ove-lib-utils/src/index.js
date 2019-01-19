@@ -26,6 +26,18 @@ function Utils (appName, app, dirs) {
     this.JSON.equals = function (param1, param2) {
         return JSON.stringify(param1) === JSON.stringify(param2);
     };
+    this.JSON.getDescendant = function getDescendant (input, obj) {
+        if (!obj) {
+            return undefined;
+        }
+
+        const nameSeparator = input.indexOf('.');
+        if (nameSeparator === -1) {
+            return obj[input];
+        } else {
+            return getDescendant(input.substring(nameSeparator + 1), obj[input.substring(0, nameSeparator)]);
+        }
+    };
     this.JSON.EMPTY = JSON.stringify({});
     this.JSON.EMPTY_ARRAY = JSON.stringify([]);
 
@@ -124,7 +136,7 @@ function Utils (appName, app, dirs) {
             (!showRoot ? ')?' : ''), function (req, res) {
             res.send(fs.readFileSync(path.join(dirs.base, 'client', 'index.html'), Constants.UTF8)
                 .replace(Constants.RegExp.OVE_TYPE, req.params.type === 'control' ? 'control' : 'view')
-                .replace(Constants.RegExp.OVE_HOST, process.env.OVE_HOST));
+                .replace(Constants.RegExp.OVE_HOST, module.exports.Utils.getOVEHost()));
         });
         app.use('/', express.static(path.join(dirs.nodeModules, 'jquery', 'dist')));
     };
@@ -174,6 +186,19 @@ function Utils (appName, app, dirs) {
     /**************************************************************
                         Other Utility Functions
     **************************************************************/
+    this.getOVEHost = function () {
+        let host = process.env.OVE_HOST;
+        if (host) {
+            if (host.indexOf('//') >= 0) {
+                host = host.substring(host.indexOf('//') + 2);
+            }
+            if (host.indexOf('/') >= 0) {
+                host = host.substring(0, host.indexOf('/'));
+            }
+        }
+        return host;
+    };
+
     this.sendMessage = function (res, status, msg) {
         res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
     };

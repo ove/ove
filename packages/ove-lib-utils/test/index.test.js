@@ -24,10 +24,11 @@ describe('The OVE Utils library', () => {
         expect(Object.keys(Utils)).toContain('sendMessage');
         expect(Object.keys(Utils)).toContain('sendEmptySuccess');
         expect(Object.keys(Utils)).toContain('isNullOrEmpty');
+        expect(Object.keys(Utils)).toContain('getOVEHost');
     });
 
     it('should also export non-mandatory functionality', () => {
-        expect(Object.keys(Utils).length).toEqual(7);
+        expect(Object.keys(Utils).length).toEqual(8);
         expect(Object.keys(Utils)).toContain('Logger');
         expect(Object.keys(Utils)).toContain('registerRoutesForContent');
         expect(Object.keys(Utils)).toContain('buildAPIDocs');
@@ -43,11 +44,53 @@ describe('The OVE Utils library', () => {
         expect(Utils.isNullOrEmpty(foo)).toBeFalsy();
     });
 
+    it('should return a proper hostname', () => {
+        process.env.OVE_HOST = 'http://localhost:8080/foo';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'http://localhost:8080/foo/bar';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'http://localhost:8080';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'https://localhost:8080/foo';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = '//localhost:8080/foo';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = '//localhost:8080/';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'localhost:8080/foo';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'http://localhost:8080/';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'localhost:8080/';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = 'localhost:8080';
+        expect(Utils.getOVEHost()).toEqual('localhost:8080');
+        process.env.OVE_HOST = '/foo';
+        expect(Utils.getOVEHost()).toEqual('');
+        process.env.OVE_HOST = '//';
+        expect(Utils.getOVEHost()).toEqual('');
+        process.env.OVE_HOST = '/';
+        expect(Utils.getOVEHost()).toEqual('');
+        process.env.OVE_HOST = '////';
+        expect(Utils.getOVEHost()).toEqual('');
+        delete process.env.OVE_HOST;
+        expect(Utils.getOVEHost()).toBeUndefined();
+    });
+
     it('should be able to generate JSON responses', () => {
         let res = mockHttp.createResponse();
         Utils.sendMessage(res, 999, 'dummy message');
         expect(res._getData()).toEqual('dummy message');
         expect(res.statusCode).toEqual(999);
+    });
+
+    it('should be able to get descendants from JSON payloads', () => {
+        expect(Utils.JSON.getDescendant('foo', null)).toBeUndefined();
+        expect(Utils.JSON.getDescendant('foo', undefined)).toBeUndefined();
+        expect(Utils.JSON.getDescendant('foo', { foo: 10 })).toEqual(10);
+        expect(Utils.JSON.getDescendant('foo.bar', { foo: { bar: 'ten' } })).toEqual('ten');
+        expect(Utils.JSON.getDescendant('bar', { foo: 10 })).toBeUndefined();
+        expect(Utils.JSON.getDescendant('bar.foo', { foo: { bar: 'ten' } })).toBeUndefined();
     });
 
     it('should be able to generate empty JSON responses', () => {
