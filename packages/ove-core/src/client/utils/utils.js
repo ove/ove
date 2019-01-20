@@ -330,6 +330,11 @@ function OVEUtils () {
         return new URLSearchParams(location.search.slice(1)).get(name);
     };
 
+    //-- This is a common operation used by a majority of OVE applications --//
+    this.getURLQueryParam = function () {
+        return OVE.Utils.getQueryParam('url');
+    };
+
     this.getViewId = function () {
         //-- BACKWARDS-COMPATIBILITY: For < v0.2.0 --//
         return OVE.Utils.getQueryParam('oveViewId') || OVE.Utils.getQueryParam('oveClientId');
