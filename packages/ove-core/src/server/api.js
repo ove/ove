@@ -111,6 +111,16 @@ module.exports = function (server, log, Utils, Constants) {
         return layout;
     };
 
+    const _handleRequestError = function (e) {
+        /* istanbul ignore if */
+        // It is impossible to test this scenario as there would be issues in the test runner if URLs
+        // were invalid. This is easily testable using an integration test-case, since PM2/node will
+        // eventually report the error after several seconds.
+        if (e) {
+            log.warn('Connection error when making request:', e);
+        }
+    };
+
     // Creates an individual section
     const createSection = function (req, res) {
         if (!req.body.space || !server.spaces[req.body.space]) {
@@ -150,7 +160,7 @@ module.exports = function (server, log, Utils, Constants) {
                             request.post(section.app.url + '/state/' + name, {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: req.body.app.states.cache[name]
-                            });
+                            }, _handleRequestError);
                         });
                     }
                     if (req.body.app.states.load) {
@@ -163,7 +173,7 @@ module.exports = function (server, log, Utils, Constants) {
                             request.post(section.app.url + '/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: req.body.app.states.load
-                            });
+                            }, _handleRequestError);
                         }
                     }
                 }
@@ -198,7 +208,7 @@ module.exports = function (server, log, Utils, Constants) {
         let section = server.sections[sectionId];
         if (section.app) {
             log.debug('Flushing application at URL:', section.app.url);
-            request.post(section.app.url + '/flush');
+            request.post(section.app.url + '/flush', _handleRequestError);
         }
         server.groups.forEach(function (e, groupId) {
             if (e.includes(parseInt(sectionId, 10))) {
@@ -251,7 +261,7 @@ module.exports = function (server, log, Utils, Constants) {
                 let section = server.sections.pop();
                 if (section.app) {
                     log.debug('Flushing application at URL:', section.app.url);
-                    request.post(section.app.url + '/flush');
+                    request.post(section.app.url + '/flush', _handleRequestError);
                 }
             }
             while (server.groups.length !== 0) {
@@ -389,7 +399,7 @@ module.exports = function (server, log, Utils, Constants) {
             needsUpdate = needsUpdate || (url !== oldURL);
             if (oldURL && (url !== oldURL)) {
                 log.debug('Flushing application at URL:', oldURL);
-                request.post(oldURL + '/flush');
+                request.post(oldURL + '/flush', _handleRequestError);
             }
             server.sections[sectionId].app = { 'url': url };
             log.debug('Got URL for app:', url);
@@ -407,7 +417,7 @@ module.exports = function (server, log, Utils, Constants) {
                         request.post(server.sections[sectionId].app.url + '/state/' + name, {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.cache[name]
-                        });
+                        }, _handleRequestError);
                     });
                     needsUpdate = true;
                 }
@@ -421,7 +431,7 @@ module.exports = function (server, log, Utils, Constants) {
                         request.post(server.sections[sectionId].app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.load
-                        });
+                        }, _handleRequestError);
                     }
                     needsUpdate = true;
                 }
@@ -436,7 +446,7 @@ module.exports = function (server, log, Utils, Constants) {
             }
         } else if (oldURL) {
             log.debug('Flushing application at URL:', oldURL);
-            request.post(oldURL + '/flush');
+            request.post(oldURL + '/flush', _handleRequestError);
         }
 
         // Notify OVE viewers/controllers
