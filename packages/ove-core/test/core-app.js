@@ -428,6 +428,63 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(Utils.JSON.EMPTY);
     });
 
+    it('should be able to set opacity of an app', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081', 'opacity': '1.0' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081', 'opacity': '1.0' } }));
+
+        const mockCallback = jest.fn(x => x);
+        const OLD_LOG_DEBUG = log.debug;
+        log.debug = mockCallback;
+        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        res = await request(app).post('/section/0')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
+        log.debug = OLD_LOG_DEBUG;
+        expect(mockCallback.mock.calls[0][0]).toBe('Deleting existing application configuration');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        // dimensions should not change as the update only changes the app.
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
+
+        res = await request(app).post('/section/0')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082', 'opacity': '0.1' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        // dimensions should not change as the update only changes the app.
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082', 'opacity': '0.1' } }));
+
+        res = await request(app).post('/section/0')
+            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082', 'opacity': '0.2' }, 'space': 'TestingFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        // dimensions should not change as the update only changes the app.
+        expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingFour', 'app': { 'url': 'http://localhost:8082', 'opacity': '0.2' } }));
+
+        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
+
+        res = await request(app).get('/section/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+    });
+
     it('should be able to update the app of a section that never had an app', async () => {
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });

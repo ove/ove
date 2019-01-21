@@ -108,6 +108,7 @@ updateSections = function (m) {
                     const url = m.app.url + '/view.html?oveViewId=' + id + '.' + m.id;
                     log.info('Setting iFrame source URL:', url);
                     frame.attr('src', url);
+                    frame.css('opacity', m.app.opacity);
                 } else {
                     // An app may be un-deployed from a section without deleting the actual section.
                     if (frame.attr('src')) {

@@ -595,6 +595,10 @@ definitions:
             type: "string"
             description: "Name of the state will only be returned if a named state was loaded."
             example: "DSI"
+          opacity:
+            format: "float"
+            description: "Sets the transparency of an element which can be a value between 0.0 and 1.0"
+            example: 0.75
 
 externalDocs:
   description: "Find out more about OVE"

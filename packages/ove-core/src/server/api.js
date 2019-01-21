@@ -177,6 +177,11 @@ module.exports = function (server, log, Utils, Constants) {
                         }
                     }
                 }
+                const opacity = req.body.app.opacity;
+                if (opacity) {
+                    log.debug('Setting opacity for app:', opacity);
+                    section.app.opacity = opacity;
+                }
             }
             server.sections[sectionId] = section;
 
@@ -338,7 +343,7 @@ module.exports = function (server, log, Utils, Constants) {
             };
             const app = server.sections[i].app;
             if (app) {
-                section.app = { url: app.url, state: app.state };
+                section.app = { url: app.url, state: app.state, opacity: app.opacity };
             }
             result.push(section);
         });
@@ -352,8 +357,10 @@ module.exports = function (server, log, Utils, Constants) {
     const _updateSectionById = function (sectionId, space, geometry, app) {
         let commands = [];
         let oldURL = null;
+        let oldOpacity = null;
         if (server.sections[sectionId].app) {
             oldURL = server.sections[sectionId].app.url;
+            oldOpacity = server.sections[sectionId].app.opacity;
             log.debug('Deleting existing application configuration');
             delete server.sections[sectionId].app;
             commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
@@ -436,9 +443,21 @@ module.exports = function (server, log, Utils, Constants) {
                     needsUpdate = true;
                 }
             }
+            const opacity = app.opacity;
+            if (opacity) {
+                log.debug('Setting opacity for app:', opacity);
+                server.sections[sectionId].app.opacity = opacity;
+                if (oldOpacity !== opacity && !needsUpdate) {
+                    needsUpdate = true;
+                }
+            }
             // If nothing changed, there is no point in making an update.
             if (needsUpdate) {
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: { 'url': server.sections[sectionId].app.url } } }));
+                let $app = { 'url': server.sections[sectionId].app.url };
+                if (opacity) {
+                    $app.opacity = opacity;
+                }
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: $app } }));
             } else {
                 // There is no need to check if the old url was set, because, if it was not, needsUpdate would be true anyway.
                 // Removes the first update command.
@@ -560,7 +579,7 @@ module.exports = function (server, log, Utils, Constants) {
             };
             const app = server.sections[sectionId].app;
             if (app) {
-                section.app = { url: app.url, state: app.state };
+                section.app = { url: app.url, state: app.state, opacity: app.opacity };
             }
             log.debug('Successfully read configuration for section id:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
