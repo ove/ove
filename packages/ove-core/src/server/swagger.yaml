@@ -103,7 +103,7 @@ paths:
       tags:
       - "sections"
       summary: "Updates sections"
-      description: "Each section will be transformed (resized or moved within a space, or moved to a new space) by invoking the corresponding update operation. This operation will be limited to subset of sections if a group id or a space was provided."
+      description: "Each section will be transformed (resized or moved within a space, or moved to a new space) by invoking the corresponding update operation. This operation will be limited to a subset of sections if a group id or a space was provided."
       produces:
       - "application/json"
       parameters:
@@ -536,7 +536,7 @@ definitions:
         format: "int32"
         example: 4320
   Transformation:
-    description: "Used when updating multiple section"
+    description: "Used when updating multiple sections"
     properties:
       scale:
         type: "object"
