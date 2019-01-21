@@ -597,7 +597,7 @@ definitions:
             example: "DSI"
           opacity:
             format: "float"
-            description: "Sets the transparency of an element which can be a value between 0.0 and 1.0"
+            description: "Sets the opacity of an element to a value that can be between 0.0 (completely transparent, and hence invisible) and 1.0 (completely opaque)"
             example: 0.75
 
 externalDocs:
