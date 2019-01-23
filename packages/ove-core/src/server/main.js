@@ -4,7 +4,6 @@ const uglify = require('uglify-js');
 const pjson = require(path.join('..', '..', 'package.json')); // this path might have to be fixed based on packaging
 
 module.exports = function (app, wss, spaces, log, Utils, Constants) {
-    this.groups = [];
     this.spaces = spaces;
     this.wss = wss;
     this.app = app;
@@ -81,6 +80,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     // Persistence;
     Utils.registerRoutesForPersistence();
     Utils.Persistence.set('sections', []);
+    Utils.Persistence.set('groups', []);
 
     // APIs
     require(path.join(__dirname, 'api'))(this, log, Utils, Constants);

@@ -215,7 +215,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/flush', _handleRequestError);
         }
-        server.groups.forEach(function (e, groupId) {
+        Utils.Persistence.get('groups').forEach(function (e, groupId) {
             if (e.includes(parseInt(sectionId, 10))) {
                 // The outcome of this operation is logged within the internal utility method
                 _deleteGroupById(groupId);
@@ -237,9 +237,9 @@ module.exports = function (server, log, Utils, Constants) {
         let sections = Utils.Persistence.get('sections');
         if (groupId) {
             let deletedSections = [];
-            if (!Utils.isNullOrEmpty(server.groups[groupId])) {
+            if (!Utils.isNullOrEmpty(Utils.Persistence.get('groups[' + groupId + ']'))) {
                 log.info('Deleting sections of group:', groupId);
-                const group = server.groups[groupId].slice();
+                const group = Utils.Persistence.get('groups[' + groupId + ']').slice();
                 group.forEach(function (e) {
                     _deleteSectionById(e);
                     deletedSections.push(parseInt(e, 10));
@@ -270,9 +270,7 @@ module.exports = function (server, log, Utils, Constants) {
                 }
             }
             Utils.Persistence.set('sections', []);
-            while (server.groups.length !== 0) {
-                server.groups.pop();
-            }
+            Utils.Persistence.set('groups', []);
             server.wss.clients.forEach(function (c) {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
                     c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
@@ -282,7 +280,7 @@ module.exports = function (server, log, Utils, Constants) {
             Utils.sendEmptySuccess(res);
         }
         log.debug('Existing sections (active/deleted):', Utils.Persistence.get('sections').length);
-        log.debug('Existing groups (active/deleted):', server.groups.length);
+        log.debug('Existing groups (active/deleted):', Utils.Persistence.get('groups').length);
     };
 
     // Returns details of sections
@@ -293,9 +291,9 @@ module.exports = function (server, log, Utils, Constants) {
         const sections = Utils.Persistence.get('sections');
         let sectionsToFetch = [];
         if (groupId) {
-            if (!Utils.isNullOrEmpty(server.groups[groupId])) {
+            if (!Utils.isNullOrEmpty(Utils.Persistence.get('groups[' + groupId + ']'))) {
                 log.info('Fetching sections of group:', groupId);
-                const group = server.groups[groupId].slice();
+                const group = Utils.Persistence.get('groups[' + groupId + ']').slice();
                 group.forEach(function (e) {
                     let i = parseInt(e, 10);
                     sectionsToFetch.push(i);
@@ -492,9 +490,9 @@ module.exports = function (server, log, Utils, Constants) {
             const groupId = req.query.groupId;
             const sections = Utils.Persistence.get('sections');
             if (groupId) {
-                if (!Utils.isNullOrEmpty(server.groups[groupId])) {
+                if (!Utils.isNullOrEmpty(Utils.Persistence.get('groups[' + groupId + ']'))) {
                     log.info('Updating sections of group:', groupId);
-                    const group = server.groups[groupId].slice();
+                    const group = Utils.Persistence.get('groups[' + groupId + ']').slice();
                     group.forEach(function (e) {
                         let i = parseInt(e, 10);
                         sectionsToUpdate.push(i);
@@ -640,7 +638,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Invalid Group', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
         } else {
-            server.groups[groupId] = req.body.slice();
+            Utils.Persistence.set('groups[' + groupId + ']', req.body.slice());
             log.info('Successfully ' + operation + 'd group:', groupId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
         }
@@ -648,18 +646,18 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Creates an individual group
     const createGroup = function (req, res) {
-        _createOrUpdateGroup(server.groups.length, 'create', req, res);
+        _createOrUpdateGroup(Utils.Persistence.get('groups').length, 'create', req, res);
     };
 
     // Fetches details of an individual group
     const readGroupById = function (req, res) {
         let groupId = req.params.id;
-        if (Utils.isNullOrEmpty(server.groups[groupId])) {
+        if (Utils.isNullOrEmpty(Utils.Persistence.get('groups[' + groupId + ']'))) {
             log.error('Invalid Group Id:', groupId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
         } else {
             log.debug('Successfully read configuration for group id:', groupId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.groups[groupId]));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(Utils.Persistence.get('groups[' + groupId + ']')));
         }
     };
 
@@ -670,10 +668,9 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Internal utility function to delete a group by the given id
     const _deleteGroupById = function (groupId) {
-        delete server.groups[groupId];
-        server.groups[groupId] = [];
+        Utils.Persistence.set('groups[' + groupId + ']', []);
         let hasNonEmptyGroups = false;
-        server.groups.forEach(function (e) {
+        Utils.Persistence.get('groups').forEach(function (e) {
             if (!Utils.isNullOrEmpty(e)) {
                 hasNonEmptyGroups = true;
             }
@@ -681,7 +678,7 @@ module.exports = function (server, log, Utils, Constants) {
         if (hasNonEmptyGroups) {
             log.info('Successfully deleted group:', groupId);
         } else {
-            server.groups = [];
+            Utils.Persistence.set('groups', []);
             log.info('Successfully deleted all groups');
         }
     };
@@ -690,7 +687,7 @@ module.exports = function (server, log, Utils, Constants) {
     // operation, it will reset all groups on the server.
     const deleteGroupById = function (req, res) {
         let groupId = req.params.id;
-        if (Utils.isNullOrEmpty(server.groups[groupId])) {
+        if (Utils.isNullOrEmpty(Utils.Persistence.get('groups[' + groupId + ']'))) {
             log.error('Invalid Group Id:', groupId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
         } else {

@@ -185,14 +185,15 @@ function Persistence (appName, log, __private) {
     };
 
     const deleteSavable = function (key, deleteRemoteCopy) {
+        let result;
         if (getSavable(__private.local, key)) {
             let parent = getSavable(__private.local, key, true);
             if (parent === __private.local) {
-                delete __private.local[key];
+                result = delete __private.local[key];
             } else {
                 parent.value.forEach(function (e, i) {
                     if (e.key === key) {
-                        parent.splice(i, 1);
+                        result = parent.splice(i, 1);
                     }
                 });
             }
@@ -200,6 +201,7 @@ function Persistence (appName, log, __private) {
                 $delete(new Savable(key, undefined));
             }
         }
+        return result;
     };
 
     const createSavable = function (key, value) {
@@ -284,7 +286,7 @@ function Persistence (appName, log, __private) {
     };
 
     this.del = function (key) {
-        deleteSavable(key, true);
+        return deleteSavable(key, true);
     };
 }
 
