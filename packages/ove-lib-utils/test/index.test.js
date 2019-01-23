@@ -28,8 +28,9 @@ describe('The OVE Utils library', () => {
     });
 
     it('should also export non-mandatory functionality', () => {
-        expect(Object.keys(Utils).length).toEqual(8);
+        expect(Object.keys(Utils).length).toEqual(9);
         expect(Object.keys(Utils)).toContain('Logger');
+        expect(Object.keys(Utils)).toContain('registerRoutesForPersistence');
         expect(Object.keys(Utils)).toContain('registerRoutesForContent');
         expect(Object.keys(Utils)).toContain('buildAPIDocs');
     });

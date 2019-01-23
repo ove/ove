@@ -6,6 +6,7 @@ const yamljs = require('js-yaml');
 const chalk = require('chalk');
 const dateFormat = require('dateformat');
 const HttpStatus = require('http-status-codes');
+const Persistence = require('./persistence');
 const { Constants } = require('./constants');
 
 // A collection of utilities for OVE and OVE apps. It is generally not
@@ -82,6 +83,36 @@ function Utils (appName, app, dirs) {
             });
         })(this);
     }
+
+    /**************************************************************
+                              Persistence
+    **************************************************************/
+    this.registerRoutesForPersistence = function () {
+        let __self = this;
+        let __private = { provider: null, local: {} };
+
+        const setProvider = function (req, res) {
+            if (!req.body.url) {
+                log.error('Invalid Request', 'request:', JSON.stringify(req.body));
+                __self.sendMessage(res, HttpStatus.BAD_REQUEST,
+                    JSON.stringify({ error: 'invalid request' }));
+            } else {
+                __private.provider = req.body.url;
+                setInterval(2000, __self.Persistence.sync);
+            }
+        };
+
+        const removeProvider = function (_req, res) {
+            if (__private.provider) {
+                __private.provider = null;
+            }
+            __self.sendEmptySuccess(res);
+        };
+
+        app.post('/persistence', setProvider);
+        app.delete('/persistence', removeProvider);
+        __self.Persistence = Persistence(appName, log, __private);
+    };
 
     /**************************************************************
                      Static Content/Docs Generation

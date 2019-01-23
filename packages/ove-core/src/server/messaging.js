@@ -1,4 +1,4 @@
-module.exports = function (server, log, _Utils, Constants) {
+module.exports = function (server, log, Utils, Constants) {
     return function (s) {
         s.safeSend(JSON.stringify({ func: 'connect' }));
         s.on('message', function (msg) {
@@ -7,7 +7,8 @@ module.exports = function (server, log, _Utils, Constants) {
             // Method for viewers to request section information, helps browser crash recovery
             if (m.appId === Constants.APP_NAME && m.message.action === Constants.Action.READ) {
                 if (m.sectionId === undefined) { // specifically testing for undefined since '0' is a valid input.
-                    server.sections.forEach(function (section, sectionId) {
+                    const sections = Utils.Persistence.get('sections');
+                    sections.forEach(function (section, sectionId) {
                         // We respond only to the sender and only if a section exists.
                         if (section && s.readyState === Constants.WEBSOCKET_READY) {
                             // Sections are created on the browser and then the application is deployed after a

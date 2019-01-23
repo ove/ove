@@ -42,6 +42,9 @@ module.exports = function (baseDir, appName) {
         isNullOrEmpty: Utils.isNullOrEmpty
     };
 
+    Utils.registerRoutesForPersistence();
+    module.exports.Utils.Persistence = Utils.Persistence;
+
     /**************************************************************
                APIs Exposed by all Apps (required by OVE)
     **************************************************************/

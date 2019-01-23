@@ -10,12 +10,12 @@ module.exports = function (server, log, Utils, Constants) {
     const listSpaces = function (req, res) {
         let sectionId = req.query.oveSectionId;
         if (sectionId !== undefined) {
-            if (!server.sections[sectionId]) {
+            if (!Utils.Persistence.get('sections[' + sectionId + ']')) {
                 log.debug('Unable to produce list of spaces for section id:', sectionId);
                 Utils.sendEmptySuccess(res);
             } else {
                 log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME + ' for section id:', sectionId);
-                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.sections[sectionId].spaces));
+                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(Utils.Persistence.get('sections[' + sectionId + '][spaces]')));
             }
         } else {
             log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME);
@@ -141,7 +141,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.debug('Generated spaces configuration for new section');
 
             // Deploy an App into a section
-            let sectionId = server.sections.length;
+            let sectionId = Utils.Persistence.get('sections').length;
             if (req.body.app) {
                 const url = req.body.app.url.replace(/\/$/, '');
                 section.app = { 'url': url };
@@ -183,7 +183,7 @@ module.exports = function (server, log, Utils, Constants) {
                     section.app.opacity = opacity;
                 }
             }
-            server.sections[sectionId] = section;
+            Utils.Persistence.set('sections[' + sectionId + ']', section);
 
             // Notify OVE viewers/controllers
             server.wss.clients.forEach(function (c) {
@@ -201,7 +201,7 @@ module.exports = function (server, log, Utils, Constants) {
                 }
             });
             log.info('Successfully created new section:', sectionId);
-            log.debug('Existing sections (active/deleted):', server.sections.length);
+            log.debug('Existing sections (active/deleted):', Utils.Persistence.get('sections').length);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
         }
     };
@@ -210,7 +210,7 @@ module.exports = function (server, log, Utils, Constants) {
     // either to delete all sections belonging to a given space, or to delete a specific
     // section by its id.
     const _deleteSectionById = function (sectionId) {
-        let section = server.sections[sectionId];
+        let section = Utils.Persistence.get('sections[' + sectionId + ']');
         if (section.app) {
             log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/flush', _handleRequestError);
@@ -221,8 +221,7 @@ module.exports = function (server, log, Utils, Constants) {
                 _deleteGroupById(groupId);
             }
         });
-        delete server.sections[sectionId];
-        server.sections[sectionId] = {};
+        Utils.Persistence.set('sections[' + sectionId + ']', {});
 
         server.wss.clients.forEach(function (c) {
             if (c.readyState === Constants.WEBSOCKET_READY) {
@@ -235,6 +234,7 @@ module.exports = function (server, log, Utils, Constants) {
     const deleteSections = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
+        let sections = Utils.Persistence.get('sections');
         if (groupId) {
             let deletedSections = [];
             if (!Utils.isNullOrEmpty(server.groups[groupId])) {
@@ -253,22 +253,23 @@ module.exports = function (server, log, Utils, Constants) {
             };
             log.info('Deleting sections of space:', space);
             let deletedSections = [];
-            let i = server.sections.findIndex(findSectionsBySpace);
+            let i = sections.findIndex(findSectionsBySpace);
             while (i !== -1) {
                 _deleteSectionById(i);
                 deletedSections.push(parseInt(i, 10));
-                i = server.sections.findIndex(findSectionsBySpace);
+                i = Utils.Persistence.get('sections').findIndex(findSectionsBySpace);
             }
             log.info('Successfully deleted sections:', deletedSections);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
         } else {
-            while (server.sections.length !== 0) {
-                let section = server.sections.pop();
+            while (sections.length !== 0) {
+                let section = sections.pop();
                 if (section.app) {
                     log.debug('Flushing application at URL:', section.app.url);
                     request.post(section.app.url + '/flush', _handleRequestError);
                 }
             }
+            Utils.Persistence.set('sections', []);
             while (server.groups.length !== 0) {
                 server.groups.pop();
             }
@@ -280,7 +281,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.info('Successfully deleted all sections');
             Utils.sendEmptySuccess(res);
         }
-        log.debug('Existing sections (active/deleted):', server.sections.length);
+        log.debug('Existing sections (active/deleted):', Utils.Persistence.get('sections').length);
         log.debug('Existing groups (active/deleted):', server.groups.length);
     };
 
@@ -289,6 +290,7 @@ module.exports = function (server, log, Utils, Constants) {
         const space = req.query.space;
         const groupId = req.query.groupId;
         const geometry = req.query.geometry;
+        const sections = Utils.Persistence.get('sections');
         let sectionsToFetch = [];
         if (groupId) {
             if (!Utils.isNullOrEmpty(server.groups[groupId])) {
@@ -305,13 +307,13 @@ module.exports = function (server, log, Utils, Constants) {
             let findSectionsBySpace = function (e, x) {
                 return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
             };
-            i = server.sections.findIndex(findSectionsBySpace);
+            i = sections.findIndex(findSectionsBySpace);
             while (i !== -1) {
                 sectionsToFetch.push(i);
-                i = server.sections.findIndex(findSectionsBySpace);
+                i = sections.findIndex(findSectionsBySpace);
             }
         } else {
-            server.sections.forEach(function (e, i) {
+            sections.forEach(function (e, i) {
                 if (!Utils.isNullOrEmpty(e)) {
                     sectionsToFetch.push(i);
                 }
@@ -325,7 +327,7 @@ module.exports = function (server, log, Utils, Constants) {
             } else {
                 log.info('Filtering list of sections using geometry:', r);
                 sectionsToFetch = sectionsToFetch.filter(function (i) {
-                    const e = server.sections[i];
+                    const e = sections[i];
                     // Top-Left and Bottom-Right of section should be within the given range.
                     return (e.x >= r.x && e.y >= r.y && (e.x + e.w) <= (r.x + r.w) && (e.y + e.h) <= (r.y + r.h));
                 });
@@ -333,15 +335,9 @@ module.exports = function (server, log, Utils, Constants) {
         }
         let result = [];
         sectionsToFetch.forEach(function (i) {
-            let section = {
-                id: i,
-                x: server.sections[i].x,
-                y: server.sections[i].y,
-                w: server.sections[i].w,
-                h: server.sections[i].h,
-                space: Object.keys(server.sections[i].spaces)[0]
-            };
-            const app = server.sections[i].app;
+            let s = sections[i];
+            let section = { id: i, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0] };
+            const app = s.app;
             if (app) {
                 section.app = { url: app.url, state: app.state, opacity: app.opacity };
             }
@@ -358,46 +354,47 @@ module.exports = function (server, log, Utils, Constants) {
         let commands = [];
         let oldURL = null;
         let oldOpacity = null;
-        if (server.sections[sectionId].app) {
-            oldURL = server.sections[sectionId].app.url;
-            oldOpacity = server.sections[sectionId].app.opacity;
+        let section = Utils.Persistence.get('sections[' + sectionId + ']');
+        if (section.app) {
+            oldURL = section.app.url;
+            oldOpacity = section.app.opacity;
             log.debug('Deleting existing application configuration');
-            delete server.sections[sectionId].app;
+            delete section.app;
             commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
         }
 
         let needsUpdate = false;
-        if (space && !Object.keys(server.sections[sectionId].spaces).includes(space)) {
+        if (space && !Object.keys(section.spaces).includes(space)) {
             log.debug('Changing space name to:', space);
             needsUpdate = true;
         }
-        if (geometry.w !== undefined && geometry.w !== server.sections[sectionId].w) {
+        if (geometry.w !== undefined && geometry.w !== section.w) {
             log.debug('Changing space width to:', geometry.w);
-            server.sections[sectionId].w = geometry.w;
+            section.w = geometry.w;
             needsUpdate = true;
         }
-        if (geometry.h !== undefined && geometry.h !== server.sections[sectionId].h) {
+        if (geometry.h !== undefined && geometry.h !== section.h) {
             log.debug('Changing space height to:', geometry.h);
-            server.sections[sectionId].h = geometry.h;
+            section.h = geometry.h;
             needsUpdate = true;
         }
 
-        const spaceName = space || Object.keys(server.sections[sectionId].spaces)[0];
+        const spaceName = space || Object.keys(section.spaces)[0];
         if (geometry.x !== undefined && geometry.y !== undefined) {
             const layout = _calculateSectionLayout(spaceName, {
-                x: geometry.x, y: geometry.y, w: server.sections[sectionId].w, h: server.sections[sectionId].h
+                x: geometry.x, y: geometry.y, w: section.w, h: section.h
             });
-            if (!needsUpdate && !Utils.JSON.equals(server.sections[sectionId].spaces[spaceName], layout)) {
-                server.sections[sectionId].x = geometry.x;
-                server.sections[sectionId].y = geometry.y;
+            if (!needsUpdate && !Utils.JSON.equals(section.spaces[spaceName], layout)) {
+                section.x = geometry.x;
+                section.y = geometry.y;
                 needsUpdate = true;
             }
             if (needsUpdate) {
                 log.debug('Updating spaces configuration of section');
-                delete server.sections[sectionId].spaces;
-                server.sections[sectionId].spaces = {};
-                server.sections[sectionId].spaces[spaceName] = layout;
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), spaces: server.sections[sectionId].spaces } }));
+                delete section.spaces;
+                section.spaces = {};
+                section.spaces[spaceName] = layout;
+                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), spaces: section.spaces } }));
             }
         }
 
@@ -408,7 +405,7 @@ module.exports = function (server, log, Utils, Constants) {
                 log.debug('Flushing application at URL:', oldURL);
                 request.post(oldURL + '/flush', _handleRequestError);
             }
-            server.sections[sectionId].app = { 'url': url };
+            section.app = { 'url': url };
             log.debug('Got URL for app:', url);
             if (app.states) {
                 /* istanbul ignore else */
@@ -421,7 +418,7 @@ module.exports = function (server, log, Utils, Constants) {
                 if (app.states.cache) {
                     Object.keys(app.states.cache).forEach(function (name) {
                         log.debug('Caching new named state for future use:', name);
-                        request.post(server.sections[sectionId].app.url + '/state/' + name, {
+                        request.post(section.app.url + '/state/' + name, {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.cache[name]
                         }, _handleRequestError);
@@ -431,11 +428,11 @@ module.exports = function (server, log, Utils, Constants) {
                 if (app.states.load) {
                     // Either a named state or an in-line state configuration can be loaded.
                     if (typeof app.states.load === 'string' || app.states.load instanceof String) {
-                        server.sections[sectionId].app.state = app.states.load;
-                        log.debug('Loading existing named state:', server.sections[sectionId].app.state);
+                        section.app.state = app.states.load;
+                        log.debug('Loading existing named state:', section.app.state);
                     } else {
                         log.debug('Loading state configuration');
-                        request.post(server.sections[sectionId].app.url + '/' + sectionId + '/state', {
+                        request.post(section.app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.load
                         }, _handleRequestError);
@@ -446,14 +443,14 @@ module.exports = function (server, log, Utils, Constants) {
             const opacity = app.opacity;
             if (opacity) {
                 log.debug('Setting opacity for app:', opacity);
-                server.sections[sectionId].app.opacity = opacity;
+                section.app.opacity = opacity;
                 if (oldOpacity !== opacity && !needsUpdate) {
                     needsUpdate = true;
                 }
             }
             // If nothing changed, there is no point in making an update.
             if (needsUpdate) {
-                let $app = { 'url': server.sections[sectionId].app.url };
+                let $app = { 'url': section.app.url };
                 if (opacity) {
                     $app.opacity = opacity;
                 }
@@ -476,6 +473,7 @@ module.exports = function (server, log, Utils, Constants) {
                 });
             }
         });
+        Utils.Persistence.set('sections[' + sectionId + ']', section);
     };
 
     const updateSections = function (req, res) {
@@ -492,6 +490,7 @@ module.exports = function (server, log, Utils, Constants) {
             let sectionsToUpdate = [];
             const space = req.query.space;
             const groupId = req.query.groupId;
+            const sections = Utils.Persistence.get('sections');
             if (groupId) {
                 if (!Utils.isNullOrEmpty(server.groups[groupId])) {
                     log.info('Updating sections of group:', groupId);
@@ -507,13 +506,13 @@ module.exports = function (server, log, Utils, Constants) {
                 let findSectionsBySpace = function (e, x) {
                     return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
                 };
-                i = server.sections.findIndex(findSectionsBySpace);
+                i = sections.findIndex(findSectionsBySpace);
                 while (i !== -1) {
                     sectionsToUpdate.push(i);
-                    i = server.sections.findIndex(findSectionsBySpace);
+                    i = sections.findIndex(findSectionsBySpace);
                 }
             } else {
-                server.sections.forEach(function (e, i) {
+                sections.forEach(function (e, i) {
                     if (!Utils.isNullOrEmpty(e)) {
                         sectionsToUpdate.push(i);
                     }
@@ -523,8 +522,9 @@ module.exports = function (server, log, Utils, Constants) {
             if (!Utils.isNullOrEmpty(sectionsToUpdate) && (req.body.space || req.body.scale || req.body.translate)) {
                 let rangeError = false;
                 let geometries = {};
+                const sections = Utils.Persistence.get('sections');
                 sectionsToUpdate.forEach(function (e) {
-                    const section = server.sections[e];
+                    const section = sections[e];
                     geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
                     const space = req.body.space || Object.keys(section.spaces)[0];
                     const bounds = _getSpaceGeometries()[space];
@@ -546,10 +546,10 @@ module.exports = function (server, log, Utils, Constants) {
                     Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
                 } else {
                     sectionsToUpdate.forEach(function (e) {
-                        const section = server.sections[e];
+                        const section = sections[e];
                         _updateSectionById(e, req.body.space, geometries[e], section.app);
                     });
-                    if (sectionsToUpdate.length === server.sections.length) {
+                    if (sectionsToUpdate.length === Utils.Persistence.get('sections').length) {
                         log.info('Successfully updated all sections');
                     } else {
                         log.info('Successfully updated sections:', sectionsToUpdate);
@@ -565,19 +565,15 @@ module.exports = function (server, log, Utils, Constants) {
     // Fetches details of an individual section
     const readSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (Utils.isNullOrEmpty(server.sections[sectionId])) {
+        let s = Utils.Persistence.get('sections[' + sectionId + ']');
+        if (Utils.isNullOrEmpty(s)) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
         } else {
             let section = {
-                id: parseInt(sectionId, 10),
-                x: server.sections[sectionId].x,
-                y: server.sections[sectionId].y,
-                w: server.sections[sectionId].w,
-                h: server.sections[sectionId].h,
-                space: Object.keys(server.sections[sectionId].spaces)[0]
+                id: parseInt(sectionId, 10), x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0]
             };
-            const app = server.sections[sectionId].app;
+            const app = s.app;
             if (app) {
                 section.app = { url: app.url, state: app.state, opacity: app.opacity };
             }
@@ -589,7 +585,7 @@ module.exports = function (server, log, Utils, Constants) {
     // Updates an app associated with a section
     const updateSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (Utils.isNullOrEmpty(server.sections[sectionId])) {
+        if (Utils.isNullOrEmpty(Utils.Persistence.get('sections[' + sectionId + ']'))) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else if (req.body.app && !req.body.app.url) {
@@ -618,7 +614,7 @@ module.exports = function (server, log, Utils, Constants) {
     // Deletes an individual section
     const deleteSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (Utils.isNullOrEmpty(server.sections[sectionId])) {
+        if (Utils.isNullOrEmpty(Utils.Persistence.get('sections[' + sectionId + ']'))) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
@@ -632,8 +628,9 @@ module.exports = function (server, log, Utils, Constants) {
     const _createOrUpdateGroup = function (groupId, operation, req, res) {
         const validateSections = function (group) {
             let valid = true;
+            const sections = Utils.Persistence.get('sections');
             group.forEach(function (e) {
-                if (Utils.isNullOrEmpty(server.sections[e])) {
+                if (Utils.isNullOrEmpty(sections[e])) {
                     valid = false;
                 }
             });
