@@ -73,7 +73,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                 case 'boolean':
                 case 'undefined':
                     result[item.key] = item.timestamp;
-                    return;
+                    break;
                 case 'array':
                 case 'object':
                     item.value.forEach(function (e) {
@@ -280,22 +280,21 @@ function Persistence (appName, log, Utils, Constants, __private) {
                 log.error('Unable to get of keys from persistence provider:',
                     __private.provider, ', got:', err);
             } else {
-                let localList;
-                getLocalItems(__private.local, localList);
+                const localList = getLocalItems(__private.local);
                 Object.keys(localList).forEach(function (key) {
                     if (!remoteList[key]) {
                         deletePersistable(key);
                     }
                 });
                 Object.keys(remoteList).forEach(function (key) {
-                    if (!localList[key] || remoteList[key].timestamp > localList[key].timestamp) {
+                    if (!localList[key] || remoteList[key] > localList[key]) {
                         const url = __private.provider + '/' + key + '?appName=' + appName;
                         request(url, { json: true }, function (err, _res, result) {
                             if (err) {
                                 log.error('Unable to read key:', key, 'from persistence provider:',
                                     __private.provider, ', got:', err);
                             } else {
-                                createOrUpdatePersistable(key, result.value);
+                                createOrUpdatePersistable(key, new Persistable(key, result.value)); 
                             }
                         });
                     }
