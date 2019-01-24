@@ -88,17 +88,26 @@ function Utils (appName, app, dirs) {
                               Persistence
     **************************************************************/
     this.registerRoutesForPersistence = function () {
+        log.debug('Registering routes for persistence');
         let __self = this;
-        let __private = { provider: null, local: {} };
+        let __private = { provider: null, local: {}, interval: null };
 
         const setProvider = function (req, res) {
             if (!req.body.url) {
-                log.error('Invalid Request', 'request:', JSON.stringify(req.body));
+                log.error('Invalid request,', 'got:', JSON.stringify(req.body));
                 __self.sendMessage(res, HttpStatus.BAD_REQUEST,
                     JSON.stringify({ error: 'invalid request' }));
             } else {
                 __private.provider = req.body.url;
-                setInterval(2000, __self.Persistence.sync);
+                if (__private.interval) {
+                    clearInterval(__private.interval);
+                    __private.interval = null;
+                }
+                const interval = process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
+                if (interval > 0) {
+                    __private.interval = setInterval(interval, __self.Persistence.sync);
+                }
+                __self.sendEmptySuccess(res);
             }
         };
 
@@ -111,7 +120,7 @@ function Utils (appName, app, dirs) {
 
         app.post('/persistence', setProvider);
         app.delete('/persistence', removeProvider);
-        __self.Persistence = Persistence(appName, log, __private);
+        __self.Persistence = Persistence(appName, log, __self, Constants, __private);
     };
 
     /**************************************************************

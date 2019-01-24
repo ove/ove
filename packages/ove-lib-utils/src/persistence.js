@@ -1,6 +1,9 @@
-const request = require('then-request');
+const request = require('request');
 
-function Persistence (appName, log, __private) {
+function Persistence (appName, log, Utils, Constants, __private) {
+    // A persistable object needs a key and value, but will also have a type and a timestamp which
+    // is automatically computed. The object also provides a method to extract the original value
+    // in its original type.
     function Persistable (key, value) {
         const __self = this;
         __self.key = key;
@@ -16,7 +19,7 @@ function Persistence (appName, log, __private) {
         } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
             __self.value = value;
             __self.type = typeof value;
-        } else if (value instanceof Object) {
+        } else if (typeof value === 'object') {
             __self.value = [];
             Object.keys(value).forEach(function (e) {
                 __self.value.push(new Persistable(key + '[' + e + ']', value[e]));
@@ -48,7 +51,7 @@ function Persistence (appName, log, __private) {
                     });
                     return x;
                 default:
-                    log.error('Unknown type:', item.type);
+                    log.warn('Unknown type:', item.type);
             }
         };
 
@@ -76,53 +79,75 @@ function Persistence (appName, log, __private) {
                     item.value.forEach(function (e) {
                         result = Object.assign(result, getLocalItems(e));
                     });
-                    return;
+                    break;
                 default:
-                    log.error('Unknown type:', item.type);
+                    log.warn('Unknown type:', item.type);
             }
         }
         return result;
     };
 
+    const _handleRequestError = function (e) {
+        /* istanbul ignore if */
+        // It is impossible to test this scenario as there would be issues in the test runner if URLs
+        // were invalid. This is easily testable using an integration test-case, since PM2/node will
+        // eventually report the error after several seconds.
+        if (e) {
+            log.warn('Connection error when making request to persistence provider:', e);
+        }
+    };
+
     const updateRemoteItem = function (item) {
-        if (item instanceof Array) {
-            item.forEach(function (e) {
-                updateRemoteItem(e.value);
+        if (item.value instanceof Array) {
+            item.value.forEach(function (e) {
+                updateRemoteItem(e);
             });
-        } else if (item !== undefined) {
+        } else if (item !== undefined && item.type !== undefined) {
+            const url = __private.provider + '/' + item.key + '?appName=' + appName;
             if (item.value === undefined) {
-                request('DELETE', __private.provider + '/' + item.key + '?appName=' + appName)
-                    .then(function (res) {
-                        if (res.statusCode >= 300) {
-                            log.error('Unable to delete key:', item.key, 'from persistence provider:',
-                                __private.provider, ', got: Server responded with status code ' + res.statusCode);
-                        }
-                    });
+                log.trace('Deleting key at:', url);
+                request.delete(url, _handleRequestError);
             } else {
-                request('POST', __private.provider + '/' + item.key + '?appName=' + appName, { json: {
-                    value: item.value, type: item.type, timestamp: item.timestamp
-                } }).then(function (res) {
-                    if (res.statusCode >= 300) {
-                        log.error('Unable to add key:', item.key, 'to persistence provider:',
-                            __private.provider, ', got: Server responded with status code ' + res.statusCode);
-                    }
-                });
+                log.trace('Updating key at:', url);
+                request.post(url, {
+                    headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                    json: { value: item.value, type: item.type, timestamp: item.timestamp }
+                }, _handleRequestError);
             }
         }
     };
 
     const deleteRemoteItem = function (item) {
-        if (item instanceof Array) {
-            item.forEach(function (e) {
-                deleteRemoteItem(e.value);
+        if (item.value instanceof Array) {
+            item.value.forEach(function (e) {
+                deleteRemoteItem(e);
             });
         } else {
             updateRemoteItem(new Persistable(item.key, undefined));
         }
     };
 
+    const sortValues = function (item) {
+        item.value.sort(function (a, b) {
+            if (a.key < b.key) {
+                return -1;
+            }
+            /* istanbul ignore next */
+            // Below line exists only for the sake of completeness. Generally the array will
+            // always be sorted, and therefore it is impossible to get to this state in a test.
+            return a.key > b.key ? 1 : 0;
+        });
+        return item;
+    };
+
     const compareAndSet = function (current, future) {
         if (current === undefined) {
+            updateRemoteItem(future);
+            return future;
+        } else if (current.type !== future.type || current.key !== future.key) {
+            // If the key or type are different, the object is not comparable and therefore
+            // must be deleted and recreated.
+            deleteRemoteItem(current);
             updateRemoteItem(future);
             return future;
         } else {
@@ -131,21 +156,36 @@ function Persistence (appName, log, __private) {
                 case 'number':
                 case 'boolean':
                 case 'undefined':
-                    if (current.value !== future.value) {
+                    if (!Utils.JSON.equals(current.value, future.value)) {
                         updateRemoteItem(future);
                         return future;
                     }
                     return current;
                 case 'array':
                 case 'object':
-                    while (current.value.length > future.value.length) {
-                        let x = current.value.pop();
-                        x.value = undefined;
-                        updateRemoteItem(x);
+                    // It is important to sort the arrays to avoid objects being replaced during parsing
+                    // phase;
+                    current.value = sortValues(current).value;
+                    future.value = sortValues(future).value;
+                    // We use two counters since the lists would never match in size.
+                    let i = 0;
+                    let j = 0;
+                    while (i < current.value.length) {
+                        if (!future.value[j]) {
+                            // No more items in the future list, therefore delete everything we got.
+                            current.value.splice(i, current.value.length - i).forEach(function (e) {
+                                deleteRemoteItem(e);
+                            });
+                        } else if (current.value[i].key !== future.value[j].key) {
+                            // The item has been deleted, and a new item has taken its place.
+                            deleteRemoteItem(current.value.splice(i, 1)[0]);
+                        } else {
+                            current.value[i] = compareAndSet(current.value[i], future.value[j]);
+                            i++;
+                            j++;
+                        }
                     }
-                    for (let i = 0; i < current.value.length; i++) {
-                        current.value[i] = compareAndSet(current.value[i], future.value[i]);
-                    }
+                    // All items remaining on the list of future values are not existing on the current list.
                     if (current.value.length < future.value.length) {
                         for (let i = current.value.length; i < future.value.length; i++) {
                             current.value.push(compareAndSet(current.value[i], future.value[i]));
@@ -153,7 +193,7 @@ function Persistence (appName, log, __private) {
                     }
                     return current;
                 default:
-                    log.error('Unknown type:', current.type);
+                    log.warn('Unknown type:', current.type);
             }
         }
     };
@@ -192,7 +232,7 @@ function Persistence (appName, log, __private) {
             firstPart = key.substring(0, key.indexOf('['));
             nextPart = key.substring(key.indexOf('[') + 1, key.indexOf(']')) + key.substring(key.indexOf(']') + 1);
         }
-        let result = null;
+        let result;
         if (item === __private.local) {
             result = item[firstPart];
         } else {
@@ -204,7 +244,9 @@ function Persistence (appName, log, __private) {
                 });
             }
         }
-        if (!result || !nextPart) {
+        if (!result && nextPart) {
+            return result;
+        } if (!result || !nextPart) {
             return returnParent ? item : result;
         } else {
             return readPersistable(result, nextPart, returnParent);
@@ -216,67 +258,50 @@ function Persistence (appName, log, __private) {
         if (readPersistable(__private.local, key)) {
             let parent = readPersistable(__private.local, key, true);
             if (parent === __private.local) {
-                result = delete __private.local[key];
+                result = __private.local[key];
+                delete __private.local[key];
             } else {
                 parent.value.forEach(function (e, i) {
                     if (e.key === key) {
-                        result = parent.splice(i, 1);
+                        result = parent.value.splice(i, 1)[0];
                     }
                 });
             }
             if (deleteRemoteCopy) {
-                deleteRemoteItem(new Persistable(key, undefined));
+                deleteRemoteItem(result);
             }
         }
         return result;
     };
 
     this.sync = function () {
-        request('GET', __private.provider + '/?appName=' + appName)
-            .then(function (res) {
-                try {
-                    const remoteList = JSON.parse(res.getBody('utf-8'));
-                    let localList;
-                    getLocalItems(__private.local, localList);
-                    Object.keys(localList).forEach(function (key) {
-                        if (!remoteList[key]) {
-                            deletePersistable(key);
-                        }
-                    });
-                    Object.keys(remoteList).forEach(function (key) {
-                        if (!localList[key] || remoteList[key].timestamp > localList[key].timestamp) {
-                            request('GET', __private.provider + '/' + key + '?appName=' + appName)
-                                .then(function (res) {
-                                    try {
-                                        const result = JSON.parse(res.getBody('utf-8'));
-                                        let value;
-                                        if (result.type === 'string') {
-                                            value = new Persistable(key, result.value);
-                                        } else if (result.type === 'number') {
-                                            value = new Persistable(key, +(result.value));
-                                        } else if (result.type === 'boolean') {
-                                            value = new Persistable(key,
-                                                (result.value === 'true' || result.value));
-                                        } else {
-                                            log.error('Unable to handle type:', result.type);
-                                            return;
-                                        }
-                                        value.type = result.type;
-                                        createOrUpdatePersistable(key, value);
-                                    } catch (e) {
-                                        log.error('Unable to read key:', key, 'from persistence provider:',
-                                            __private.provider, ', got:', e);
-                                        return undefined;
-                                    }
-                                });
-                        }
-                    });
-                } catch (e) {
-                    log.error('Unable to get of keys from persistence provider:',
-                        __private.provider, ', got:', e);
-                    return undefined;
-                }
-            });
+        request(__private.provider + '/?appName=' + appName, { json: true }, function (err, _res, remoteList) {
+            if (err) {
+                log.error('Unable to get of keys from persistence provider:',
+                    __private.provider, ', got:', err);
+            } else {
+                let localList;
+                getLocalItems(__private.local, localList);
+                Object.keys(localList).forEach(function (key) {
+                    if (!remoteList[key]) {
+                        deletePersistable(key);
+                    }
+                });
+                Object.keys(remoteList).forEach(function (key) {
+                    if (!localList[key] || remoteList[key].timestamp > localList[key].timestamp) {
+                        const url = __private.provider + '/' + key + '?appName=' + appName;
+                        request(url, { json: true }, function (err, _res, result) {
+                            if (err) {
+                                log.error('Unable to read key:', key, 'from persistence provider:',
+                                    __private.provider, ', got:', err);
+                            } else {
+                                createOrUpdatePersistable(key, result.value);
+                            }
+                        });
+                    }
+                });
+            }
+        });
     };
 
     this.get = function (key) {
@@ -289,10 +314,10 @@ function Persistence (appName, log, __private) {
     };
 
     this.del = function (key) {
-        return deletePersistable(key, true);
+        return deletePersistable(key, __private.provider);
     };
 }
 
-module.exports = function (appName, log, __private) {
-    return new Persistence(appName, log, __private);
+module.exports = function (appName, log, Utils, Constants, __private) {
+    return new Persistence(appName, log, Utils, Constants, __private);
 };
