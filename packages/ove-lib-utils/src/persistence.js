@@ -294,7 +294,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                                 log.error('Unable to read key:', key, 'from persistence provider:',
                                     __private.provider, ', got:', err);
                             } else {
-                                createOrUpdatePersistable(key, new Persistable(key, result.value)); 
+                                createOrUpdatePersistable(key, new Persistable(key, result.value));
                             }
                         });
                     }
