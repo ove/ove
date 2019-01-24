@@ -43,12 +43,12 @@ module.exports = function (baseDir, appName) {
     };
 
     Utils.registerRoutesForPersistence();
-    module.exports.Utils.Persistence = Utils.Persistence;
+    const appState = module.exports.appState = Utils.Persistence;
 
     /**************************************************************
                APIs Exposed by all Apps (required by OVE)
     **************************************************************/
-    Utils.Persistence.set('state', []);
+    appState.set('state', []);
 
     const createStateByName = function (req, res) {
         log.info('Creating named state:', req.params.name);
@@ -83,7 +83,7 @@ module.exports = function (baseDir, appName) {
     };
 
     const readState = function (_req, res) {
-        const state = Utils.Persistence.get('state');
+        const state = appState.get('state');
         if (state.length > 0) {
             log.debug('Reading state configuration');
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state));
@@ -94,7 +94,7 @@ module.exports = function (baseDir, appName) {
     };
 
     const readStateOfSection = function (req, res) {
-        const state = Utils.Persistence.get('state[' + req.params.id + ']');
+        const state = appState.get('state[' + req.params.id + ']');
         if (state) {
             log.debug('Reading state configuration for section:', req.params.id);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state));
@@ -106,7 +106,7 @@ module.exports = function (baseDir, appName) {
 
     const updateStateOfSection = function (req, res) {
         log.debug('Updating state of section:', req.params.id);
-        Utils.Persistence.set('state[' + req.params.id + ']', req.body);
+        appState.set('state[' + req.params.id + ']', req.body);
         Utils.sendEmptySuccess(res);
     };
 
@@ -142,12 +142,12 @@ module.exports = function (baseDir, appName) {
     };
 
     const transformStateOfSection = function (req, res) {
-        const state = Utils.Persistence.get('state[' + req.params.id + ']');
+        const state = appState.get('state[' + req.params.id + ']');
         if (Utils.isNullOrEmpty(state)) {
             log.error('No state configurations found for section:', req.params.id);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
-            Utils.Persistence.set('state[' + req.params.id + ']', _transformState(state, req.body, res));
+            appState.set('state[' + req.params.id + ']', _transformState(state, req.body, res));
         }
     };
 
@@ -180,7 +180,7 @@ module.exports = function (baseDir, appName) {
     };
 
     const diffForStateOfSection = function (req, res) {
-        const state = Utils.Persistence.get('state[' + req.params.id + ']');
+        const state = appState.get('state[' + req.params.id + ']');
         if (Utils.isNullOrEmpty(state)) {
             log.debug('No state configurations found for section:', req.params.id);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
@@ -200,7 +200,7 @@ module.exports = function (baseDir, appName) {
 
     const flush = function (_req, res) {
         log.debug('Flushing application');
-        Utils.Persistence.set('state', []);
+        appState.set('state', []);
         if (fs.existsSync(configPath)) {
             module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
         } else {

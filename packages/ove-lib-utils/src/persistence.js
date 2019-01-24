@@ -103,7 +103,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                 updateRemoteItem(e);
             });
         } else if (item !== undefined && item.type !== undefined) {
-            const url = __private.provider + '/' + item.key + '?appName=' + appName;
+            const url = __private.provider + '/' + appName + '/' + convertKey(item.key);
             if (item.value === undefined) {
                 log.trace('Deleting key at:', url);
                 request.delete(url, _handleRequestError);
@@ -138,6 +138,23 @@ function Persistence (appName, log, Utils, Constants, __private) {
             return a.key > b.key ? 1 : 0;
         });
         return item;
+    };
+
+    const convertKey = function (key) {
+        let result = key.split('');
+        if (key.indexOf('/') > -1) {
+            while (result.indexOf('/') > -1) {
+                result.splice(result.indexOf('/') + 1, 0, '[');
+                result[result.indexOf('/')] = ']';
+            }
+            result.push(result.splice(result.indexOf(']'), 1));
+        } else if (key.indexOf('[') > -1) {
+            while (result.indexOf('[') > -1) {
+                result[result.indexOf('[')] = '/';
+                result.splice(result.indexOf(']'), 1);
+            }
+        }
+        return result.join('');
     };
 
     const compareAndSet = function (current, future) {
@@ -275,26 +292,27 @@ function Persistence (appName, log, Utils, Constants, __private) {
     };
 
     this.sync = function () {
-        request(__private.provider + '/?appName=' + appName, { json: true }, function (err, _res, remoteList) {
+        request(__private.provider + '/' + appName, { json: true }, function (err, _res, remoteList) {
             if (err) {
                 log.error('Unable to get of keys from persistence provider:',
                     __private.provider, ', got:', err);
             } else {
                 const localList = getLocalItems(__private.local);
                 Object.keys(localList).forEach(function (key) {
-                    if (!remoteList[key]) {
+                    if (!remoteList[convertKey(key)]) {
                         deletePersistable(key);
                     }
                 });
                 Object.keys(remoteList).forEach(function (key) {
-                    if (!localList[key] || remoteList[key] > localList[key]) {
-                        const url = __private.provider + '/' + key + '?appName=' + appName;
+                    const convertedKey = convertKey(key);
+                    if (!localList[convertedKey] || remoteList[key] > localList[convertedKey]) {
+                        const url = __private.provider + '/' + appName + '/' + key;
                         request(url, { json: true }, function (err, _res, result) {
                             if (err) {
-                                log.error('Unable to read key:', key, 'from persistence provider:',
+                                log.error('Unable to read key:', convertedKey, 'from persistence provider:',
                                     __private.provider, ', got:', err);
                             } else {
-                                createOrUpdatePersistable(key, new Persistable(key, result.value));
+                                createOrUpdatePersistable(convertedKey, new Persistable(convertedKey, result.value));
                             }
                         });
                     }

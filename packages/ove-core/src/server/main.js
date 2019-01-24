@@ -79,8 +79,9 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
 
     // Persistence;
     Utils.registerRoutesForPersistence();
-    Utils.Persistence.set('sections', []);
-    Utils.Persistence.set('groups', []);
+    this.state = Utils.Persistence;
+    this.state.set('sections', []);
+    this.state.set('groups', []);
 
     // APIs
     require(path.join(__dirname, 'api'))(this, log, Utils, Constants);

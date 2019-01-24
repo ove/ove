@@ -9,9 +9,11 @@ const Utils = global.Utils;
 // Core functionality tests.
 describe('The OVE Utils library - Persistence', () => {
     const TIMEOUT = 500;
+    let state;
 
     beforeAll(() => {
         Utils.registerRoutesForPersistence();
+        state = Utils.Persistence;
     });
 
     jest.useFakeTimers();
@@ -24,100 +26,100 @@ describe('The OVE Utils library - Persistence', () => {
 
     it('should fail when providing invalid keys', () => {
         const spy = jest.spyOn(global.console, 'error');
-        expect(Utils.Persistence.del('fooNumber')).toBeUndefined();
-        Utils.Persistence.set('fooNumber[bar]', 10);
-        expect(Utils.Persistence.get('fooNumber[bar]')).not.toEqual(10);
-        Utils.Persistence.set('fooNumber', 10);
-        expect(Utils.Persistence.get('fooNumber')).toEqual(10);
-        expect(Utils.Persistence.del('fooNumber[10]')).toBeUndefined();
-        expect(Utils.Persistence.del('fooNumber')).not.toBeUndefined();
+        expect(state.del('fooNumber')).toBeUndefined();
+        state.set('fooNumber[bar]', 10);
+        expect(state.get('fooNumber[bar]')).not.toEqual(10);
+        state.set('fooNumber', 10);
+        expect(state.get('fooNumber')).toEqual(10);
+        expect(state.del('fooNumber[10]')).toBeUndefined();
+        expect(state.del('fooNumber')).not.toBeUndefined();
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
     });
 
     it('should support getting, setting and deleting objects of various types', () => {
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
-        Utils.Persistence.set('fooNumber', 10);
-        expect(Utils.Persistence.get('fooNumber')).toEqual(10);
-        Utils.Persistence.del('fooNumber');
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        expect(state.get('fooNumber')).toBeUndefined();
+        state.set('fooNumber', 10);
+        expect(state.get('fooNumber')).toEqual(10);
+        state.del('fooNumber');
+        expect(state.get('fooNumber')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooString')).toBeUndefined();
-        Utils.Persistence.set('fooString', 'myString');
-        expect(Utils.Persistence.get('fooString')).toEqual('myString');
-        Utils.Persistence.del('fooString');
-        expect(Utils.Persistence.get('fooString')).toBeUndefined();
+        expect(state.get('fooString')).toBeUndefined();
+        state.set('fooString', 'myString');
+        expect(state.get('fooString')).toEqual('myString');
+        state.del('fooString');
+        expect(state.get('fooString')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooString2')).toBeUndefined();
-        Utils.Persistence.set('fooString2', '');
-        expect(Utils.Persistence.get('fooString2')).toEqual('');
-        Utils.Persistence.del('fooString2');
-        expect(Utils.Persistence.get('fooString2')).toBeUndefined();
+        expect(state.get('fooString2')).toBeUndefined();
+        state.set('fooString2', '');
+        expect(state.get('fooString2')).toEqual('');
+        state.del('fooString2');
+        expect(state.get('fooString2')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooBoolean')).toBeUndefined();
-        Utils.Persistence.set('fooBoolean', false);
-        expect(Utils.Persistence.get('fooBoolean')).toEqual(false);
-        Utils.Persistence.del('fooBoolean');
-        expect(Utils.Persistence.get('fooBoolean')).toBeUndefined();
+        expect(state.get('fooBoolean')).toBeUndefined();
+        state.set('fooBoolean', false);
+        expect(state.get('fooBoolean')).toEqual(false);
+        state.del('fooBoolean');
+        expect(state.get('fooBoolean')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooBoolean2')).toBeUndefined();
-        Utils.Persistence.set('fooBoolean2', true);
-        expect(Utils.Persistence.get('fooBoolean2')).toEqual(true);
-        Utils.Persistence.del('fooBoolean2');
-        expect(Utils.Persistence.get('fooBoolean2')).toBeUndefined();
+        expect(state.get('fooBoolean2')).toBeUndefined();
+        state.set('fooBoolean2', true);
+        expect(state.get('fooBoolean2')).toEqual(true);
+        state.del('fooBoolean2');
+        expect(state.get('fooBoolean2')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooArray')).toBeUndefined();
-        Utils.Persistence.set('fooArray', ['tick', 'tock', 10]);
-        expect(Utils.Persistence.get('fooArray')).toEqual(['tick', 'tock', 10]);
-        expect(Utils.Persistence.get('fooArray[0]')).toEqual('tick');
-        Utils.Persistence.del('fooArray');
-        expect(Utils.Persistence.get('fooArray')).toBeUndefined();
+        expect(state.get('fooArray')).toBeUndefined();
+        state.set('fooArray', ['tick', 'tock', 10]);
+        expect(state.get('fooArray')).toEqual(['tick', 'tock', 10]);
+        expect(state.get('fooArray[0]')).toEqual('tick');
+        state.del('fooArray');
+        expect(state.get('fooArray')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooArray2')).toBeUndefined();
-        Utils.Persistence.set('fooArray2', []);
-        expect(Utils.Persistence.get('fooArray2')).toEqual([]);
-        Utils.Persistence.del('fooArray2');
-        expect(Utils.Persistence.get('fooArray2')).toBeUndefined();
+        expect(state.get('fooArray2')).toBeUndefined();
+        state.set('fooArray2', []);
+        expect(state.get('fooArray2')).toEqual([]);
+        state.del('fooArray2');
+        expect(state.get('fooArray2')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooObject')).toBeUndefined();
-        Utils.Persistence.set('fooObject', { foo: ['foobar'] });
-        expect(Utils.Persistence.get('fooObject')).toEqual({ foo: ['foobar'] });
-        expect(Utils.Persistence.get('fooObject[foo]')).toEqual(['foobar']);
-        expect(Utils.Persistence.get('fooObject[foo][0]')).toEqual('foobar');
-        Utils.Persistence.del('fooObject');
-        expect(Utils.Persistence.get('fooObject')).toBeUndefined();
+        expect(state.get('fooObject')).toBeUndefined();
+        state.set('fooObject', { foo: ['foobar'] });
+        expect(state.get('fooObject')).toEqual({ foo: ['foobar'] });
+        expect(state.get('fooObject[foo]')).toEqual(['foobar']);
+        expect(state.get('fooObject[foo][0]')).toEqual('foobar');
+        state.del('fooObject');
+        expect(state.get('fooObject')).toBeUndefined();
 
-        expect(Utils.Persistence.get('fooObject2')).toBeUndefined();
-        Utils.Persistence.set('fooObject', {});
-        expect(Utils.Persistence.get('fooObject')).toEqual({});
-        Utils.Persistence.del('fooObject');
-        expect(Utils.Persistence.get('fooObject')).toBeUndefined();
+        expect(state.get('fooObject2')).toBeUndefined();
+        state.set('fooObject', {});
+        expect(state.get('fooObject')).toEqual({});
+        state.del('fooObject');
+        expect(state.get('fooObject')).toBeUndefined();
     });
 
     it('should support getting, setting and deleting objects using keys', () => {
-        expect(Utils.Persistence.get('fooEntry')).toBeUndefined();
-        Utils.Persistence.set('fooEntry', { bar: 10 });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(10);
-        Utils.Persistence.del('fooEntry[bar]');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toBeUndefined();
-        expect(Utils.Persistence.get('fooEntry')).not.toBeUndefined();
-        Utils.Persistence.set('fooEntry[bar]', true);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(true);
-        Utils.Persistence.set('fooEntry[bar]', ['ten']);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(['ten']);
-        Utils.Persistence.set('fooEntry[bar]', {});
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({});
-        Utils.Persistence.set('fooEntry[bar]', { some: { deep: 'block' } });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({ some: { deep: 'block' } });
-        Utils.Persistence.set('fooEntry[bar]', { some: { deep: 'block', with: 'updates' } });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', with: 'updates' } });
-        Utils.Persistence.set('fooEntry[bar]', { some: { deep: 'block', withMore: 'updates' } });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', withMore: 'updates' } });
-        Utils.Persistence.del('fooEntry[bar][some][withMore]');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({ some: { deep: 'block' } });
-        Utils.Persistence.del('fooEntry');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toBeUndefined();
-        expect(Utils.Persistence.get('fooEntry')).toBeUndefined();
+        expect(state.get('fooEntry')).toBeUndefined();
+        state.set('fooEntry', { bar: 10 });
+        expect(state.get('fooEntry[bar]')).toEqual(10);
+        state.del('fooEntry[bar]');
+        expect(state.get('fooEntry[bar]')).toBeUndefined();
+        expect(state.get('fooEntry')).not.toBeUndefined();
+        state.set('fooEntry[bar]', true);
+        expect(state.get('fooEntry[bar]')).toEqual(true);
+        state.set('fooEntry[bar]', ['ten']);
+        expect(state.get('fooEntry[bar]')).toEqual(['ten']);
+        state.set('fooEntry[bar]', {});
+        expect(state.get('fooEntry[bar]')).toEqual({});
+        state.set('fooEntry[bar]', { some: { deep: 'block' } });
+        expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block' } });
+        state.set('fooEntry[bar]', { some: { deep: 'block', with: 'updates' } });
+        expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', with: 'updates' } });
+        state.set('fooEntry[bar]', { some: { deep: 'block', withMore: 'updates' } });
+        expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', withMore: 'updates' } });
+        state.del('fooEntry[bar][some][withMore]');
+        expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block' } });
+        state.del('fooEntry');
+        expect(state.get('fooEntry[bar]')).toBeUndefined();
+        expect(state.get('fooEntry')).toBeUndefined();
     });
 
     /* jshint ignore:start */
@@ -139,6 +141,7 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
         await request(app).post('/persistence')
             .send({ }).expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid request' }));
 
@@ -147,14 +150,14 @@ describe('The OVE Utils library - Persistence', () => {
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        let scope1 = nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        let scope2 = nock('http://localhost:8081').delete('/fooNumber?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope1 = nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope2 = nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
-        Utils.Persistence.set('fooNumber', 10);
-        expect(Utils.Persistence.get('fooNumber')).toEqual(10);
-        Utils.Persistence.del('fooNumber');
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        expect(state.get('fooNumber')).toBeUndefined();
+        state.set('fooNumber', 10);
+        expect(state.get('fooNumber')).toEqual(10);
+        state.del('fooNumber');
+        expect(state.get('fooNumber')).toBeUndefined();
 
         await request(app).delete('/persistence').send({ }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
         delete process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
@@ -169,6 +172,7 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
         await request(app).post('/persistence')
             .send({ }).expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid request' }));
 
@@ -177,87 +181,87 @@ describe('The OVE Utils library - Persistence', () => {
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        expect(state.get('fooNumber')).toBeUndefined();
         let scopes = [];
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', 10);
-        expect(Utils.Persistence.get('fooNumber')).toEqual(10);
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', 'ten');
-        expect(Utils.Persistence.get('fooNumber')).toEqual('ten');
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.del('fooNumber');
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj1: 10 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj1: 10 });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj1: 20 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj1: 20 });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj1]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 20 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 20 });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', 10);
+        expect(state.get('fooNumber')).toEqual(10);
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', 'ten');
+        expect(state.get('fooNumber')).toEqual('ten');
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.del('fooNumber');
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj1: 10 });
+        expect(state.get('fooNumber')).toEqual({ obj1: 10 });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj1: 20 });
+        expect(state.get('fooNumber')).toEqual({ obj1: 20 });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 20 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 20 });
         // Ordering of the items in value have changed, and therefore, we must delete objects that are not matching
         // according to their indexes. This is mandatory for arrays, because the order is important.
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj2]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj1: 10, obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj1: 10, obj2: 30 });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj1]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30 });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj3][0]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj3][1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj3: [10, 20], obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 40, obj3: [10, 20] });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 40, obj3: [10, 20] });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj3: [10, 20], obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj3][1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber[obj3][1]', 30);
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 30] });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj3][0]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj3][1]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30 });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj2]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.del('fooNumber');
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj2').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj1: 10, obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj1: 10, obj2: 30 });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30 });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj3/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj3/1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj3: [10, 20], obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 40, obj3: [10, 20] });
+        expect(state.get('fooNumber')).toEqual({ obj2: 40, obj3: [10, 20] });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj3: [10, 20], obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj3/1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber[obj3][1]', 30);
+        expect(state.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 30] });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj3/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj3/1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30 });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj2').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.del('fooNumber');
+        expect(state.get('fooNumber')).toBeUndefined();
 
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry', { bar: 10 });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(10);
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry', { bar: 20 });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(20);
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', true);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(true);
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', false);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(false);
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', 'some');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual('some');
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', 'string');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual('string');
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar][0]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', ['ten']);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(['ten']);
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar][0]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', {});
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({});
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.del('fooEntry');
-        expect(Utils.Persistence.get('fooEntry')).toBeUndefined();
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry', { bar: 10 });
+        expect(state.get('fooEntry[bar]')).toEqual(10);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry', { bar: 20 });
+        expect(state.get('fooEntry[bar]')).toEqual(20);
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', true);
+        expect(state.get('fooEntry[bar]')).toEqual(true);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', false);
+        expect(state.get('fooEntry[bar]')).toEqual(false);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', 'some');
+        expect(state.get('fooEntry[bar]')).toEqual('some');
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', 'string');
+        expect(state.get('fooEntry[bar]')).toEqual('string');
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', ['ten']);
+        expect(state.get('fooEntry[bar]')).toEqual(['ten']);
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', {});
+        expect(state.get('fooEntry[bar]')).toEqual({});
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.del('fooEntry');
+        expect(state.get('fooEntry')).toBeUndefined();
 
         await request(app).delete('/persistence').send({ }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
         delete process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
@@ -273,88 +277,89 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
 
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        expect(state.get('fooNumber')).toBeUndefined();
         let scopes = [];
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', 10);
-        expect(Utils.Persistence.get('fooNumber')).toEqual(10);
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', 'ten');
-        expect(Utils.Persistence.get('fooNumber')).toEqual('ten');
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.del('fooNumber');
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj1: 10 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj1: 10 });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj1: 20 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj1: 20 });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj1]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 20 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 20 });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', 10);
+        expect(state.get('fooNumber')).toEqual(10);
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', 'ten');
+        expect(state.get('fooNumber')).toEqual('ten');
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.del('fooNumber');
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj1: 10 });
+        expect(state.get('fooNumber')).toEqual({ obj1: 10 });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj1: 20 });
+        expect(state.get('fooNumber')).toEqual({ obj1: 20 });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 20 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 20 });
         // Ordering of the items in value have changed, and therefore, we must delete objects that are not matching
         // according to their indexes. This is mandatory for arrays, because the order is important.
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj2]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj1: 10, obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj1: 10, obj2: 30 });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj1]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30 });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj3][0]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj3][1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj3: [10, 20], obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 40, obj3: [10, 20] });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 40, obj3: [10, 20] });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj2]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj3: [10, 20], obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber[obj3][1]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber[obj3][1]', 30);
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 30] });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj3][0]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj3][1]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooNumber', { obj2: 30 });
-        expect(Utils.Persistence.get('fooNumber')).toEqual({ obj2: 30 });
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj2]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.del('fooNumber');
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj2').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj1: 10, obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj1: 10, obj2: 30 });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30 });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj3/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj3/1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj3: [10, 20], obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 40, obj3: [10, 20] });
+        expect(state.get('fooNumber')).toEqual({ obj2: 40, obj3: [10, 20] });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj2', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj3: [10, 20], obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 20] });
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber/obj3/1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber[obj3][1]', 30);
+        expect(state.get('fooNumber')).toEqual({ obj2: 30, obj3: [10, 30] });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj3/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj3/1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooNumber', { obj2: 30 });
+        expect(state.get('fooNumber')).toEqual({ obj2: 30 });
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj2').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.del('fooNumber');
+        expect(state.get('fooNumber')).toBeUndefined();
 
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry', { bar: 10 });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(10);
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry', { bar: 20 });
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(20);
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', true);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(true);
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', false);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(false);
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', 'some');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual('some');
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', 'string');
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual('string');
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooEntry[bar][0]?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', ['ten']);
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual(['ten']);
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar][0]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.set('fooEntry[bar]', {});
-        expect(Utils.Persistence.get('fooEntry[bar]')).toEqual({});
-        scopes.push(nock('http://localhost:8081').delete('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        Utils.Persistence.del('fooEntry');
-        expect(Utils.Persistence.get('fooEntry')).toBeUndefined();
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry', { bar: 10 });
+        expect(state.get('fooEntry[bar]')).toEqual(10);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry', { bar: 20 });
+        expect(state.get('fooEntry[bar]')).toEqual(20);
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', true);
+        expect(state.get('fooEntry[bar]')).toEqual(true);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', false);
+        expect(state.get('fooEntry[bar]')).toEqual(false);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', 'some');
+        expect(state.get('fooEntry[bar]')).toEqual('some');
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', 'string');
+        expect(state.get('fooEntry[bar]')).toEqual('string');
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', ['ten']);
+        expect(state.get('fooEntry[bar]')).toEqual(['ten']);
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar]', {});
+        expect(state.get('fooEntry[bar]')).toEqual({});
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.del('fooEntry');
+        expect(state.get('fooEntry')).toBeUndefined();
 
         // Important: scopes must be tested at the end, or else they don't evaluate to anything
         scopes.forEach((e) => {
@@ -367,25 +372,26 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
 
         // We don't want sync operations to kick-in at this point.
         process.env.OVE_PERSISTENCE_SYNC_INTERVAL = 0;
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        expect(Utils.Persistence.get('fooNumber')).toBeUndefined();
+        expect(state.get('fooNumber')).toBeUndefined();
         let scopes = [];
-        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/fooNumber?appName=core', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        scopes.push(nock('http://localhost:8081').delete('/fooNumber[obj2]?appName=core').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj2').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         let func = function () {};
         let spy = jest.spyOn(global.console, 'warn');
-        Utils.Persistence.set('fooFunc', func);
+        state.set('fooFunc', func);
         expect(spy).not.toHaveBeenCalled();
-        expect(Utils.Persistence.get('fooFunc')).not.toEqual(func);
+        expect(state.get('fooFunc')).not.toEqual(func);
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
         spy = jest.spyOn(global.console, 'warn');
-        Utils.Persistence.set('fooFunc', func);
+        state.set('fooFunc', func);
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
 
@@ -403,10 +409,11 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
 
-        Utils.Persistence.set('fooEntry', { foo: 'bar', test: [0, false] });
-        Utils.Persistence.set('fakeEntry', { fn: function () {} });
-        expect(Utils.Persistence.get('fooEntry')).toEqual({ foo: 'bar', test: [0, false] });
+        state.set('fooEntry', { foo: 'bar', test: [0, false] });
+        state.set('fakeEntry', { fn: function () {} });
+        expect(state.get('fooEntry')).toEqual({ foo: 'bar', test: [0, false] });
 
         // We don't want sync operations to kick-in at this point.
         process.env.OVE_PERSISTENCE_SYNC_INTERVAL = 0;
@@ -417,21 +424,21 @@ describe('The OVE Utils library - Persistence', () => {
         const mockCallback = jest.fn(x => x);
         const OLD_CONSOLE = global.console;
         global.console = { error: mockCallback, log: OLD_CONSOLE.log, warn: OLD_CONSOLE.warn };
-        Utils.Persistence.sync();
+        state.sync();
 
-        scopes.push(nock('http://localhost:8081').get('/?appName=core').reply(HttpStatus.OK, {
-            'fooEntry[foo]': Number.MIN_VALUE,
-            'fooEntry[bar]': Number.MAX_VALUE,
-            'fooEntry[nbar]': Number.MAX_VALUE,
-            'fooEntry[test][0]': Number.MAX_VALUE
+        scopes.push(nock('http://localhost:8081').get('/core').reply(HttpStatus.OK, {
+            'fooEntry/foo': Number.MIN_VALUE,
+            'fooEntry/bar': Number.MAX_VALUE,
+            'fooEntry/nbar': Number.MAX_VALUE,
+            'fooEntry/test/0': Number.MAX_VALUE
         }));
-        scopes.push(nock('http://localhost:8081').get('/fooEntry[bar]?appName=core').reply(HttpStatus.OK, {
+        scopes.push(nock('http://localhost:8081').get('/core/fooEntry/bar').reply(HttpStatus.OK, {
             value: 'bar'
         }));
-        scopes.push(nock('http://localhost:8081').get('/fooEntry[test][0]?appName=core').reply(HttpStatus.OK, {
+        scopes.push(nock('http://localhost:8081').get('/core/fooEntry/test/0').reply(HttpStatus.OK, {
             value: 0
         }));
-        Utils.Persistence.sync();
+        state.sync();
 
         // Fake request to make things wait for a while before cleaning up.
         await request(app).post('/').send({});
@@ -443,7 +450,7 @@ describe('The OVE Utils library - Persistence', () => {
         scopes.forEach((e) => {
             expect(e.isDone()).toBeTruthy();
         });
-        expect(Utils.Persistence.get('fooEntry')).toEqual({ foo: 'bar', bar: 'bar', test: [0] });
+        expect(state.get('fooEntry')).toEqual({ foo: 'bar', bar: 'bar', test: [0] });
         global.console = OLD_CONSOLE;
 
         // Should be getting exactly two errors due to failed network calls.
@@ -457,10 +464,11 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
 
         // We don't want sync operations to kick-in at this point.
         process.env.OVE_PERSISTENCE_SYNC_INTERVAL = 1;
-        const spy = jest.spyOn(Utils.Persistence, 'sync');
+        const spy = jest.spyOn(state, 'sync');
 
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -481,6 +489,7 @@ describe('The OVE Utils library - Persistence', () => {
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForPersistence();
+        const state = Utils.Persistence;
 
         // We don't want sync operations to kick-in at this point.
         process.env.OVE_PERSISTENCE_SYNC_INTERVAL = 1;
@@ -493,7 +502,7 @@ describe('The OVE Utils library - Persistence', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
         // Now set the spy and check whether it actually runs or not.
-        const spy = jest.spyOn(Utils.Persistence, 'sync');
+        const spy = jest.spyOn(state, 'sync');
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 

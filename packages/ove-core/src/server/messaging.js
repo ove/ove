@@ -7,7 +7,7 @@ module.exports = function (server, log, Utils, Constants) {
             // Method for viewers to request section information, helps browser crash recovery
             if (m.appId === Constants.APP_NAME && m.message.action === Constants.Action.READ) {
                 if (m.sectionId === undefined) { // specifically testing for undefined since '0' is a valid input.
-                    const sections = Utils.Persistence.get('sections');
+                    const sections = server.state.get('sections');
                     sections.forEach(function (section, sectionId) {
                         // We respond only to the sender and only if a section exists.
                         if (section && s.readyState === Constants.WEBSOCKET_READY) {
