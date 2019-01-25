@@ -115,8 +115,10 @@ describe('The OVE Utils library - Persistence', () => {
         expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', with: 'updates' } });
         state.set('fooEntry[bar]', { some: { deep: 'block', withMore: 'updates' } });
         expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', withMore: 'updates' } });
+        state.set('fooEntry[bar][some]', { deep: 'block', withMore: 'updates', test: 'test' });
+        expect(state.get('fooEntry[bar][some]')).toEqual({ deep: 'block', withMore: 'updates', test: 'test' });
         state.del('fooEntry[bar][some][withMore]');
-        expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block' } });
+        expect(state.get('fooEntry[bar]')).toEqual({ some: { deep: 'block', test: 'test' } });
         state.del('fooEntry');
         expect(state.get('fooEntry[bar]')).toBeUndefined();
         expect(state.get('fooEntry')).toBeUndefined();
@@ -256,7 +258,13 @@ describe('The OVE Utils library - Persistence', () => {
         scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         state.set('fooEntry[bar]', ['ten']);
         expect(state.get('fooEntry[bar]')).toEqual(['ten']);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/1/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/1/1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar][1]', [10, 20]);
+        expect(state.get('fooEntry[bar][1]')).toEqual([10, 20]);
         scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/1/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/1/1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         state.set('fooEntry[bar]', {});
         expect(state.get('fooEntry[bar]')).toEqual({});
         scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
@@ -354,7 +362,13 @@ describe('The OVE Utils library - Persistence', () => {
         scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         state.set('fooEntry[bar]', ['ten']);
         expect(state.get('fooEntry[bar]')).toEqual(['ten']);
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/1/0', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooEntry/bar/1/1', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        state.set('fooEntry[bar][1]', [10, 20]);
+        expect(state.get('fooEntry[bar][1]')).toEqual([10, 20]);
         scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/1/0').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar/1/1').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         state.set('fooEntry[bar]', {});
         expect(state.get('fooEntry[bar]')).toEqual({});
         scopes.push(nock('http://localhost:8081').delete('/core/fooEntry/bar').reply(HttpStatus.OK, Utils.JSON.EMPTY));
@@ -487,17 +501,17 @@ describe('The OVE Utils library - Persistence', () => {
     it('should use the updated value of the OVE_PERSISTENCE_SYNC_INTERVAL whenever the persistence provider changes', async () => {
         const app = express();
         app.use(express.json());
-        const { Utils } = index('core', app, dirs);
+        const { Utils, Constants } = index('core', app);
         Utils.registerRoutesForPersistence();
         const state = Utils.Persistence;
 
         // We don't want sync operations to kick-in at this point.
-        process.env.OVE_PERSISTENCE_SYNC_INTERVAL = 1;
+        Constants.PERSISTENCE_SYNC_INTERVAL = 0;
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
         // Reset it once to ensure sync will not be running, before we start the test.
-        process.env.OVE_PERSISTENCE_SYNC_INTERVAL = 0;
+        Constants.PERSISTENCE_SYNC_INTERVAL = 2000;
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 

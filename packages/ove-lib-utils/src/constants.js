@@ -21,7 +21,8 @@ const Constants = {
                            Other Constants
     **************************************************************/
     SWAGGER_API_DOCS_CONTEXT: '/api-docs',
-    PERSISTENCE_SYNC_INTERVAL: +(process.env.OVE_PERSISTENCE_SYNC_INTERVAL || 2000), // Unit: milliseconds
+    PERSISTENCE_SYNC_INTERVAL: +(process.env.OVE_PERSISTENCE_SYNC_INTERVAL !==
+        undefined ? process.env.OVE_PERSISTENCE_SYNC_INTERVAL : 2000), // Unit: milliseconds
     UTF8: 'utf8'
 
 };

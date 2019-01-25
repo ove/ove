@@ -4,6 +4,10 @@ function Persistence (appName, log, Utils, Constants, __private) {
     // A persistable object needs a key and value, but will also have a type and a timestamp which
     // is automatically computed. The object also provides a method to extract the original value
     // in its original type.
+
+    // IMPORTANT: None of the operations involving a single key provides any logs to avoid log-overflow.
+    // Similarly, the sync operation that happens frequently does not provide any logs. These methods do
+    // provide logs should anything fail.
     function Persistable (key, value) {
         const __self = this;
         __self.key = key;
@@ -105,10 +109,8 @@ function Persistence (appName, log, Utils, Constants, __private) {
         } else if (item !== undefined && item.type !== undefined) {
             const url = __private.provider + '/' + appName + '/' + convertKey(item.key);
             if (item.value === undefined) {
-                log.trace('Deleting key at:', url);
                 request.delete(url, _handleRequestError);
             } else {
-                log.trace('Updating key at:', url);
                 request.post(url, {
                     headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                     json: { value: item.value, type: item.type, timestamp: item.timestamp }
@@ -157,7 +159,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
         return result.join('');
     };
 
-    const compareAndSet = function (current, future) {
+    const compareAndSet = function (future, current) {
         if (current === undefined) {
             updateRemoteItem(future);
             return future;
@@ -197,7 +199,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                             // The item has been deleted, and a new item has taken its place.
                             deleteRemoteItem(current.value.splice(i, 1)[0]);
                         } else {
-                            current.value[i] = compareAndSet(current.value[i], future.value[j]);
+                            current.value[i] = compareAndSet(future.value[j], current.value[i]);
                             i++;
                             j++;
                         }
@@ -205,7 +207,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                     // All items remaining on the list of future values are not existing on the current list.
                     if (current.value.length < future.value.length) {
                         for (let i = current.value.length; i < future.value.length; i++) {
-                            current.value.push(compareAndSet(current.value[i], future.value[i]));
+                            current.value.push(compareAndSet(future.value[i], current.value[i]));
                         }
                     }
                     return current;
@@ -221,7 +223,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
             log.error('Invalid key:', key);
         } else if (parent === __private.local) {
             if (__private.provider) {
-                __private.local[key] = compareAndSet(__private.local[key], value);
+                __private.local[key] = compareAndSet(value, __private.local[key]);
             } else {
                 __private.local[key] = value;
             }
@@ -229,12 +231,12 @@ function Persistence (appName, log, Utils, Constants, __private) {
             let exists = false;
             parent.value.forEach(function (e, i) {
                 if (e.key === key) {
-                    parent.value[i] = __private.provider ? compareAndSet(e, value) : value;
+                    parent.value[i] = __private.provider ? compareAndSet(value, e) : value;
                     exists = true;
                 }
             });
             if (!exists) {
-                parent.value.push(value);
+                parent.value.push(__private.provider ? compareAndSet(value) : value);
             }
         }
     };

@@ -103,15 +103,19 @@ function Utils (appName, app, dirs) {
                     clearInterval(__private.interval);
                     __private.interval = null;
                 }
-                const interval = process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
+                const interval = Constants.PERSISTENCE_SYNC_INTERVAL;
                 if (interval > 0) {
-                    __private.interval = setInterval(interval, __self.Persistence.sync);
+                    __private.interval = setInterval(__self.Persistence.sync, interval);
                 }
                 __self.sendEmptySuccess(res);
             }
         };
 
         const removeProvider = function (_req, res) {
+            if (__private.interval) {
+                clearInterval(__private.interval);
+                __private.interval = null;
+            }
             if (__private.provider) {
                 __private.provider = null;
             }
