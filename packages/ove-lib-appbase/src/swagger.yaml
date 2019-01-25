@@ -31,6 +31,43 @@ paths:
       responses:
         200:
           description: "successful operation"
+  /persistence:
+    post:
+      tags:
+      - "common operations"
+      summary: "Sets the URL of the persistence provider"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: "object"
+          url:
+            source:
+              type: "string"
+              description: "URL of the persistence provider"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid request' if the required parameter 'url' was not provided/"
+    delete:
+      tags:
+      - "common operations"
+      summary: "Removes the URL of the persistence provider, if it exists"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
   /diff:
     post:
       tags:

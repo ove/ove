@@ -6,6 +6,7 @@ const yamljs = require('js-yaml');
 const chalk = require('chalk');
 const dateFormat = require('dateformat');
 const HttpStatus = require('http-status-codes');
+const Persistence = require('./persistence');
 const { Constants } = require('./constants');
 
 // A collection of utilities for OVE and OVE apps. It is generally not
@@ -82,6 +83,49 @@ function Utils (appName, app, dirs) {
             });
         })(this);
     }
+
+    /**************************************************************
+                              Persistence
+    **************************************************************/
+    this.registerRoutesForPersistence = function () {
+        log.debug('Registering routes for persistence');
+        let __self = this;
+        let __private = { provider: null, local: {}, interval: null };
+
+        const setProvider = function (req, res) {
+            if (!req.body.url) {
+                log.error('Invalid request,', 'got:', JSON.stringify(req.body));
+                __self.sendMessage(res, HttpStatus.BAD_REQUEST,
+                    JSON.stringify({ error: 'invalid request' }));
+            } else {
+                __private.provider = req.body.url;
+                if (__private.interval) {
+                    clearInterval(__private.interval);
+                    __private.interval = null;
+                }
+                const interval = Constants.PERSISTENCE_SYNC_INTERVAL;
+                if (interval > 0) {
+                    __private.interval = setInterval(__self.Persistence.sync, interval);
+                }
+                __self.sendEmptySuccess(res);
+            }
+        };
+
+        const removeProvider = function (_req, res) {
+            if (__private.interval) {
+                clearInterval(__private.interval);
+                __private.interval = null;
+            }
+            if (__private.provider) {
+                __private.provider = null;
+            }
+            __self.sendEmptySuccess(res);
+        };
+
+        app.post('/persistence', setProvider);
+        app.delete('/persistence', removeProvider);
+        __self.Persistence = Persistence(appName, log, __self, Constants, __private);
+    };
 
     /**************************************************************
                      Static Content/Docs Generation

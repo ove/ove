@@ -17,7 +17,7 @@ describe('The OVE App Base library', () => {
     it('should export utilities for OVE applications', () => {
         // Precise validation of number of items exported and then check their
         // names one by one.
-        expect(Object.keys(base).length).toEqual(7);
+        expect(Object.keys(base).length).toEqual(8);
         expect(Object.keys(base)).toContain('express');
         expect(Object.keys(base)).toContain('app');
         expect(Object.keys(base)).toContain('config');
@@ -25,6 +25,7 @@ describe('The OVE App Base library', () => {
         expect(Object.keys(base)).toContain('log');
         expect(Object.keys(base)).toContain('operations');
         expect(Object.keys(base)).toContain('Utils');
+        expect(Object.keys(base)).toContain('appState');
     });
 
     /* jshint ignore:start */

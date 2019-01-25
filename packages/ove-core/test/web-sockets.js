@@ -313,7 +313,7 @@ describe('The OVE Core server', () => {
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
-            ))).not.toBeTruthy();
+            ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
         }, TIMEOUT);
@@ -353,7 +353,7 @@ describe('The OVE Core server', () => {
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
-            ))).not.toBeTruthy();
+            ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
         }, TIMEOUT);

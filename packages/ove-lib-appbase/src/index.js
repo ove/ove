@@ -42,10 +42,13 @@ module.exports = function (baseDir, appName) {
         isNullOrEmpty: Utils.isNullOrEmpty
     };
 
+    Utils.registerRoutesForPersistence();
+    const appState = module.exports.appState = Utils.Persistence;
+
     /**************************************************************
                APIs Exposed by all Apps (required by OVE)
     **************************************************************/
-    var state = [];
+    appState.set('state', []);
 
     const createStateByName = function (req, res) {
         log.info('Creating named state:', req.params.name);
@@ -80,6 +83,7 @@ module.exports = function (baseDir, appName) {
     };
 
     const readState = function (_req, res) {
+        const state = appState.get('state');
         if (state.length > 0) {
             log.debug('Reading state configuration');
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state));
@@ -90,9 +94,10 @@ module.exports = function (baseDir, appName) {
     };
 
     const readStateOfSection = function (req, res) {
-        if (state[req.params.id]) {
+        const state = appState.get('state[' + req.params.id + ']');
+        if (state) {
             log.debug('Reading state configuration for section:', req.params.id);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state[req.params.id]));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state));
         } else {
             log.debug('No state configurations found for section:', req.params.id);
             res.sendStatus(HttpStatus.NO_CONTENT);
@@ -101,7 +106,7 @@ module.exports = function (baseDir, appName) {
 
     const updateStateOfSection = function (req, res) {
         log.debug('Updating state of section:', req.params.id);
-        state[req.params.id] = req.body;
+        appState.set('state[' + req.params.id + ']', req.body);
         Utils.sendEmptySuccess(res);
     };
 
@@ -137,11 +142,12 @@ module.exports = function (baseDir, appName) {
     };
 
     const transformStateOfSection = function (req, res) {
-        if (Utils.isNullOrEmpty(state[req.params.id])) {
+        const state = appState.get('state[' + req.params.id + ']');
+        if (Utils.isNullOrEmpty(state)) {
             log.error('No state configurations found for section:', req.params.id);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
-            state[req.params.id] = _transformState(state[req.params.id], req.body, res);
+            appState.set('state[' + req.params.id + ']', _transformState(state, req.body, res));
         }
     };
 
@@ -174,11 +180,12 @@ module.exports = function (baseDir, appName) {
     };
 
     const diffForStateOfSection = function (req, res) {
-        if (Utils.isNullOrEmpty(state[req.params.id])) {
+        const state = appState.get('state[' + req.params.id + ']');
+        if (Utils.isNullOrEmpty(state)) {
             log.debug('No state configurations found for section:', req.params.id);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
-            _diff(state[req.params.id], req.body.target, res);
+            _diff(state, req.body.target, res);
         }
     };
 
@@ -193,7 +200,7 @@ module.exports = function (baseDir, appName) {
 
     const flush = function (_req, res) {
         log.debug('Flushing application');
-        state = [];
+        appState.set('state', []);
         if (fs.existsSync(configPath)) {
             module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
         } else {
