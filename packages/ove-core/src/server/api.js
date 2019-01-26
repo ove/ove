@@ -9,17 +9,15 @@ module.exports = function (server, log, Utils, Constants) {
     // Lists details of all spaces, and accepts filters as a part of its query string.
     const listSpaces = function (req, res) {
         let sectionId = req.query.oveSectionId;
-        if (sectionId !== undefined) {
-            if (!server.state.get('sections[' + sectionId + ']')) {
-                log.debug('Unable to produce list of spaces for section id:', sectionId);
-                Utils.sendEmptySuccess(res);
-            } else {
-                log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME + ' for section id:', sectionId);
-                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.state.get('sections[' + sectionId + '][spaces]')));
-            }
-        } else {
+        if (sectionId === undefined) {
             log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.spaces));
+        } else if (!server.state.get('sections[' + sectionId + ']')) {
+            log.debug('Unable to produce list of spaces for section id:', sectionId);
+            Utils.sendEmptySuccess(res);
+        } else {
+            log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME + ' for section id:', sectionId);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.state.get('sections[' + sectionId + '][spaces]')));
         }
     };
 
@@ -62,51 +60,51 @@ module.exports = function (server, log, Utils, Constants) {
             // - the section's top edge is above the client's bottom edge
             // - the section's bottom edge is below the client's top edge
             // If the section does not overlap with this client we ignore it.
-            if ((e.x + e.w) > geometry.x && (geometry.x + geometry.w) > e.x &&
-                (e.y + e.h) > geometry.y && (geometry.y + geometry.h) > e.y) {
-                let c = Object.assign({}, e);
-                // We generally don't use offsets, but this can be used to move content relative
-                // to top-left both in the positive and negative directions. If the offsets were
-                // not set (the most common case), we initialize it to (0,0).
-                if (!c.offset) {
-                    c.offset = { x: 0, y: 0 };
-                }
-                // In here we check if the section started before the starting point of a client
-                // and adjust it accordingly along the horizontal axis. If it wasn't the case, the
-                // section starts within the bounds of a client and therefore the offset is being
-                // set.
-                if (c.x >= geometry.x) {
-                    c.x -= geometry.x;
-                } else {
-                    c.offset.x += (geometry.x - c.x);
-                    c.x = 0;
-                    c.w -= c.offset.x;
-                }
-                // In here we check if the section ends before the ending point of the client and
-                // adjust the width of the frame along the horizontal axis.
-                if (c.x + c.w > geometry.w) {
-                    c.w = (geometry.w - c.x);
-                }
-                // In here we check if the section started before the starting point of a client
-                // and adjust it accordingly along the vertical axis. If it wasn't the case, the
-                // section starts within the bounds of a client and therefore the offset is being
-                // set.
-                if (c.y >= geometry.y) {
-                    c.y -= geometry.y;
-                } else {
-                    c.offset.y += (geometry.y - c.y);
-                    c.y = 0;
-                    c.h -= c.offset.y;
-                }
-                // In here we check if the section ends before the ending point of the client and
-                // adjust the width of the frame along the vertical axis.
-                if (c.y + c.h > geometry.h) {
-                    c.h = (geometry.h - c.y);
-                }
-                layout.push(c);
-            } else {
+            if ((e.x + e.w) <= geometry.x || (geometry.x + geometry.w) <= e.x ||
+                (e.y + e.h) <= geometry.y || (geometry.y + geometry.h) <= e.y) {
                 layout.push({});
+                return;
             }
+            let c = Object.assign({}, e);
+            // We generally don't use offsets, but this can be used to move content relative
+            // to top-left both in the positive and negative directions. If the offsets were
+            // not set (the most common case), we initialize it to (0,0).
+            if (!c.offset) {
+                c.offset = { x: 0, y: 0 };
+            }
+            // In here we check if the section started before the starting point of a client
+            // and adjust it accordingly along the horizontal axis. If it wasn't the case, the
+            // section starts within the bounds of a client and therefore the offset is being
+            // set.
+            if (c.x >= geometry.x) {
+                c.x -= geometry.x;
+            } else {
+                c.offset.x += (geometry.x - c.x);
+                c.x = 0;
+                c.w -= c.offset.x;
+            }
+            // In here we check if the section ends before the ending point of the client and
+            // adjust the width of the frame along the horizontal axis.
+            if (c.x + c.w > geometry.w) {
+                c.w = (geometry.w - c.x);
+            }
+            // In here we check if the section started before the starting point of a client
+            // and adjust it accordingly along the vertical axis. If it wasn't the case, the
+            // section starts within the bounds of a client and therefore the offset is being
+            // set.
+            if (c.y >= geometry.y) {
+                c.y -= geometry.y;
+            } else {
+                c.offset.y += (geometry.y - c.y);
+                c.y = 0;
+                c.h -= c.offset.y;
+            }
+            // In here we check if the section ends before the ending point of the client and
+            // adjust the width of the frame along the vertical axis.
+            if (c.y + c.h > geometry.h) {
+                c.h = (geometry.h - c.y);
+            }
+            layout.push(c);
         });
         return layout;
     };
@@ -126,84 +124,86 @@ module.exports = function (server, log, Utils, Constants) {
         if (!req.body.space || !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+            return;
         } else if (req.body.w === undefined || req.body.h === undefined || req.body.x === undefined || req.body.y === undefined) {
             // specifically testing for undefined since '0' is a valid input.
             log.error('Invalid Dimensions', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+            return;
         } else if (req.body.app && !req.body.app.url) {
             log.error('Invalid App Configuration', 'request:', JSON.stringify(req.body.app));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
-        } else {
-            let section = { w: req.body.w, h: req.body.h, x: req.body.x, y: req.body.y, spaces: {} };
-            section.spaces[req.body.space] = _calculateSectionLayout(req.body.space, {
-                x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h
-            });
-            log.debug('Generated spaces configuration for new section');
+            return;
+        }
+        let section = { w: req.body.w, h: req.body.h, x: req.body.x, y: req.body.y, spaces: {} };
+        section.spaces[req.body.space] = _calculateSectionLayout(req.body.space, {
+            x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h
+        });
+        log.debug('Generated spaces configuration for new section');
 
-            // Deploy an App into a section
-            let sectionId = server.state.get('sections').length;
-            if (req.body.app) {
-                const url = req.body.app.url.replace(/\/$/, '');
-                section.app = { 'url': url };
-                log.debug('Got URL for app:', url);
-                if (req.body.app.states) {
-                    /* istanbul ignore else */
-                    // DEBUG logging is turned on by default, and only turned off in production deployments.
-                    // The operation of the Constants.Logging.DEBUG flag has been tested elsewhere.
-                    if (Constants.Logging.DEBUG) {
-                        log.debug('Got state configuration for app:', JSON.stringify(req.body.app.states));
-                    }
-                    // Cache or load states if they were provided as a part of the create request.
-                    if (req.body.app.states.cache) {
-                        Object.keys(req.body.app.states.cache).forEach(function (name) {
-                            log.debug('Caching new named state for future use:', name);
-                            request.post(section.app.url + '/state/' + name, {
-                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: req.body.app.states.cache[name]
-                            }, _handleRequestError);
-                        });
-                    }
-                    if (req.body.app.states.load) {
-                        // Either a named state or an in-line state configuration can be loaded.
-                        if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
-                            section.app.state = req.body.app.states.load;
-                            log.debug('Loading existing named state:', section.app.state);
-                        } else {
-                            log.debug('Loading state configuration');
-                            request.post(section.app.url + '/' + sectionId + '/state', {
-                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: req.body.app.states.load
-                            }, _handleRequestError);
-                        }
-                    }
+        // Deploy an App into a section
+        let sectionId = server.state.get('sections').length;
+        if (req.body.app) {
+            const url = req.body.app.url.replace(/\/$/, '');
+            section.app = { 'url': url };
+            log.debug('Got URL for app:', url);
+            if (req.body.app.states) {
+                /* istanbul ignore else */
+                // DEBUG logging is turned on by default, and only turned off in production deployments.
+                // The operation of the Constants.Logging.DEBUG flag has been tested elsewhere.
+                if (Constants.Logging.DEBUG) {
+                    log.debug('Got state configuration for app:', JSON.stringify(req.body.app.states));
                 }
-                const opacity = req.body.app.opacity;
-                if (opacity) {
-                    log.debug('Setting opacity for app:', opacity);
-                    section.app.opacity = opacity;
+                // Cache or load states if they were provided as a part of the create request.
+                if (req.body.app.states.cache) {
+                    Object.keys(req.body.app.states.cache).forEach(function (name) {
+                        log.debug('Caching new named state for future use:', name);
+                        request.post(section.app.url + '/state/' + name, {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: req.body.app.states.cache[name]
+                        }, _handleRequestError);
+                    });
+                }
+                if (req.body.app.states.load) {
+                    // Either a named state or an in-line state configuration can be loaded.
+                    if (typeof req.body.app.states.load === 'string' || req.body.app.states.load instanceof String) {
+                        section.app.state = req.body.app.states.load;
+                        log.debug('Loading existing named state:', section.app.state);
+                    } else {
+                        log.debug('Loading state configuration');
+                        request.post(section.app.url + '/' + sectionId + '/state', {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: req.body.app.states.load
+                        }, _handleRequestError);
+                    }
                 }
             }
-            server.state.set('sections[' + sectionId + ']', section);
-
-            // Notify OVE viewers/controllers
-            server.wss.clients.forEach(function (c) {
-                if (c.readyState === Constants.WEBSOCKET_READY) {
-                    // Sections are created on the browser and then the application is deployed after a
-                    // short delay. This will ensure proper frame sizes.
-                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
-                        message: { action: Constants.Action.CREATE, id: sectionId, spaces: section.spaces } }));
-                    if (section.app) {
-                        setTimeout(function () {
-                            c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
-                                message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
-                        }, Constants.SECTION_UPDATE_DELAY);
-                    }
-                }
-            });
-            log.info('Successfully created new section:', sectionId);
-            log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
+            const opacity = req.body.app.opacity;
+            if (opacity) {
+                log.debug('Setting opacity for app:', opacity);
+                section.app.opacity = opacity;
+            }
         }
+        server.state.set('sections[' + sectionId + ']', section);
+
+        // Notify OVE viewers/controllers
+        server.wss.clients.forEach(function (c) {
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                // Sections are created on the browser and then the application is deployed after a
+                // short delay. This will ensure proper frame sizes.
+                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
+                    message: { action: Constants.Action.CREATE, id: sectionId, spaces: section.spaces } }));
+                if (section.app) {
+                    setTimeout(function () {
+                        c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
+                            message: { action: Constants.Action.UPDATE, id: sectionId, app: section.app } }));
+                    }, Constants.SECTION_UPDATE_DELAY);
+                }
+            }
+        });
+        log.info('Successfully created new section:', sectionId);
+        log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
     };
 
     // Internal utility function to delete section by a given id. This function is used
@@ -478,86 +478,91 @@ module.exports = function (server, log, Utils, Constants) {
         if (req.body.space && !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+            return;
         } else if (req.body.scale && (req.body.scale.x === undefined || req.body.scale.y === undefined)) {
             log.error('Invalid Dimensions for Scale operation', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+            return;
         } else if (req.body.translate && (req.body.translate.x === undefined || req.body.translate.y === undefined)) {
             log.error('Invalid Dimensions for Translate operation', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-        } else {
-            let sectionsToUpdate = [];
-            const space = req.query.space;
-            const groupId = req.query.groupId;
-            const sections = server.state.get('sections');
-            if (groupId) {
-                if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
-                    log.info('Updating sections of group:', groupId);
-                    const group = server.state.get('groups[' + groupId + ']').slice();
-                    group.forEach(function (e) {
-                        let i = parseInt(e, 10);
-                        sectionsToUpdate.push(i);
-                    });
-                }
-            } else if (space) {
-                log.info('Updating sections of space:', space);
-                let i = -1;
-                let findSectionsBySpace = function (e, x) {
-                    return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
-                };
-                i = sections.findIndex(findSectionsBySpace);
-                while (i !== -1) {
-                    sectionsToUpdate.push(i);
-                    i = sections.findIndex(findSectionsBySpace);
-                }
-            } else {
-                sections.forEach(function (e, i) {
-                    if (!Utils.isNullOrEmpty(e)) {
-                        sectionsToUpdate.push(i);
-                    }
-                });
-            }
-            // Check whether any operation has to be made.
-            if (!Utils.isNullOrEmpty(sectionsToUpdate) && (req.body.space || req.body.scale || req.body.translate)) {
-                let rangeError = false;
-                let geometries = {};
-                const sections = server.state.get('sections');
-                sectionsToUpdate.forEach(function (e) {
-                    const section = sections[e];
-                    geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
-                    const space = req.body.space || Object.keys(section.spaces)[0];
-                    const bounds = _getSpaceGeometries()[space];
-                    if (req.body.scale) {
-                        geometries[e].w = (geometries[e].w * req.body.scale.x) << 0;
-                        geometries[e].h = (geometries[e].h * req.body.scale.y) << 0;
-                    }
-                    if (req.body.translate) {
-                        geometries[e].x = (geometries[e].x + req.body.translate.x) << 0;
-                        geometries[e].y = (geometries[e].y + req.body.translate.y) << 0;
-                    }
-                    if (geometries[e].x < 0 || geometries[e].y < 0 || Math.max(geometries[e].x, geometries[e].w) > bounds.w || Math.max(geometries[e].y, geometries[e].h) > bounds.h) {
-                        log.error('Section no longer fits within space after transformation for section id:', e, 'space:', space, 'geometry:', JSON.stringify(geometries[e]));
-                        rangeError = true;
-                    }
-                });
-                if (rangeError) {
-                    log.error('Unable to update sections due to one or more range errors');
-                    Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-                } else {
-                    sectionsToUpdate.forEach(function (e) {
-                        const section = sections[e];
-                        _updateSectionById(e, req.body.space, geometries[e], section.app);
-                    });
-                    if (sectionsToUpdate.length === server.state.get('sections').length) {
-                        log.info('Successfully updated all sections');
-                    } else {
-                        log.info('Successfully updated sections:', sectionsToUpdate);
-                    }
-                    Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToUpdate }));
-                }
-            } else {
-                Utils.sendEmptySuccess(res);
-            }
+            return;
         }
+
+        let sectionsToUpdate = [];
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        const sections = server.state.get('sections');
+        if (groupId) {
+            if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
+                log.info('Updating sections of group:', groupId);
+                const group = server.state.get('groups[' + groupId + ']').slice();
+                group.forEach(function (e) {
+                    let i = parseInt(e, 10);
+                    sectionsToUpdate.push(i);
+                });
+            }
+        } else if (space) {
+            log.info('Updating sections of space:', space);
+            let i = -1;
+            let findSectionsBySpace = function (e, x) {
+                return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
+            };
+            i = sections.findIndex(findSectionsBySpace);
+            while (i !== -1) {
+                sectionsToUpdate.push(i);
+                i = sections.findIndex(findSectionsBySpace);
+            }
+        } else {
+            sections.forEach(function (e, i) {
+                if (!Utils.isNullOrEmpty(e)) {
+                    sectionsToUpdate.push(i);
+                }
+            });
+        }
+
+        // Check whether any operation has to be made.
+        if (Utils.isNullOrEmpty(sectionsToUpdate) || !(req.body.space || req.body.scale || req.body.translate)) {
+            Utils.sendEmptySuccess(res);
+            return;
+        }
+
+        let rangeError = false;
+        let geometries = {};
+        sectionsToUpdate.forEach(function (e) {
+            const section = sections[e];
+            geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
+            const space = req.body.space || Object.keys(section.spaces)[0];
+            const bounds = _getSpaceGeometries()[space];
+            if (req.body.scale) {
+                geometries[e].w = (geometries[e].w * req.body.scale.x) << 0;
+                geometries[e].h = (geometries[e].h * req.body.scale.y) << 0;
+            }
+            if (req.body.translate) {
+                geometries[e].x = (geometries[e].x + req.body.translate.x) << 0;
+                geometries[e].y = (geometries[e].y + req.body.translate.y) << 0;
+            }
+            if (geometries[e].x < 0 || geometries[e].y < 0 || Math.max(geometries[e].x, geometries[e].w) > bounds.w || Math.max(geometries[e].y, geometries[e].h) > bounds.h) {
+                log.error('Section no longer fits within space after transformation for section id:', e, 'space:', space, 'geometry:', JSON.stringify(geometries[e]));
+                rangeError = true;
+            }
+        });
+        if (rangeError) {
+            log.error('Unable to update sections due to one or more range errors');
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+            return;
+        }
+
+        sectionsToUpdate.forEach(function (e) {
+            const section = sections[e];
+            _updateSectionById(e, req.body.space, geometries[e], section.app);
+        });
+        if (sectionsToUpdate.length === server.state.get('sections').length) {
+            log.info('Successfully updated all sections');
+        } else {
+            log.info('Successfully updated sections:', sectionsToUpdate);
+        }
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToUpdate }));
     };
 
     // Fetches details of an individual section
@@ -567,17 +572,18 @@ module.exports = function (server, log, Utils, Constants) {
         if (Utils.isNullOrEmpty(s)) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
-        } else {
-            let section = {
-                id: parseInt(sectionId, 10), x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0]
-            };
-            const app = s.app;
-            if (app) {
-                section.app = { url: app.url, state: app.state, opacity: app.opacity };
-            }
-            log.debug('Successfully read configuration for section id:', sectionId);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
+            return;
         }
+
+        let section = {
+            id: parseInt(sectionId, 10), x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0]
+        };
+        const app = s.app;
+        if (app) {
+            section.app = { url: app.url, state: app.state, opacity: app.opacity };
+        }
+        log.debug('Successfully read configuration for section id:', sectionId);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
     };
 
     // Updates an app associated with a section

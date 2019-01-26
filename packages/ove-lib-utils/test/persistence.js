@@ -152,8 +152,9 @@ describe('The OVE Utils library - Persistence', () => {
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        let scope1 = nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        let scope2 = nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scopes = [];
+        scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
+        scopes.push(nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY));
 
         expect(state.get('fooNumber')).toBeUndefined();
         state.set('fooNumber', 10);
@@ -165,8 +166,9 @@ describe('The OVE Utils library - Persistence', () => {
         delete process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
 
         // Important: scopes must be tested at the end, or else they don't evaluate to anything
-        expect(scope1.isDone()).toBeTruthy(); // request should be made at this point.
-        expect(scope2.isDone()).toBeTruthy(); // request should not be made at this point.
+        scopes.forEach((e) => {
+            expect(e.isDone()).toBeTruthy();
+        });
     });
 
     it('should be comparing and setting objects and arrays', async () => {
@@ -400,7 +402,9 @@ describe('The OVE Utils library - Persistence', () => {
         let func = function () {};
         let spy = jest.spyOn(global.console, 'warn');
         state.set('fooFunc', func);
-        expect(spy).not.toHaveBeenCalled();
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+        spy = jest.spyOn(global.console, 'warn');
         expect(state.get('fooFunc')).not.toEqual(func);
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
@@ -416,6 +420,18 @@ describe('The OVE Utils library - Persistence', () => {
         scopes.forEach((e) => {
             expect(e.isDone()).not.toBeTruthy();
         });
+    });
+
+    it('should not attempt to sync without a persistence provider', () => {
+        const app = express();
+        app.use(express.json());
+        const { Utils } = index('core', app);
+        Utils.registerRoutesForPersistence();
+
+        let spy = jest.spyOn(global.console, 'warn');
+        Utils.Persistence.sync();
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
     });
 
     it('should synchronise local and remote data', async () => {
@@ -464,10 +480,6 @@ describe('The OVE Utils library - Persistence', () => {
         await request(app).delete('/persistence').send({ }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
         delete process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
 
-        // Important: scopes must be tested at the end, or else they don't evaluate to anything
-        scopes.forEach((e) => {
-            expect(e.isDone()).toBeTruthy();
-        });
         expect(state.get('fooEntry')).toEqual({ foo: 'bar', bar: 'bar', test: [0] });
         global.console = OLD_CONSOLE;
 
@@ -475,6 +487,11 @@ describe('The OVE Utils library - Persistence', () => {
         expect(mockCallback.mock.calls.length).toBe(2);
         expect(mockCallback.mock.calls[0][5]).toBe('Unable to get of keys from persistence provider:');
         expect(mockCallback.mock.calls[1][5]).toBe('Unable to read key:');
+
+        // Important: scopes must be tested at the end, or else they don't evaluate to anything
+        scopes.forEach((e) => {
+            expect(e.isDone()).toBeTruthy();
+        });
     });
 
     it('should schedule sync task according to environment variables', async () => {

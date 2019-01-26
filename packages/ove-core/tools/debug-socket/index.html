@@ -20,20 +20,20 @@
             let hostname = new URLSearchParams(location.search.slice(1)).get('oveHost');
             if (!hostname) {
                 displayError();
-            } else {
-                hostname = hostname.substring(hostname.indexOf('//') + 2);
-                $.getScript('http://' + hostname + '/ove.js', () => {
-                    if (!OVE.Utils.getQueryParam('oveAppName') || !OVE.Utils.getQueryParam('oveSectionId')) {
-                        displayError();
-                    } else {
-                        const content = $('<textarea>').css({ height: '10vw', width: '85vw', fontSize: '1.5vw', background: 'lightyellow', borderRadius: '.2rem', padding: '0.5vw' }).appendTo('.outer');
-                        const send = $('<button>').addClass('btn btn-primary btn-sm').text('Send').appendTo('.outer');
-                        const ove = new OVE(OVE.Utils.getQueryParam('oveAppName'), hostname, OVE.Utils.getQueryParam('oveSectionId'));
-                        ove.socket.on(m => { content.val(JSON.stringify(m)); });
-                        send.click(() => { ove.socket.send(JSON.parse(content.val())); });
-                    }
-                });
+                return;
             }
+            hostname = hostname.substring(hostname.indexOf('//') + 2);
+            $.getScript('http://' + hostname + '/ove.js', () => {
+                if (!OVE.Utils.getQueryParam('oveAppName') || !OVE.Utils.getQueryParam('oveSectionId')) {
+                    displayError();
+                    return;
+                }
+                const content = $('<textarea>').css({ height: '10vw', width: '85vw', fontSize: '1.5vw', background: 'lightyellow', borderRadius: '.2rem', padding: '0.5vw' }).appendTo('.outer');
+                const send = $('<button>').addClass('btn btn-primary btn-sm').text('Send').appendTo('.outer');
+                const ove = new OVE(OVE.Utils.getQueryParam('oveAppName'), hostname, OVE.Utils.getQueryParam('oveSectionId'));
+                ove.socket.on(m => { content.val(JSON.stringify(m)); });
+                send.click(() => { ove.socket.send(JSON.parse(content.val())); });
+            });
         });
     </script>
 </head>

@@ -35,9 +35,8 @@ function Utils (appName, app, dirs) {
         const nameSeparator = input.indexOf('.');
         if (nameSeparator === -1) {
             return obj[input];
-        } else {
-            return getDescendant(input.substring(nameSeparator + 1), obj[input.substring(0, nameSeparator)]);
         }
+        return getDescendant(input.substring(nameSeparator + 1), obj[input.substring(0, nameSeparator)]);
     };
     this.JSON.EMPTY = JSON.stringify({});
     this.JSON.EMPTY_ARRAY = JSON.stringify([]);
@@ -261,6 +260,9 @@ function Utils (appName, app, dirs) {
                         Module Exports
 **************************************************************/
 module.exports = function (appName, app, dirs) {
+    // Exporting the Utility functions.
+    module.exports.Utils = new Utils(appName, app, dirs);
+
     // Constants are defined as follows:
     //    1. System-wide within @ove-lib/utils
     //    2. Within OVE Core as a part of client utilities
@@ -269,17 +271,14 @@ module.exports = function (appName, app, dirs) {
     // system-wide constants. The following code supports all of the above combinations.
     if (!dirs) {
         module.exports.Constants = Constants;
-    } else {
-        const constantsFile = path.join(dirs.constants, (appName === 'core' ? 'constants' : appName) + '.js');
-        if (fs.existsSync(constantsFile)) {
-            module.exports.Constants = Object.assign({}, Constants, require(constantsFile).Constants);
-        } else {
-            module.exports.Constants = Constants;
-        }
+        return module.exports;
     }
-
-    // Exporting the Utility functions.
-    module.exports.Utils = new Utils(appName, app, dirs);
+    const constantsFile = path.join(dirs.constants, (appName === 'core' ? 'constants' : appName) + '.js');
+    if (fs.existsSync(constantsFile)) {
+        module.exports.Constants = Object.assign({}, Constants, require(constantsFile).Constants);
+    } else {
+        module.exports.Constants = Constants;
+    }
 
     return module.exports;
 };

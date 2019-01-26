@@ -115,20 +115,21 @@ module.exports = function (baseDir, appName) {
         if (!module.exports.operations.canTransform || !module.exports.operations.transform) {
             log.warn('Transform State operation not implemented by application');
             Utils.sendMessage(res, HttpStatus.NOT_IMPLEMENTED, JSON.stringify({ error: 'operation not implemented' }));
+            return state;
         } else if (Utils.isNullOrEmpty(transformation)) {
             log.error('Transformation not provided');
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid transformation' }));
+            return state;
         } else if (!module.exports.operations.canTransform(state, transformation)) {
             log.error('Unable to apply transformation:', transformation);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid transformation' }));
-        } else {
-            const result = module.exports.operations.transform(state, transformation);
-            log.info('Successfully transformed state');
-            log.debug('Transformed state from:', state, 'into:', result, 'using transformation:', transformation);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
-            return result;
+            return state;
         }
-        return state;
+        const result = module.exports.operations.transform(state, transformation);
+        log.info('Successfully transformed state');
+        log.debug('Transformed state from:', state, 'into:', result, 'using transformation:', transformation);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+        return result;
     };
 
     const transformStateByName = function (req, res) {

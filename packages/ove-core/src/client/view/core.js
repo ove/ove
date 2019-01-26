@@ -109,12 +109,10 @@ updateSections = function (m) {
                     log.info('Setting iFrame source URL:', url);
                     frame.attr('src', url);
                     frame.css('opacity', m.app.opacity);
-                } else {
+                } else if (frame.attr('src')) {
                     // An app may be un-deployed from a section without deleting the actual section.
-                    if (frame.attr('src')) {
-                        frame.attr('src', null);
-                        log.info('Removing iFrame source URL');
-                    }
+                    frame.attr('src', null);
+                    log.info('Removing iFrame source URL');
                 }
             } else if (m.spaces) {
                 let geometry = (m.spaces[space] || [])[client] || {};
