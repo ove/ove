@@ -217,6 +217,21 @@ function Persistence (appName, log, Utils, Constants, __private) {
         }
     };
 
+    const createParentIfNotExisting = function (key) {
+        let parent = readPersistable(__private.local, key, true);
+        if (!parent) {
+            const parentKey = key.substring(0, key.lastIndexOf('['));
+            createParentIfNotExisting(parentKey);
+            // If a parent does not exist locally, but exists remotely, then, it should be
+            // created locally. If a parent exists, it could be either an object or an array
+            // and there is no easy way of figuring that out based on just the key. So, we
+            // make an assumption that objects would not generally have keys that start with
+            // numbers.
+            const isArray = !isNaN(parseInt(key.substring(key.lastIndexOf('[') + 1, key.length - 1)));
+            createOrUpdatePersistable(parentKey, new Persistable(parentKey, isArray ? [] : {}));
+        }
+    };
+
     const createOrUpdatePersistable = function (key, value) {
         let parent = readPersistable(__private.local, key, true);
         if (!parent) {
@@ -314,6 +329,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                                 log.error('Unable to read key:', convertedKey, 'from persistence provider:',
                                     __private.provider, ', got:', err);
                             } else {
+                                createParentIfNotExisting(convertedKey);
                                 createOrUpdatePersistable(convertedKey, new Persistable(convertedKey, result.value));
                             }
                         });

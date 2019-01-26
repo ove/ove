@@ -444,12 +444,16 @@ describe('The OVE Utils library - Persistence', () => {
             'fooEntry/foo': Number.MIN_VALUE,
             'fooEntry/bar': Number.MAX_VALUE,
             'fooEntry/nbar': Number.MAX_VALUE,
+            'xEntry/0/test/nbar': Number.MAX_VALUE,
             'fooEntry/test/0': Number.MAX_VALUE
         }));
         scopes.push(nock('http://localhost:8081').get('/core/fooEntry/bar').reply(HttpStatus.OK, {
             value: 'bar'
         }));
         scopes.push(nock('http://localhost:8081').get('/core/fooEntry/test/0').reply(HttpStatus.OK, {
+            value: 0
+        }));
+        scopes.push(nock('http://localhost:8081').get('/core/xEntry/0/test/nbar').reply(HttpStatus.OK, {
             value: 0
         }));
         state.sync();

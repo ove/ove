@@ -211,7 +211,7 @@ module.exports = function (server, log, Utils, Constants) {
     // section by its id.
     const _deleteSectionById = function (sectionId) {
         let section = server.state.get('sections[' + sectionId + ']');
-        if (section.app) {
+        if (section.app && section.app.url) {
             log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/flush', _handleRequestError);
         }
@@ -264,7 +264,7 @@ module.exports = function (server, log, Utils, Constants) {
         } else {
             while (sections.length !== 0) {
                 let section = sections.pop();
-                if (section.app) {
+                if (section.app && section.app.url) {
                     log.debug('Flushing application at URL:', section.app.url);
                     request.post(section.app.url + '/flush', _handleRequestError);
                 }
