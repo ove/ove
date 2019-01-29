@@ -75,7 +75,7 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
         server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.length).toEqual(2);
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(spy).toHaveBeenCalled();
         server.peers = {};

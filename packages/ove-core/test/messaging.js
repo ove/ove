@@ -85,8 +85,24 @@ describe('The OVE Core server', () => {
         server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        server.peers = {};
+    });
+
+    it('should forward events to peers if they arrived from another peer', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid', server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
+        server.peers = {};
+    });
+
+    it('should drop events if they originated from self', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
+        expect(sockets.messages.length).toEqual(0);
         server.peers = {};
     });
 

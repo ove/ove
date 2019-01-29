@@ -7,6 +7,11 @@ module.exports = function (server, log, Utils, Constants) {
 
     // It is required that we are able to access variables like these during testing.
     server.peers = {};
+    server.uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        let r = Math.random() * 16 | 0;
+        let v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 
     const getSocket = function (peerHost) {
         const socketURL = 'ws://' + peerHost;
@@ -79,6 +84,10 @@ module.exports = function (server, log, Utils, Constants) {
         s.safeSend(JSON.stringify({ func: 'connect' }));
         s.on('message', function (msg) {
             let m = JSON.parse(msg);
+            // We will ignore anything that we have already forwarded.
+            if (m.forwardedBy && m.forwardedBy.indexOf(server.uuid) !== -1) {
+                return;
+            }
 
             // All methods except the method for viewers to request section information that
             // helps browser crash recovery
@@ -99,7 +108,15 @@ module.exports = function (server, log, Utils, Constants) {
                         if (Constants.Logging.TRACE_SERVER) {
                             log.trace('Sending to peer:', p, ', message:', msg);
                         }
-                        c.safeSend(msg);
+                        // We set a forwardedBy property on the message to avoid it being forwarded
+                        // in a loop. There can be more than one peer participating in a broadcast
+                        // so we need to keep track of multiple peers who have forwarded the same
+                        // message.
+                        if (!m.forwardedBy) {
+                            m.forwardedBy = [];
+                        }
+                        m.forwardedBy.push(server.uuid);
+                        c.safeSend(JSON.stringify(m));
                     }
                 });
                 return;
