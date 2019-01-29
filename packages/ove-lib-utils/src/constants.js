@@ -20,6 +20,7 @@ const Constants = {
     /**************************************************************
                            Other Constants
     **************************************************************/
+    WEBSOCKET_READY: 1,
     SWAGGER_API_DOCS_CONTEXT: '/api-docs',
     PERSISTENCE_SYNC_INTERVAL: +(process.env.OVE_PERSISTENCE_SYNC_INTERVAL !==
         undefined ? process.env.OVE_PERSISTENCE_SYNC_INTERVAL : 2000), // Unit: milliseconds

@@ -34,6 +34,7 @@ global.Utils = Utils;
 
 require(path.join(srcDir, '..', 'test', 'core-functionality.js'));
 require(path.join(srcDir, '..', 'test', 'persistence.js'));
+require(path.join(srcDir, '..', 'test', 'web-sockets.js'));
 require(path.join(srcDir, '..', 'test', 'logging.js'));
 require(path.join(srcDir, '..', 'test', 'constants.js'));
 

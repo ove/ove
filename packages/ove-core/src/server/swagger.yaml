@@ -33,10 +33,10 @@ paths:
         in: "body"
         schema:
           type: "object"
-          url:
-            source:
+          properties:
+            url:
               type: "string"
-              description: "URL of the persistence provider"
+              description: "URL of the persistence provider"  
         required: true
       produces:
       - "application/json"
@@ -60,6 +60,30 @@ paths:
       responses:
         200:
           description: "successful operation"
+  /peers:
+    post:
+      tags:
+      - "other"
+      summary: "Updates the list of peers (other instances of OVE Core)"
+      parameters:
+      - name: "body"
+        in: "body"
+        schema:
+          type: "array"
+          items:
+            type: "object"
+            properties:
+              url:
+                type: "string"
+                description: "URL of peer"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "bad request"
   /spaces:
     get:
       tags:

@@ -19,10 +19,11 @@ describe('The OVE Utils library', () => {
         expect(Object.keys(Utils)).toContain('sendEmptySuccess');
         expect(Object.keys(Utils)).toContain('isNullOrEmpty');
         expect(Object.keys(Utils)).toContain('getOVEHost');
+        expect(Object.keys(Utils)).toContain('getSafeSocket');
     });
 
     it('should also export non-mandatory functionality', () => {
-        expect(Object.keys(Utils).length).toEqual(9);
+        expect(Object.keys(Utils).length).toEqual(10);
         expect(Object.keys(Utils)).toContain('Logger');
         expect(Object.keys(Utils)).toContain('registerRoutesForPersistence');
         expect(Object.keys(Utils)).toContain('registerRoutesForContent');

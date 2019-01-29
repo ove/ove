@@ -37,6 +37,7 @@ module.exports = function (baseDir, appName) {
     module.exports.Utils = {
         JSON: Utils.JSON,
         getOVEHost: Utils.getOVEHost,
+        getSafeSocket: Utils.getSafeSocket,
         sendMessage: Utils.sendMessage,
         sendEmptySuccess: Utils.sendEmptySuccess,
         isNullOrEmpty: Utils.isNullOrEmpty

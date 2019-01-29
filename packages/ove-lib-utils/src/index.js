@@ -242,6 +242,30 @@ function Utils (appName, app, dirs) {
         return host;
     };
 
+    this.getSafeSocket = function (socket) {
+        // We check if the WebSocket object already has a safeSend method associated with it's
+        // prototype, we add it only if it does not exist. The safeSend method is introduced by
+        // OVE, so it is impossible for the WebSocket to have it unless OVE introduced it.
+        if (!Object.getPrototypeOf(socket).safeSend) {
+            log.debug('Extending Prototype of WebSocket');
+            // The safeSend method simply wraps the send method with a try-catch. We could avoid
+            // doing this and introduce a try-catch whenever we send a message to introduce a
+            // utility. This approach is a bit neater than that, since the code is easier to
+            // follow as a result.
+            Object.getPrototypeOf(socket).safeSend = function (msg) {
+                try {
+                    this.send(msg);
+                } catch (e) {
+                    if (this.readyState === Constants.WEBSOCKET_READY) {
+                        log.error('Error sending message:', e.message);
+                    }
+                    // ignore all other errors, since there is no value in recording them.
+                }
+            };
+        }
+        return socket;
+    };
+
     this.sendMessage = function (res, status, msg) {
         res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
     };

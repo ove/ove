@@ -16,6 +16,7 @@ describe('The OVE Core server', () => {
     const { WebSocket, Server } = require('mock-socket');
     const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
     const PORT = 5555;
+    const PEER_PORT = 5545;
     const TIMEOUT = 500;
 
     let sockets = {};
@@ -25,7 +26,9 @@ describe('The OVE Core server', () => {
 
     beforeAll(() => {
         const url = 'ws://localhost:' + PORT;
+        const peerUrl = 'ws://localhost:' + PEER_PORT;
         sockets.server = new Server(url);
+        sockets.peerServer = new Server(peerUrl);
         let socket = new WebSocket(url);
         socket.readyState = 1;
         wss.clients.add(socket);
@@ -41,6 +44,12 @@ describe('The OVE Core server', () => {
             throw new Error('some error');
         };
         wss.clients.add(sockets.failing);
+
+        // We need at least one peer socket;
+        sockets.peerSocket = new WebSocket(peerUrl);
+        sockets.peerSocket.readyState = 1;
+        sockets.peerSocketNotReady = new WebSocket(peerUrl);
+        sockets.peerSocketNotReady.readyState = 0;
 
         // Add a server-side socket to test the messaging functionality.
         // It is important to create at least one client-side socket before creating a
@@ -72,6 +81,23 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
     });
 
+    it('should forward events to peers if they exist', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        server.peers = {};
+    });
+
+    it('should not forward events to peers if they are not ready', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocketNotReady;
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(1); // We are expecting one event instead of two.
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        server.peers = {};
+    });
+
     // This scenario would happen only if section information would be requested by an app within a section.
     // OVE prevents this scenario as it is both a security breach and a consistency violation.
     it('should be complaining when a read event from the core application is sent with a section id', () => {
@@ -91,6 +117,30 @@ describe('The OVE Core server', () => {
 
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
+    it('should be able to update peers', async () => {
+        expect(Object.keys(server.peers).length).toEqual(0);
+        await request(app).post('/peers').send({})
+            .expect(HttpStatus.BAD_REQUEST, Utils.JSON.EMPTY);
+        expect(Object.keys(server.peers).length).toEqual(0);
+        await request(app).post('/peers').send([{ url: 'http://localhost:' + PEER_PORT }])
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(Object.keys(server.peers).length).toEqual(1);
+        expect(Object.keys(server.peers)[0]).toEqual('localhost:' + PEER_PORT);
+        await request(app).post('/peers').send([{ url: 'http://localhost:' + PEER_PORT }, { url: 'somehost:' + PEER_PORT }, {}])
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(Object.keys(server.peers).length).toEqual(2);
+        expect(Object.keys(server.peers)[0]).toEqual('localhost:' + PEER_PORT);
+        expect(Object.keys(server.peers)[1]).toEqual('somehost:' + PEER_PORT);
+        await request(app).post('/peers').send([{ url: 'somehost:' + PEER_PORT + '/' }])
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(Object.keys(server.peers).length).toEqual(1);
+        expect(Object.keys(server.peers)[0]).toEqual('somehost:' + PEER_PORT);
+        await request(app).post('/peers').send([])
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(Object.keys(server.peers).length).toEqual(0);
+        server.peers = {};
+    });
+
     it('should trigger an event to its sockets when a section is deleted', async () => {
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -101,13 +151,14 @@ describe('The OVE Core server', () => {
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should be logging errors when sockets are failing, but only if the failure was not related to their readyState', async () => {
-        const spy = jest.spyOn(global.console, 'error');
+        let spy = jest.spyOn(global.console, 'error');
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(sockets.messages.length).toEqual(1);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
+        spy = jest.spyOn(global.console, 'error');
         sockets.failing.send = () => {
             sockets.failing.readyState = 0;
             throw new Error('some error');

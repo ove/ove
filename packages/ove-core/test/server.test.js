@@ -95,4 +95,4 @@ describe('The OVE Core server', () => {
 });
 
 // Any tests involving setTimeout needs to happen at the end - limitation of Jest.
-require(path.join(srcDir, '..', 'test', 'web-sockets.js'));
+require(path.join(srcDir, '..', 'test', 'messaging.js'));

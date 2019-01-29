@@ -1,4 +1,80 @@
+const HttpStatus = require('http-status-codes');
+
 module.exports = function (server, log, Utils, Constants) {
+    /**************************************************************
+                           Peers of OVE Core
+    **************************************************************/
+
+    // It is required that we are able to access variables like these during testing.
+    server.peers = {};
+
+    const getSocket = function (peerHost) {
+        const socketURL = 'ws://' + peerHost;
+        log.debug('Establishing WebSocket connection with:', socketURL);
+
+        let ws = new (require('ws'))(socketURL);
+        ws.on('close', function (code) {
+            log.warn('Lost websocket connection: closed with code:', code);
+            log.warn('Attempting to reconnect in ' + Constants.SOCKET_REFRESH_DELAY + 'ms');
+            // If the socket is closed, we try to refresh it.
+            setTimeout(getSocket, Constants.SOCKET_REFRESH_DELAY);
+        });
+        ws.on('error', log.error);
+        return Utils.getSafeSocket(ws);
+    };
+
+    // Utility function to get peer socket URL
+    const _getPeerSocketURL = function (peerURL) {
+        let host = peerURL;
+        /* istanbul ignore else */
+        // The host should never be null, empty or undefined based on how this method is used.
+        // This check is an additional precaution.
+        if (host) {
+            if (host.indexOf('//') >= 0) {
+                host = host.substring(host.indexOf('//') + 2);
+            }
+            if (host.indexOf('/') >= 0) {
+                host = host.substring(0, host.indexOf('/'));
+            }
+        }
+        return host;
+    };
+
+    const updatePeers = function (req, res) {
+        if (!(req.body instanceof Array)) {
+            log.error('Invalid request to update peers:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, Utils.JSON.EMPTY);
+            return;
+        }
+        const peers = [];
+        req.body.forEach(function (peer) {
+            if (peer.url) {
+                peers.push(_getPeerSocketURL(peer.url));
+            }
+        });
+        peers.forEach(function (peer) {
+            if (!server.peers[peer]) {
+                log.debug('Adding peer:', peer);
+                server.peers[peer] = getSocket(peer);
+            }
+        });
+        Object.keys(server.peers).forEach(function (peer) {
+            if (peers.indexOf(peer) === -1) {
+                log.debug('Removing peer:', peer);
+                server.peers[peer].close();
+                delete server.peers[peer];
+            }
+        });
+        log.info('Successfully updated peers of node');
+        log.debug('Existing active peers:', Object.keys(server.peers).length);
+        Utils.sendEmptySuccess(res);
+    };
+
+    server.app.post('/peers', updatePeers);
+
+    /**************************************************************
+                        Messaging Functionality
+    **************************************************************/
     return function (s) {
         s.safeSend(JSON.stringify({ func: 'connect' }));
         s.on('message', function (msg) {
@@ -12,6 +88,16 @@ module.exports = function (server, log, Utils, Constants) {
                     if (c !== s && c.readyState === Constants.WEBSOCKET_READY) {
                         if (Constants.Logging.TRACE_SERVER) {
                             log.trace('Sending to socket:', c.id, ', message:', msg);
+                        }
+                        c.safeSend(msg);
+                    }
+                });
+                // We forward the same message to all peers
+                Object.keys(server.peers).forEach(function (p) {
+                    const c = server.peers[p];
+                    if (c.readyState === Constants.WEBSOCKET_READY) {
+                        if (Constants.Logging.TRACE_SERVER) {
+                            log.trace('Sending to peer:', p, ', message:', msg);
                         }
                         c.safeSend(msg);
                     }

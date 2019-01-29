@@ -41,10 +41,10 @@ paths:
         in: "body"
         schema:
           type: "object"
-          url:
-            source:
+          properties:
+            url:
               type: "string"
-              description: "URL of the persistence provider"
+              description: "URL of the persistence provider" 
         required: true
       produces:
       - "application/json"

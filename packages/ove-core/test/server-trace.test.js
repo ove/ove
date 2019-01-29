@@ -31,6 +31,7 @@ const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, lo
 describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
     const { WebSocket, Server } = require('mock-socket');
     const PORT = 5556;
+    const PEER_PORT = 5546;
 
     let sockets = {};
     WebSocket.prototype.send = (m) => {
@@ -39,10 +40,16 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
 
     beforeAll(() => {
         const url = 'ws://localhost:' + PORT;
+        const peerUrl = 'ws://localhost:' + PEER_PORT;
         sockets.server = new Server(url);
+        sockets.peerServer = new Server(peerUrl);
         let socket = new WebSocket(url);
         socket.readyState = 1;
         wss.clients.add(socket);
+
+        // We need at least one peer socket;
+        sockets.peerSocket = new WebSocket(peerUrl);
+        sockets.peerSocket.readyState = 1;
 
         // Add a server-side socket to test the messaging functionality.
         // It is important to create at least one client-side socket before creating a
@@ -65,10 +72,13 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
 
         sockets.messages = [];
         const spy = jest.spyOn(log, 'trace');
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(spy).toHaveBeenCalled();
+        server.peers = {};
         spy.mockRestore();
     });
 

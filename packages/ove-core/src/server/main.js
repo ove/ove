@@ -17,28 +17,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
         // instantiation of the object is to extend an object that has been created from within the
         // module. So, first of all we extend the add method to achieve what we want.
         Object.getPrototypeOf(wss.clients).add = function (i) {
-            // Then we check if the object that is being added already has a safeSend method
-            // associated with it's prototype, we add it only if it does not exist. The safeSend
-            // method is introduced by OVE, so it is impossible for the WebSocket to have it unless
-            // OVE introduced it.
-            if (!Object.getPrototypeOf(i).safeSend) {
-                log.debug('Extending Prototype of WebSocket');
-                // The safeSend method simply wraps the send method with a try-catch. We could avoid
-                // doing this and introduce a try-catch whenever we send a message to introduce a
-                // utility. This approach is a bit neater than that, since the code is easier to
-                // follow as a result.
-                Object.getPrototypeOf(i).safeSend = function (msg) {
-                    try {
-                        this.send(msg);
-                    } catch (e) {
-                        if (this.readyState === Constants.WEBSOCKET_READY) {
-                            log.error('Error sending message:', e.message);
-                        }
-                        // ignore all other errors, since there is no value in recording them.
-                    }
-                };
-            }
-            add.bind(wss.clients)(i);
+            add.bind(wss.clients)(Utils.getSafeSocket(i));
         };
     }(Object.getPrototypeOf(wss.clients).add));
 
