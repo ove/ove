@@ -9,7 +9,7 @@ const dirs = {
     base: __dirname,
     nodeModules: path.join(__dirname, '..', '..', '..', 'node_modules'),
     constants: path.join(__dirname, 'client', 'utils'),
-    rootPage: path.join(__dirname, 'blank.html')
+    rootPage: path.join(__dirname, 'landing.html')
 };
 const { Constants, Utils } = require('@ove-lib/utils')('core', app, dirs);
 const log = Utils.Logger('OVE');
@@ -21,6 +21,9 @@ log.debug('Using CORS middleware');
 app.use(cors());
 log.debug('Using Express JSON middleware');
 app.use(express.json());
+
+log.debug('Using module:', 'github-markdown-css');
+app.use('/', express.static(path.join(dirs.nodeModules, 'github-markdown-css')));
 
 // The spaces configuration can be loaded either from a URL specified by an environment
 // variable or through a local file.

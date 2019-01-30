@@ -129,14 +129,19 @@ function Utils (appName, app, dirs) {
     /**************************************************************
                      Static Content/Docs Generation
     **************************************************************/
-    this.registerRoutesForContent = function () {
+    this.registerRoutesForContent = function (config) {
         log.debug('Registering routes for content pages');
         const showRoot = !!dirs.rootPage;
         // If a rootPage parameter is provided, '/' will redirect to the rootPage.
         if (showRoot) {
             log.debug('Got root page:', dirs.rootPage);
             app.get('/', function (_req, res) {
-                res.sendFile(dirs.rootPage);
+                if (config && config.version) {
+                    res.send(fs.readFileSync(dirs.rootPage, Constants.UTF8)
+                        .replace(Constants.RegExp.Annotation.VERSION, config.version));
+                } else {
+                    res.sendFile(dirs.rootPage);
+                }
             });
         }
 

@@ -20,7 +20,7 @@ const dirs = {
     base: __dirname,
     nodeModules: path.join(__dirname, '..', 'node_modules'),
     constants: path.join(__dirname, 'constants'),
-    rootPage: path.join(__dirname, 'client', 'blank.html')
+    rootPage: path.join(__dirname, 'client', 'landing.html')
 };
 const { Constants, Utils } = require('@ove-lib/utils')('myapp', app, dirs);
 const log = Utils.Logger('myapp');

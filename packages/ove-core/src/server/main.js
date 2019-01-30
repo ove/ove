@@ -54,7 +54,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
                         OVE Core functionality
     **************************************************************/
     // Static content
-    Utils.registerRoutesForContent();
+    Utils.registerRoutesForContent(pjson);
 
     // Persistence;
     Utils.registerRoutesForPersistence();

@@ -274,7 +274,7 @@ describe('The OVE Utils library', () => {
             rootPage: path.join(dirs.base, 'client', 'root.html')
         };
         const { Utils } = index('core', app, newDirs);
-        Utils.registerRoutesForContent();
+        Utils.registerRoutesForContent({ version: 'x.y.z' });
         let resRoot = await request(app).get('/');
         let resIndexHTML = await request(app).get('/index.html');
         expect(resRoot.text).not.toContain(resIndexHTML.text);
