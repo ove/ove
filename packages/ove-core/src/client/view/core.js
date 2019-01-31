@@ -73,13 +73,15 @@ updateSections = function (m) {
                     frameborder: 0,
                     scrolling: 'no'
                 }).css({
+                    transformOrigin: 'top left',
+                    transform: 'scale(' + (geometry.scale || 1) + ')',
                     // The height is scaled to avoid random scrollbars.
                     height: geometry.h * 0.999,
                     width: geometry.w,
                     zIndex: m.id,
                     position: 'absolute',
-                    marginLeft: geometry.offset.x,
-                    marginTop: geometry.offset.y
+                    marginLeft: geometry.offset.x * (geometry.scale || 1),
+                    marginTop: geometry.offset.y * (geometry.scale || 1)
                 }).appendTo('.container');
             }
             break;
@@ -92,13 +94,15 @@ updateSections = function (m) {
                     let geometry = (m.spaces[space] || [])[client] || {};
                     if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                         frame.css({
+                            transformOrigin: 'top left',
+                            transform: 'scale(' + (geometry.scale || 1) + ')',
                             // The height is scaled to avoid random scrollbars.
                             height: geometry.h * 0.999,
                             width: geometry.w,
                             zIndex: m.id,
                             position: 'absolute',
-                            marginLeft: geometry.offset.x,
-                            marginTop: geometry.offset.y
+                            marginLeft: geometry.offset.x * (geometry.scale || 1),
+                            marginTop: geometry.offset.y * (geometry.scale || 1)
                         });
                     } else {
                         log.debug('Removing iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
@@ -125,13 +129,15 @@ updateSections = function (m) {
                         frameborder: 0,
                         scrolling: 'no'
                     }).css({
+                        transformOrigin: 'top left',
+                        transform: 'scale(' + (geometry.scale || 1) + ')',
                         // The height is scaled to avoid random scrollbars.
                         height: geometry.h * 0.999,
                         width: geometry.w,
                         zIndex: m.id,
                         position: 'absolute',
-                        marginLeft: geometry.offset.x,
-                        marginTop: geometry.offset.y
+                        marginLeft: geometry.offset.x * (geometry.scale || 1),
+                        marginTop: geometry.offset.y * (geometry.scale || 1)
                     }).appendTo('.container');
                 }
             }
