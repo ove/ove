@@ -16,6 +16,8 @@ tags:
   description: "Operations on all sections"
 - name: "section"
   description: "Operations on an individual section"
+- name: "groups"
+  description: "Operations on all section groups"
 - name: "group"
   description: "Operations on an individual section group"
 - name: "other"
@@ -350,6 +352,26 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid section id' if the section id was not found."
+  /groups:
+    get:
+      tags:
+      - "groups"
+      summary: "Returns a list of groups as an array."
+      description: "Each group in this array will include an array of section identifiers that belongs to it. Will return an empty array if no groups exist."
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "array"
+              items:
+                type: "integer"
+                format: "int32"
   /group:
     post:
       tags:

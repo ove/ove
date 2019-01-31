@@ -628,6 +628,17 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
+    const readGroups = function (_req, res) {
+        let result = [];
+        server.state.get('groups').forEach(function (e, i) {
+            if (!Utils.isNullOrEmpty(server.state.get('groups[' + i + ']'))) {
+                result.push(e);
+            }
+        });
+        log.debug('Successfully read configuration for all groups');
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+    };
+
     // Internal utility function to create or update a group
     const _createOrUpdateGroup = function (groupId, operation, req, res) {
         const validateSections = function (group) {
@@ -711,6 +722,7 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.get('/section/:id', readSectionById);
     server.app.post('/section/:id', updateSectionById);
     server.app.delete('/section/:id', deleteSectionById);
+    server.app.get('/groups', readGroups);
     server.app.post('/group', createGroup);
     server.app.get('/group/:id', readGroupById);
     server.app.post('/group/:id', updateGroupById);
