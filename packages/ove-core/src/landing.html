@@ -55,10 +55,10 @@
         }
 
         function displayState() {
-            d3.json("http://localhost:8080/spaces")
+            d3.json("./spaces")
                 .then(function (spaces) {
 
-                    d3.json("http://localhost:8080/sections")
+                    d3.json("./sections")
                         .then(function (sections) {
                             drawSpaces(spaces, sections);
                             tabulateSections(spaces, sections)
