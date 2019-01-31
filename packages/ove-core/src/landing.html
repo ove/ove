@@ -4,25 +4,168 @@
 <head>
     <title>OVE Core</title>
     <link rel="shortcut icon" href="#">
-</head>
-<link rel="stylesheet" href="github-markdown.css">
-<style>
-    .markdown-body {
-        background-color:white;
-        overflow: hidden;
-        min-width: 200px;
-        max-width: 980px;
-        margin: 0 auto;
-        padding: 45px;
-    }
 
-    @media (max-width: 767px) {
+    <link rel="stylesheet" href="github-markdown.css">
+    <style>
         .markdown-body {
-            padding: 15px;
+            background-color:white;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
         }
-    }
-</style>
-<body class="markdown-body">
+
+        @media (max-width: 767px) {
+            .markdown-body {
+                padding: 15px;
+            }
+        }
+
+        .client {
+            fill: lightgrey;
+            stroke: black;
+            stroke-width: 1px;
+        }
+
+        .section {
+            fill: blue;
+            stroke: none;
+            stroke-width: 0px;
+        }
+
+    </style>
+    
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    
+    <script>
+        const margin = 50;
+        const width = Math.max(767, window.innerWidth - 2 * margin);
+        const height = Math.max(767, window.innerHeight - 2 * margin);
+
+        function getScaleForSpace(geometry) {
+            // Pick a scale which will scale the bounding-box of the screens in this space to fit
+            const xMax = d3.max(geometry.map(function (m) {
+                return m.x + m.w;
+            }));
+            const yMax = d3.max(geometry.map(function (m) {
+                return m.y + m.h;
+            }));
+
+            return Math.max((yMax / height), (xMax / width));
+        }
+
+        function displayState() {
+            d3.json("http://localhost:8080/spaces")
+                .then(function (spaces) {
+
+                    d3.json("http://localhost:8080/sections")
+                        .then(function (sections) {
+                            drawSpaces(spaces, sections);
+                            tabulateSections(spaces, sections)
+                        })
+                })
+        }
+
+
+        function drawSpaces(spaces, sections) {
+            let spaceNames = Object.keys(spaces);
+
+            let scaleFactor = d3.max(spaceNames.map(name => getScaleForSpace(spaces[name])));
+
+            let x = d3.scaleLinear().range([0, width]).domain([0, width * scaleFactor]);
+            let y = d3.scaleLinear().range([0, height]).domain([0, height * scaleFactor]);
+
+            let divs = d3.select("#spaces")
+                .selectAll("div")
+                .data(spaceNames)
+                .enter()
+                .append("div");
+
+            divs.append("h3")
+                .text(d => d);
+
+            // Create an SVG for each space, setting width and height separately
+            let svgs = divs.append('svg')
+                .attr("width", d => d3.max(spaces[d].map(m => x(m.x + m.w))))
+                .attr("height", d => d3.max(spaces[d].map(m => y(m.y + m.h))));
+
+            let rects = svgs.selectAll('rect')
+                .data(d => spaces[d])
+                .enter()
+                .append('rect')
+                .attr("x", d => x(d.x))
+                .attr("y", d => y(d.y))
+                .attr("width", d => (x(d.x + d.w) - x(d.x)))
+                .attr("height", d => (y(d.y + d.h) - y(d.y)))
+                .classed('client', true);
+
+
+            svgs.selectAll(".sections")
+                .data(d => sections.filter(s => (s.space === d)))
+                .enter()
+                .append('rect')
+
+                .attr("x", d => x(d.x))
+                .attr("y", d => y(d.y))
+                .attr("width", d => (x(d.x + d.w) - x(d.x)))
+                .attr("height", d => (y(d.y + d.h) - y(d.y)))
+                .classed('section', true);
+        }
+
+        function tabulateSections(spaces, sections) {
+            let spaceNames = Object.keys(spaces);
+
+            let divs = d3.select("#sections")
+                .selectAll("div")
+                .data(spaceNames)
+                .enter()
+                .append("div");
+
+            divs.append("h3").text(d => d);
+
+            const headers = [
+                {title: "ID", field: d => ("<a href='" + d.app.url + "/control.html?oveSectionId=" + d.id + "'>" + d.id + "</a>")},
+                {title: "x", field: d => d.x},
+                {title: "y", field: d => d.w},
+                {title: "Width", field: d => d.w},
+                {title: "Height", field: d => d.h},
+                {title: "App", field: d => d.app.url}
+            ];
+
+            let tables = divs.append("table");
+
+            let headerRow = tables
+                .append("thead")
+                .append("tr")
+
+                .selectAll('th')
+                .data(headers)
+                .enter()
+                .append("th")
+                .text(d => d.title);
+
+            let rows = tables
+                .append("tbody")
+                .selectAll("tr")
+                .data(space => (sections.filter(s => (s.space === space))))
+                .enter()
+                .append('tr');
+
+            let funcs = headers.map(c => c.field);
+
+            rows.selectAll('td')
+                .data(d => funcs.map(f => f(d)))
+                .enter()
+                .append("td")
+                .html(d => d)
+        }
+
+    </script>
+
+</head>
+
+    <body class="markdown-body" onload="displayState()">
+
     <h1>Open Visualisation Environment v@VERSION is Running!</h1>
 
     <p>Open Visualisation Environment (OVE) is an open-source software stack, designed to be used
@@ -43,6 +186,15 @@
         <li><a href="api-docs">API Documentation</a></li>
         <li><a href="https://github.com/ove/ove/issues">Open Issues</a></li>
     </ul>
+        
+    <h2>List of sections</h2>
+    <div id="sections">
+    </div>
+
+
+    <h2>Diagrams of spaces</h2>
+    <div id="spaces"></div>
+
 </body>
 
 </html>
