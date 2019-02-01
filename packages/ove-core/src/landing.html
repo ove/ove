@@ -33,6 +33,10 @@
             stroke-width: 0px;
         }
 
+        .section-label{
+            fill: white;
+        }
+
     </style>
     
     <script src="d3.min.js"></script>
@@ -110,6 +114,16 @@
                 .attr("width", d => (x(d.x + d.w) - x(d.x)))
                 .attr("height", d => (y(d.y + d.h) - y(d.y)))
                 .classed('section', true);
+
+            svgs.selectAll(".section-label")
+                .data(d => sections.filter(s => (s.space === d)))
+                .enter()
+                .append('text')
+                .text(d => d.id)
+                .attr("x", d => x(d.x + d.w/2))
+                .attr("y", d => y(d.y + d.h/2))
+                .classed("section-label", true);
+
         }
 
         function tabulateSections(spaces, sections) {
