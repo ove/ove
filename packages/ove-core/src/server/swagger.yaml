@@ -55,7 +55,7 @@ paths:
                 description: "Returns an error message 'invalid request' if the required parameter 'url' was not provided/"
     delete:
       tags:
-      - "common operations"
+      - "other"
       summary: "Removes the URL of the persistence provider, if it exists"
       produces:
       - "application/json"
