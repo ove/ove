@@ -28,7 +28,7 @@
     "node-mocks-http": "1.7.3",
     "remark": "10.0.1",
     "remark-preset-lint-recommended": "3.0.2",
-    "lerna": "3.10.7",
+    "lerna": "3.10.8",
     "rimraf": "2.6.3"
   }
 }
