@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="en">
+<html lang='en'>
 
 <head>
     <title>OVE Core</title>
-    <link rel="shortcut icon" href="#">
+    <link rel='shortcut icon' href='#'>
 
-    <link rel="stylesheet" href="github-markdown.css">
+    <link rel='stylesheet' href='github-markdown.css'>
     <style>
         .markdown-body {
             background-color:white;
@@ -28,32 +28,21 @@
         }
 
         .section {
-            fill: blue;
             stroke: none;
+            opacity: 0.7;
             stroke-width: 0px;
         }
 
-        .section-label{
+        .section-label, .space-label {
             fill: white;
-            font-size: 30px;
         }
-
-        .space-label{
-            fill: white;
-            font-size: 50px;
-        }
-
 
     </style>
     
-    <script src="d3.min.js"></script>
+    <script src='d3.min.js'></script>
     
     <script>
-        const margin = 50;
-        const width = Math.max(767, window.innerWidth - 2 * margin);
-        const height = Math.max(767, window.innerHeight - 2 * margin);
-
-        function getScaleForSpace(geometry) {
+        function getScaleForSpace(geometry, width, height) {
             // Pick a scale which will scale the bounding-box of the screens in this space to fit
             const xMax = d3.max(geometry.map(function (m) {
                 return m.x + m.w;
@@ -66,118 +55,142 @@
         }
 
         function displayState() {
-            d3.json("./spaces")
+            d3.json('./spaces')
                 .then(function (spaces) {
-
-                    d3.json("./sections")
+                    d3.json('./sections')
                         .then(function (sections) {
                             drawSpaces(spaces, sections);
-                            tabulateSections(spaces, sections)
-                        })
-                })
+                            tabulateSections(spaces, sections);
+                        });
+                });
+        }
+
+        function setAppName(that, url) {
+            if (url) {
+                d3.json(url + '/name').then(name => {
+                    const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
+                    that.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs\'>API</a>)';
+                });
+            }
         }
 
 
         function drawSpaces(spaces, sections) {
+            const margin = 50;
+            const width = Math.min(767, window.innerWidth - 2 * margin);
+            const height = Math.min(767, window.innerHeight - 2 * margin);
+
+            d3.selectAll('#spaces>div').remove();
+            
             let spaceNames = Object.keys(spaces);
 
-            let scaleFactor = d3.max(spaceNames.map(name => getScaleForSpace(spaces[name])));
+            let scaleFactor = d3.max(spaceNames.map(name => getScaleForSpace(spaces[name], width, height)));
 
             let x = d3.scaleLinear().range([0, width]).domain([0, width * scaleFactor]);
             let y = d3.scaleLinear().range([0, height]).domain([0, height * scaleFactor]);
 
-            let divs = d3.select("#spaces")
-                .selectAll("div")
+            let divs = d3.select('#spaces')
+                .selectAll('div')
                 .data(spaceNames)
                 .enter()
-                .append("div");
+                .append('div');
 
-            divs.append("h3")
+            divs.append('h3')
                 .text(d => d);
 
             // Create an SVG for each space, setting width and height separately
             let svgs = divs.append('svg')
-                .attr("width", d => d3.max(spaces[d].map(m => x(m.x + m.w))))
-                .attr("height", d => d3.max(spaces[d].map(m => y(m.y + m.h))));
+                .attr('width', d => d3.max(spaces[d].map(m => x(m.x + m.w))))
+                .attr('height', d => d3.max(spaces[d].map(m => y(m.y + m.h))));
 
             let rects = svgs.selectAll('rect')
                 .data(d => spaces[d])
                 .enter()
                 .append('rect')
-                .attr("x", d => x(d.x))
-                .attr("y", d => y(d.y))
-                .attr("width", d => (x(d.x + d.w) - x(d.x)))
-                .attr("height", d => (y(d.y + d.h) - y(d.y)))
-                .classed('client', true);
+                .attr('x', d => x(d.x))
+                .attr('y', d => y(d.y))
+                .attr('width', d => (x(d.x + d.w) - x(d.x)))
+                .attr('height', d => (y(d.y + d.h) - y(d.y)))
+                .classed('client', true)
+                .append('title')
+                .text((d, i) => 'Client Id: ' + i);
 
-            svgs.selectAll(".space-label")
+            const minClientHeight = d3.min(Object.values(spaces).map(s => d3.min(s.map( d => (x(d.y + d.h) - x(d.y))))));
+            const minClientWidth = d3.min(Object.values(spaces).map(s => d3.min(s.map( d => (x(d.x + d.w) - x(d.x))))));
+            const clientTextSize = Math.min(minClientHeight, minClientWidth) / 4;
+            svgs.selectAll('.space-label')
                 .data(d => spaces[d])
                 .enter()
                 .append('text')
                 .text((d,i) => i)
-                .attr("x", d => (x(d.x + d.w/2) - 50*0.25))
-                .attr("y", d => (y(d.y + d.h/2) + 50*0.5))
-                .classed("space-label", true);
+                .attr('x', d => (x(d.x + d.w/2) - clientTextSize*0.25))
+                .attr('y', d => (y(d.y + d.h/2) + clientTextSize*0.5))
+                .style('font-size', clientTextSize + 'px')
+                .classed('space-label', true);
 
-
-
-            svgs.selectAll(".sections")
+            const colors = ['dodgerblue', 'crimson', 'darkorange', 'darkviolet', '#4daf4a'];
+            svgs.selectAll('.sections')
                 .data(d => sections.filter(s => (s.space === d)))
                 .enter()
                 .append('rect')
+                .attr('x', d => x(d.x))
+                .attr('y', d => y(d.y))
+                .attr('width', d => (x(d.x + d.w) - x(d.x)))
+                .attr('height', d => (y(d.y + d.h) - y(d.y)))
+                .style('fill', (d,i) => colors[i % colors.length])
+                .classed('section', true)
+                .append('title')
+                .text(d => 'Section Id: ' + d.id);
 
-                .attr("x", d => x(d.x))
-                .attr("y", d => y(d.y))
-                .attr("width", d => (x(d.x + d.w) - x(d.x)))
-                .attr("height", d => (y(d.y + d.h) - y(d.y)))
-                .classed('section', true);
-
-            svgs.selectAll(".section-label")
+            const minSectionHeight = d3.min(sections.map( d => (x(d.y + d.h) - x(d.y))));
+            const minSectionWidth = d3.min(sections.map( d => (x(d.x + d.w) - x(d.x))));
+            const sectionTextSize = Math.min(minSectionHeight, minSectionWidth) / 4;
+            svgs.selectAll('.section-label')
                 .data(d => sections.filter(s => (s.space === d)))
                 .enter()
                 .append('text')
                 .text(d => d.id)
-                .attr("x", d => (x(d.x + d.w/2) - 20*0.25))
-                .attr("y", d => (y(d.y + d.h/2) + 20*0.5))
-                .classed("section-label", true);
-
+                .attr('x', d => (x(d.x + d.w/2) - sectionTextSize*0.25))
+                .attr('y', d => (y(d.y + d.h/2) + sectionTextSize*0.5))
+                .style('font-size', sectionTextSize + 'px')
+                .classed('section-label', true);
         }
 
         function tabulateSections(spaces, sections) {
-            let spaceNames = Object.keys(spaces);
+            let spaceNames = Object.keys(spaces)
+                .filter(space => sections.filter(section => (section.space === space)).length > 0);
 
-            let divs = d3.select("#sections")
-                .selectAll("div")
+            let divs = d3.select('#sections')
+                .selectAll('div')
                 .data(spaceNames)
                 .enter()
-                .append("div");
+                .append('div');
 
-            divs.append("h3").text(d => d);
+            divs.append('h3').text(d => d);
 
             const headers = [
-                {title: "ID", field: d => ("<a href='" + d.app.url + "/control.html?oveSectionId=" + d.id + "'>" + d.id + "</a>")},
-                {title: "x", field: d => d.x},
-                {title: "y", field: d => d.y},
-                {title: "Width", field: d => d.w},
-                {title: "Height", field: d => d.h},
-                {title: "App", field: d => d.app.url}
+                {title: 'Id', field: d => !d.app ? '' : ('<a target=\'_blank\' href=\'' + d.app.url + '/control.html?oveSectionId=' + d.id + '\'>' + d.id + '</a>')},
+                {title: 'x', field: d => d.x},
+                {title: 'y', field: d => d.y},
+                {title: 'Width', field: d => d.w},
+                {title: 'Height', field: d => d.h},
+                {title: 'App', field: d => !d.app ? '' : d.app.url}
             ];
 
-            let tables = divs.append("table");
+            let tables = divs.append('table');
 
             let headerRow = tables
-                .append("thead")
-                .append("tr")
-
+                .append('thead')
+                .append('tr')
                 .selectAll('th')
                 .data(headers)
                 .enter()
-                .append("th")
+                .append('th')
                 .text(d => d.title);
 
             let rows = tables
-                .append("tbody")
-                .selectAll("tr")
+                .append('tbody')
+                .selectAll('tr')
                 .data(space => (sections.filter(s => (s.space === space))))
                 .enter()
                 .append('tr');
@@ -185,25 +198,28 @@
             let funcs = headers.map(c => c.field);
 
             rows.selectAll('td')
-                .data(d => funcs.map(f => f(d)))
+                .data(d => funcs.map(f => f(d, this)))
                 .enter()
-                .append("td")
+                .append('td')
                 .html(d => d)
+                .filter( (d,i) => (i === 5) )
+                // IMPORTANT: Do not replace below with lambda function.
+                .each( function(d){ setAppName(this, d); });
         }
 
     </script>
 
 </head>
 
-    <body class="markdown-body" onload="displayState()">
+    <body class='markdown-body' onload='displayState()' onresize='displayState()'>
 
     <h1>Open Visualisation Environment v@VERSION is Running!</h1>
 
     <p>Open Visualisation Environment (OVE) is an open-source software stack, designed to be used
         in large scale visualisation environments. OVE was developed to meet the requirements of
-        controlling the <a href="https://www.imperial.ac.uk/data-science/data-observatory/">Data Observatory</a>
-        at the <a href="https://www.imperial.ac.uk/data-science/">Data Science Institute</a> of
-        <a href="https://www.imperial.ac.uk">Imperial College London</a>, but it is not specialized
+        controlling the <a href='https://www.imperial.ac.uk/data-science/data-observatory/'>Data Observatory</a>
+        at the <a href='https://www.imperial.ac.uk/data-science/'>Data Science Institute</a> of
+        <a href='https://www.imperial.ac.uk'>Imperial College London</a>, but it is not specialized
         for that purpose.</p>
 
     <p>OVE can be used for visual analytics on Large High Resolution Displays, for presentations,
@@ -213,20 +229,20 @@
     
     <p>The Links below provide more information on OVE:</p>
     <ul>
-        <li><a href="https://dsi.gitbook.io/ove">User Documentation</a></li>
-        <li><a href="api-docs">API Documentation for OVE Core</a>, which can also be used to make API requests. Documentation for other OVE services and applications can be accessed from the <code>/api-docs</code> route of the appropriate hostname.</li>
-        <li><a href="https://github.com/ove/ove/issues">Report Issues for OVE Core</a></li>
-        <li><a href="https://data-science.doc.ic.ac.uk/ove/">Unified list of Open Issues across all OVE repositories</a></li>
-        <li><a href="https://github.com/ove">OVE organisation on GitHub</a></li>
+        <li><a href='https://dsi.gitbook.io/ove'>User Documentation</a></li>
+        <li><a href='api-docs'>API Documentation for OVE Core</a>, which can also be used to make API requests. Documentation for other OVE services and applications can be accessed from the <code>/api-docs</code> route of the appropriate hostname.</li>
+        <li><a href='https://github.com/ove/ove/issues'>Report Issues for OVE Core</a></li>
+        <li><a href='https://data-science.doc.ic.ac.uk/ove/'>Unified list of Open Issues across all OVE repositories</a></li>
+        <li><a href='https://github.com/ove'>OVE organisation on GitHub</a></li>
     </ul>
         
-    <h2>List of sections (<a href='./sections'>JSON</a>)</h2>
-    <div id="sections">
+    <h2>Sections (<a target='_blank' href='./sections'>JSON</a>)</h2>
+    <div id='sections'>
     </div>
 
 
-    <h2>Diagrams of spaces (<a href='./spaces'>JSON</a>)</h2>
-    <div id="spaces"></div>
+    <h2>Space Layouts (<a target='_blank' href='./spaces'>JSON</a>)</h2>
+    <div id='spaces'></div>
 
 </body>
 
