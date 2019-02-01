@@ -475,18 +475,20 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     const updateSections = function (req, res) {
-        if (req.body.space && !server.spaces[req.body.space]) {
+        if (req.body.moveTo && req.body.moveTo.space && !server.spaces[req.body.moveTo.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
             return;
-        } else if (req.body.scale && (req.body.scale.x === undefined || req.body.scale.y === undefined)) {
-            log.error('Invalid Dimensions for Scale operation', 'request:', JSON.stringify(req.body));
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-            return;
-        } else if (req.body.translate && (req.body.translate.x === undefined || req.body.translate.y === undefined)) {
-            log.error('Invalid Dimensions for Translate operation', 'request:', JSON.stringify(req.body));
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-            return;
+        } else if (req.body.transform) {
+            if (req.body.transform.scale && (req.body.transform.scale.x === undefined || req.body.transform.scale.y === undefined)) {
+                log.error('Invalid Dimensions for Scale operation', 'request:', JSON.stringify(req.body));
+                Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+                return;
+            } else if (req.body.transform.translate && (req.body.transform.translate.x === undefined || req.body.transform.translate.y === undefined)) {
+                log.error('Invalid Dimensions for Translate operation', 'request:', JSON.stringify(req.body));
+                Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+                return;
+            }
         }
 
         let sectionsToUpdate = [];
@@ -522,7 +524,8 @@ module.exports = function (server, log, Utils, Constants) {
         }
 
         // Check whether any operation has to be made.
-        if (Utils.isNullOrEmpty(sectionsToUpdate) || !(req.body.space || req.body.scale || req.body.translate)) {
+        if (Utils.isNullOrEmpty(sectionsToUpdate) || !((req.body.moveTo && req.body.moveTo.space) ||
+            (req.body.transform && (req.body.transform.scale || req.body.transform.translate)))) {
             Utils.sendEmptySuccess(res);
             return;
         }
@@ -532,15 +535,22 @@ module.exports = function (server, log, Utils, Constants) {
         sectionsToUpdate.forEach(function (e) {
             const section = sections[e];
             geometries[e] = { x: section.x, y: section.y, w: section.w, h: section.h };
-            const space = req.body.space || Object.keys(section.spaces)[0];
-            const bounds = _getSpaceGeometries()[space];
-            if (req.body.scale) {
-                geometries[e].w = (geometries[e].w * req.body.scale.x) << 0;
-                geometries[e].h = (geometries[e].h * req.body.scale.y) << 0;
+            let space;
+            if (req.body.moveTo && req.body.moveTo.space) {
+                space = req.body.moveTo.space;
+            } else {
+                space = Object.keys(section.spaces)[0];
             }
-            if (req.body.translate) {
-                geometries[e].x = (geometries[e].x + req.body.translate.x) << 0;
-                geometries[e].y = (geometries[e].y + req.body.translate.y) << 0;
+            const bounds = _getSpaceGeometries()[space];
+            if (req.body.transform) {
+                if (req.body.transform.scale) {
+                    geometries[e].w = (geometries[e].w * req.body.transform.scale.x) << 0;
+                    geometries[e].h = (geometries[e].h * req.body.transform.scale.y) << 0;
+                }
+                if (req.body.transform.translate) {
+                    geometries[e].x = (geometries[e].x + req.body.transform.translate.x) << 0;
+                    geometries[e].y = (geometries[e].y + req.body.transform.translate.y) << 0;
+                }
             }
             if (geometries[e].x < 0 || geometries[e].y < 0 || Math.max(geometries[e].x, geometries[e].w) > bounds.w || Math.max(geometries[e].y, geometries[e].h) > bounds.h) {
                 log.error('Section no longer fits within space after transformation for section id:', e, 'space:', space, 'geometry:', JSON.stringify(geometries[e]));
@@ -555,7 +565,11 @@ module.exports = function (server, log, Utils, Constants) {
 
         sectionsToUpdate.forEach(function (e) {
             const section = sections[e];
-            _updateSectionById(e, req.body.space, geometries[e], section.app);
+            let space;
+            if (req.body.moveTo && req.body.moveTo.space) {
+                space = req.body.moveTo.space;
+            }
+            _updateSectionById(e, space, geometries[e], section.app);
         });
         if (sectionsToUpdate.length === server.state.get('sections').length) {
             log.info('Successfully updated all sections');
@@ -626,6 +640,17 @@ module.exports = function (server, log, Utils, Constants) {
             log.info('Successfully deleted section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
         }
+    };
+
+    const readGroups = function (_req, res) {
+        let result = [];
+        server.state.get('groups').forEach(function (e, i) {
+            if (!Utils.isNullOrEmpty(server.state.get('groups[' + i + ']'))) {
+                result.push(e);
+            }
+        });
+        log.debug('Successfully read configuration for all groups');
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
     };
 
     // Internal utility function to create or update a group
@@ -711,6 +736,7 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.get('/section/:id', readSectionById);
     server.app.post('/section/:id', updateSectionById);
     server.app.delete('/section/:id', deleteSectionById);
+    server.app.get('/groups', readGroups);
     server.app.post('/group', createGroup);
     server.app.get('/group/:id', readGroupById);
     server.app.post('/group/:id', updateGroupById);

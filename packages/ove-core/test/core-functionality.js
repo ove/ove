@@ -68,11 +68,11 @@ describe('The OVE Core server', () => {
     });
 
     it('should reject invalid requests when updating sections', async () => {
-        await request(app).post('/sections').send({ 'space': 'fake' })
+        await request(app).post('/sections').send({ 'moveTo': { 'space': 'fake' } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
-        await request(app).post('/sections').send({ 'scale': { x: 0 } })
+        await request(app).post('/sections').send({ 'transform': { 'scale': { x: 0 } } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-        await request(app).post('/sections').send({ 'translate': {} })
+        await request(app).post('/sections').send({ 'transform': { 'translate': {} } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
     });
 
