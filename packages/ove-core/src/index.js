@@ -34,7 +34,7 @@ app.use('/', express.static(path.join(dirs.nodeModules, 'd3', 'dist')));
 // current version of JSHint does not support async/await
 let getSpaces = async function () {
     let spaces;
-    // BACKWARDS-COMPATIBILITY: For v0.2.0
+    // BACKWARDS-COMPATIBILITY: For <= v0.2.0
     const spacesJSONEnvVar = process.env.OVE_SPACES_JSON || process.env.OVE_CLIENTS_JSON;
     if (spacesJSONEnvVar) {
         log.info('Loading spaces configuration from environment variable:', spacesJSONEnvVar);
