@@ -54,22 +54,30 @@
             return Math.max((yMax / height), (xMax / width));
         }
 
+        let spaces;
+        let sections;
         function displayState() {
-            d3.json('./spaces')
-                .then(function (spaces) {
-                    d3.json('./sections')
-                        .then(function (sections) {
-                            drawSpaces(spaces, sections);
-                            tabulateSections(spaces, sections);
-                        });
-                });
+            if (spaces && sections) {
+                drawSpaces(spaces, sections);
+            } else {
+                d3.json('./spaces')
+                    .then(function (r) {
+                        spaces = r;
+                        d3.json('./sections')
+                            .then(function (s) {
+                                sections = s;
+                                drawSpaces(spaces, sections);
+                                tabulateSections(spaces, sections);
+                            });
+                    });
+            }
         }
 
-        function setAppName(that, url) {
+        function setAppName(element, url) {
             if (url) {
                 d3.json(url + '/name').then(name => {
                     const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
-                    that.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs\'>API</a>)';
+                    element.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs\'>API</a>)';
                 });
             }
         }
@@ -203,7 +211,7 @@
                 .append('td')
                 .html(d => d)
                 .filter( (d,i) => (i === 5) )
-                // IMPORTANT: Do not replace below with lambda function.
+                // IMPORTANT: Do not replace following line as arrow functions do not have 'this'.
                 .each( function(d){ setAppName(this, d); });
         }
 
