@@ -25,6 +25,9 @@ app.use(express.json());
 log.debug('Using module:', 'github-markdown-css');
 app.use('/', express.static(path.join(dirs.nodeModules, 'github-markdown-css')));
 
+log.debug('Using module:', 'd3');
+app.use('/', express.static(path.join(dirs.nodeModules, 'd3', 'dist')));
+
 // The spaces configuration can be loaded either from a URL specified by an environment
 // variable or through a local file.
 /* jshint ignore:start */
