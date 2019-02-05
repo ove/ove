@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang='en'>
+
+<head>
+    <title>OVE Core</title>
+    <link rel='shortcut icon' href='#'>
+
+    <link rel='stylesheet' href='//__OVEHOST__/github-markdown.css'>
+    <style>
+        .markdown-body {
+            background-color:white;
+            min-width: 200px;
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 45px;
+        }
+
+        @media (max-width: 767px) {
+            .markdown-body {
+                padding: 15px;
+            }
+        }
+    </style>
+    
+    <script src='//__OVEHOST__/d3.min.js'></script>
+    
+    <script>
+        function setAppName() {
+            d3.json(document.URL + (!document.URL.endsWith('/') ? '/' : '') + 'name').then(name => {
+                const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
+                d3.select('body').html(d3.select('body').html().replace(/@APPID/g, name).replace(/@APP/g, nameInTitleCase + ' App'));
+            });
+        }
+    </script>
+</head>
+
+    <body class='markdown-body' onload='setAppName()'>
+
+    <h1>OVE @APP v@VERSION is Running!</h1>
+
+    <p><a href='https://github.com/ove/ove'>Open Visualisation Environment (OVE)</a> is an open-source software stack, designed to be used
+        in large scale visualisation environments. OVE was developed to meet the requirements of
+        controlling the <a href='https://www.imperial.ac.uk/data-science/data-observatory/'>Data Observatory</a>
+        at the <a href='https://www.imperial.ac.uk/data-science/'>Data Science Institute</a> of
+        <a href='https://www.imperial.ac.uk'>Imperial College London</a>, but it is not specialized
+        for that purpose.</p>
+
+    <p>OVE can be used for visual analytics on Large High Resolution Displays, for presentations,
+        or for collaborative group work. It allows a user to control the display of content in
+        web browsers distributed across multiple computers by implementing a microservices architecture
+        that allows the distributed execution of applications using web technologies.</p>
+    
+    <p>OVE Apps are a collection of applications designed to run within <a href='https://github.com/ove/ove'>OVE</a>.</p>
+    
+    <p>The Links below provide more information on the OVE @APP:</p>
+    <ul>
+        <li><a href='https://dsi.gitbook.io/ove'>User Documentation</a></li>
+        <li><a href='https://github.com/ove/ove-apps/tree/v@VERSION/packages/ove-app-@APPID'>OVE @APP page on GitHub</a></li>
+        <li><a href='api-docs'>API Documentation for @APP</a>, which can also be used to make API requests. Documentation for other OVE components can be accessed from the <code>/api-docs</code> route of the appropriate hostname.</li>
+        <li><a href='https://github.com/ove/ove-apps/issues'>Report Issues for OVE Apps</a></li>
+        <li><a href='https://data-science.doc.ic.ac.uk/ove/'>Unified list of Open Issues across all OVE repositories</a></li>
+        <li><a href='https://github.com/ove'>OVE organisation on GitHub</a></li>
+    </ul>
+
+</body>
+
+</html>

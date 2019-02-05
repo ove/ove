@@ -9,7 +9,8 @@ module.exports = function (baseDir, appName) {
     const dirs = {
         base: baseDir,
         nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
-        constants: path.join(baseDir, 'client', 'constants')
+        constants: path.join(baseDir, 'client', 'constants'),
+        rootPage: path.join(__dirname, 'landing.html')
     };
     const { Constants, Utils } = require('@ove-lib/utils')(appName, app, dirs);
     const log = Utils.Logger(appName);
@@ -240,7 +241,7 @@ module.exports = function (baseDir, appName) {
     **************************************************************/
     app.use('/data', express.static(path.join(baseDir, 'data')));
 
-    Utils.registerRoutesForContent();
+    Utils.registerRoutesForContent(fs.existsSync(packagePath) ? require(packagePath) : null);
     app.use('/', express.static(path.join(baseDir, 'client')));
 
     return module.exports;

@@ -138,7 +138,8 @@ function Utils (appName, app, dirs) {
             app.get('/', function (_req, res) {
                 if (config && config.version) {
                     res.send(fs.readFileSync(dirs.rootPage, Constants.UTF8)
-                        .replace(Constants.RegExp.Annotation.VERSION, config.version));
+                        .replace(Constants.RegExp.Annotation.VERSION, config.version)
+                        .replace(Constants.RegExp.OVE_HOST, module.exports.Utils.getOVEHost()));
                 } else {
                     res.sendFile(dirs.rootPage);
                 }
