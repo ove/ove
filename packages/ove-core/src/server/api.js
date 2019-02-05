@@ -475,7 +475,12 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     const updateSections = function (req, res) {
-        if (req.body.moveTo && req.body.moveTo.space && !server.spaces[req.body.moveTo.space]) {
+        if (!((req.body.moveTo && req.body.moveTo.space) ||
+        (req.body.transform && (req.body.transform.scale || req.body.transform.translate)))) {
+            // An attempt to do something we don't understand
+            log.error('Invalid Operation:', 'request:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid operation' }));
+        } else if (req.body.moveTo && req.body.moveTo.space && !server.spaces[req.body.moveTo.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
             return;
@@ -524,8 +529,7 @@ module.exports = function (server, log, Utils, Constants) {
         }
 
         // Check whether any operation has to be made.
-        if (Utils.isNullOrEmpty(sectionsToUpdate) || !((req.body.moveTo && req.body.moveTo.space) ||
-            (req.body.transform && (req.body.transform.scale || req.body.transform.translate)))) {
+        if (Utils.isNullOrEmpty(sectionsToUpdate)) {
             Utils.sendEmptySuccess(res);
             return;
         }
@@ -603,7 +607,11 @@ module.exports = function (server, log, Utils, Constants) {
     // Updates an app associated with a section
     const updateSectionById = function (req, res) {
         let sectionId = req.params.id;
-        if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
+        if (!(req.body.space || req.body.app || req.body.x || req.body.y || req.body.w || req.body.h)) {
+            // An attempt to do something we don't understand
+            log.error('Invalid Operation:', 'request:', JSON.stringify(req.body));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid operation' }));
+        } else if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else if (req.body.app && !req.body.app.url) {

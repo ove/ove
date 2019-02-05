@@ -7,6 +7,40 @@ const Utils = global.Utils;
 describe('The OVE Core server', () => {
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
+    it('should fail to update sections with invalid requests', async () => {
+        await request(app).post('/section').send({ fake: 'request' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
+        await request(app).post('/sections').send({ fake: 'request' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid operation' }));
+        await request(app).post('/group').send({ fake: 'request' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/group').send([0]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        await request(app).post('/section/0').send({ fake: 'request' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid operation' }));
+        await request(app).post('/group/0').send({ fake: 'request' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+        await request(app).post('/group/0').send([{ fake: 'request' }])
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+        await request(app).post('/group/0').send(['fake request'])
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
+
+        res = await request(app).delete('/group/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
     it('should be able to successfully create and delete sections without an app', async () => {
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
