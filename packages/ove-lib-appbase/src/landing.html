@@ -2,7 +2,7 @@
 <html lang='en'>
 
 <head>
-    <title>OVE Core</title>
+    <title>OVE App @APP</title>
     <link rel='shortcut icon' href='#'>
 
     <link rel='stylesheet' href='//__OVEHOST__/github-markdown.css'>
@@ -28,7 +28,7 @@
         function setAppName() {
             d3.json(document.URL + (!document.URL.endsWith('/') ? '/' : '') + 'name').then(name => {
                 const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
-                d3.select('body').html(d3.select('body').html().replace(/@APPID/g, name).replace(/@APP/g, nameInTitleCase + ' App'));
+                d3.select('html').html(d3.select('html').html().replace(/@APPID/g, name).replace(/@APP/g, nameInTitleCase + ' App'));
             });
         }
     </script>
