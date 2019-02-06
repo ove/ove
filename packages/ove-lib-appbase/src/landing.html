@@ -2,7 +2,7 @@
 <html lang='en'>
 
 <head>
-    <title>OVE App @APP</title>
+    <title>OVE @APP</title>
     <link rel='shortcut icon' href='#'>
 
     <link rel='stylesheet' href='//__OVEHOST__/github-markdown.css'>
@@ -31,22 +31,104 @@
                 d3.select('html').html(d3.select('html').html().replace(/@APPID/g, name).replace(/@APP/g, nameInTitleCase + ' App'));
             });
         }
+
+        let appURL = document.URL;
+        appURL = appURL.substring(0, appURL.length-1);
+
+        function setup(){
+            setAppName();
+
+            d3.json('//__OVEHOST__/spaces')
+                .then(function (spaces) {
+                    d3.json('//__OVEHOST__/sections')
+                        .then(function (sections) {
+                            listSections(spaces, sections);
+                            setAppName();
+
+                        });
+                });
+
+            d3.select("#control-url").html(appURL + "/control.html?oveSectionId=<i>&lt;sectionId&gt;</i>");
+            d3.select("#view-url").html(appURL + "/view.html?oveSectionId=<i>&lt;sectionId&gt;</i>");
+
+        }
+
+        function listSections(spaces, sections) {
+            
+            sections = sections.filter(s => (s.app && s.app.url === appURL));
+
+            let div = d3.select('#sections');
+
+            let appHost = appURL.replace("http://", "").replace("https://", "");
+
+            if (sections.length === 0){
+                div.append("p")
+                    .text("Could not find any sections created by OVE Core currently running this app.");
+                div.append("p")
+                    .html("This could be because no such sections exist, or because the app url provided when they were created is different to that used to access this page (<code>" + appHost + "</code>).");
+
+            } else {
+                div.append("p")
+                    .text("OVE Core has created the following sections running this app:")
+            }
+
+
+            let spaceNames = Object.keys(spaces)
+                .filter(space => sections.filter(section => (section.space === space)).length > 0);
+
+            let divs = div.selectAll('div')
+                .data(spaceNames)
+                .enter()
+                .append('div');
+
+            divs.append('h3').text(d => d);
+
+            divs.append("ul")
+                .selectAll("li")
+                .data(space => (sections.filter(s => (s.space === space))))
+                .enter()
+                .append("li")
+                .html(d => 'Id: <b>' + d.id + '</b>: ' + '<a target=\'_blank\' href=\'' + d.app.url + '/view.html?oveSectionId=' + d.id + '\'>View page</a>, ' + '<a target=\'_blank\' href=\'' + d.app.url + '/control.html?oveSectionId=' + d.id + '\'>control page</a>');
+
+            div.append("p")
+                .html("All sections that currently exist are listed on the <a href='//__OVEHOST__'>OVE Core page</a>, regardless of which app they correspond to.")
+
+        }
+
+
     </script>
 </head>
 
-    <body class='markdown-body' onload='setAppName()'>
+    <body class='markdown-body' onload='setup()'>
 
     <h1>OVE @APP v@VERSION is Running!</h1>
 
-    <p>OVE Apps are applications designed to run within <a href='https://github.com/ove/ove'>OVE</a>.</p>
+    <p><a href='https://github.com/ove/ove-apps/tree/v@VERSION/packages/ove-app-@APPID'>OVE @APP</a> is an OVE App are designed to run within <a href='https://github.com/ove/ove'>OVE</a>.</p>
 
-    <p>This instance of OVE @APP is associated with an instance of OVE accessible at <a href='//__OVEHOST__'>__OVEHOST__</a>: more information about OVE and how it has been configured is available there.</p>
+    <p>This instance of the OVE @APP is associated with an instance of OVE Core accessible at <a href='//__OVEHOST__'>__OVEHOST__</a> - more information about OVE and how it has been configured is available there.</p>
 
-    <h2>Further information about OVE @APP</h2>
+
+    <div id="sections">
+
+
+    <p>Each section running @APP has its own:
+
     <ul>
-        <li><a href='https://github.com/ove/ove-apps/tree/v@VERSION/packages/ove-app-@APPID'>README and source for OVE @APP v@VERSION on GitHub</a></li>
-        <li><a href='api-docs'>API Documentation for @APP</a>, which can also be used to make API requests. Documentation for other OVE components can be accessed from the <code>/api-docs</code> route of the appropriate hostname.</li>
-        <li><a href='https://github.com/ove/ove-apps/issues'>Report Issues for OVE Apps</a></li>
+        <li><b>control page</b>, which can be accessed at <code id="control-url">/control.html?oveSectionId=&lt;sectionId&gt;</code></li>
+        <li><b>view page</b>, which can be accessed at <code id="view-url">/view.html?oveSectionId=&lt;sectionId&gt;</code></li>
+    </ul>
+
+        <h2>Sections</h2>
+
+    </div>
+
+
+
+    <h2>Further information</h2>
+    <ul>
+        <li><a href='https://github.com/ove/ove-apps/tree/v@VERSION/packages/ove-app-@APPID'>README and source code</a> for OVE @APP v@VERSION on GitHub</li>
+        <li><a href='api-docs'>API Documentation</a> for @APP, which can also be used to make API requests. Documentation for other OVE components can be accessed from the <code>/api-docs</code> route of the appropriate hostname.</li>
+        <li><a href='https://github.com/ove/ove-apps/issues'>Issue tracker for OVE Apps</a>, including OVE @APP</li>
     </ul>
 
 </body>
