@@ -51,10 +51,10 @@ updateSections = function (m) {
         window.ove.context.isInitialized = true;
         log.debug('Application is initialized:', window.ove.context.isInitialized);
     }
-    if (window.ove.context.includeOnlyFilter && window.ove.context.includeOnlyFilter.indexOf(m.id) === -1) {
+    if (window.ove.context.includeOnlyFilter && !window.ove.context.includeOnlyFilter.includes(m.id)) {
         log.info('Using \'includeOnly\' filter. Ignoring Section:', m.id);
         return;
-    } else if (window.ove.context.excludeFilter && window.ove.context.excludeFilter.indexOf(m.id) !== -1) {
+    } else if (window.ove.context.excludeFilter && window.ove.context.excludeFilter.includes(m.id)) {
         log.info('Using \'exclude\' filter. Ignoring Section:', m.id);
         return;
     }
