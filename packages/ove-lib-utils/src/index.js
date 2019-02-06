@@ -181,7 +181,7 @@ function Utils (appName, app, dirs) {
         // or control.html exists on the filesystem and the same index.html file is served for
         // both of these scenarios. The index.html file is therefore a common template for both
         // viewer and controller.
-        app.use((!showRoot ? '/(' : '/') + ':type(index|control|view|landing).html' +
+        app.use((!showRoot ? '/(' : '/') + ':type(index|control|view).html' +
             (!showRoot ? ')?' : ''), function (req, res) {
             res.send(fs.readFileSync(path.join(dirs.base, 'client', 'index.html'), Constants.UTF8)
                 .replace(Constants.RegExp.OVE_TYPE, req.params.type === 'control' ? 'control' : 'view')
