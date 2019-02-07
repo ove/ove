@@ -129,7 +129,7 @@ describe('The OVE Utils library - Persistence', () => {
 
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
-    it('should not fail when trying to unset the provider, when it was not originally set', async () => {
+    it('should not fail when trying to unset the service, when it was not originally set', async () => {
         const app = express();
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
@@ -141,7 +141,7 @@ describe('The OVE Utils library - Persistence', () => {
         delete process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
     });
 
-    it('should support getting, setting and deleting objects with a persistence provider', async () => {
+    it('should support getting, setting and deleting objects with a persistence service', async () => {
         const app = express();
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
@@ -285,7 +285,7 @@ describe('The OVE Utils library - Persistence', () => {
         });
     });
 
-    it('should not be comparing and setting objects and arrays, without a persistence provider', async () => {
+    it('should not be comparing and setting objects and arrays, without a persistence service', async () => {
         const app = express();
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
@@ -425,7 +425,7 @@ describe('The OVE Utils library - Persistence', () => {
         });
     });
 
-    it('should not attempt to sync without a persistence provider', () => {
+    it('should not attempt to sync without a persistence service', () => {
         const app = express();
         app.use(express.json());
         const { Utils } = index('core', app);
@@ -488,7 +488,7 @@ describe('The OVE Utils library - Persistence', () => {
 
         // Should be getting exactly two errors due to failed network calls.
         expect(mockCallback.mock.calls.length).toBe(2);
-        expect(mockCallback.mock.calls[0][5]).toBe('Unable to get of keys from persistence provider:');
+        expect(mockCallback.mock.calls[0][5]).toBe('Unable to get of keys from persistence service:');
         expect(mockCallback.mock.calls[1][5]).toBe('Unable to read key:');
 
         // Important: scopes must be tested at the end, or else they don't evaluate to anything
@@ -522,7 +522,7 @@ describe('The OVE Utils library - Persistence', () => {
         }, TIMEOUT);
     });
 
-    it('should use the updated value of the OVE_PERSISTENCE_SYNC_INTERVAL whenever the persistence provider changes', async () => {
+    it('should use the updated value of the OVE_PERSISTENCE_SYNC_INTERVAL whenever the persistence service changes', async () => {
         const app = express();
         app.use(express.json());
         const { Utils, Constants } = index('core', app);
