@@ -3,6 +3,10 @@ const fs = require('fs');
 const request = require('supertest');
 const HttpStatus = require('http-status-codes');
 
+// Do not expose console during init.
+const OLD_CONSOLE = global.console;
+global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
 // We always test against the distribution not the source.
 const srcDir = path.join(__dirname, '..', 'lib');
 const index = require(path.join(srcDir, 'index'));
@@ -13,7 +17,14 @@ const index = require(path.join(srcDir, 'index'));
 const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
 const { app, Utils, log } = base;
 
+// Restore console before run.
+global.console = OLD_CONSOLE;
+
 describe('The OVE App Base library', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
     it('should export utilities for OVE applications', () => {
         // Precise validation of number of items exported and then check their
         // names one by one.
@@ -237,11 +248,18 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.NOT_FOUND);
     });
     /* jshint ignore:end */
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
 });
 
 // Separate section for process.env tests
 describe('The OVE App Base library', () => {
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
         const op1 = function (source, target, z) {
             return {
                 zoom: z === 1 ? target.zoom * source.zoom : target.zoom / source.zoom,
@@ -507,10 +525,19 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
     /* jshint ignore:end */
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
 });
 
 // Separate section for process.env tests
 describe('The OVE App Base library', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     const OLD_ENV = process.env;
 
     beforeEach(() => {
@@ -542,5 +569,9 @@ describe('The OVE App Base library', () => {
 
     afterEach(() => {
         process.env = OLD_ENV;
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
     });
 });

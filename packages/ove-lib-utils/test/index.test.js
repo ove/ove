@@ -6,6 +6,10 @@ const mockHttp = require('node-mocks-http');
 const nock = require('nock');
 const HttpStatus = require('http-status-codes');
 
+// Do not expose console during init.
+const OLD_CONSOLE = global.console;
+global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
 const app = express();
 // We always test against the distribution not the source.
 const srcDir = path.join(__dirname, '..', 'lib');
@@ -32,6 +36,9 @@ global.dirs = dirs;
 global.Constants = Constants;
 global.Utils = Utils;
 
+// Restore console before run.
+global.console = OLD_CONSOLE;
+
 require(path.join(srcDir, '..', 'test', 'core-functionality.js'));
 require(path.join(srcDir, '..', 'test', 'persistence.js'));
 require(path.join(srcDir, '..', 'test', 'web-sockets.js'));
@@ -41,6 +48,11 @@ require(path.join(srcDir, '..', 'test', 'constants.js'));
 // Separate section for process.env tests
 describe('The OVE Utils library', () => {
     const OLD_ENV = process.env;
+
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
 
     beforeEach(() => {
         jest.resetModules(); // This is important
@@ -68,5 +80,9 @@ describe('The OVE Utils library', () => {
 
     afterEach(() => {
         process.env = OLD_ENV;
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
     });
 });

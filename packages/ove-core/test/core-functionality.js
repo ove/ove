@@ -8,6 +8,11 @@ const Utils = global.Utils;
 
 // Core functionality tests.
 describe('The OVE Core server', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should return an empty list of spaces by id before a section is created', async () => {
@@ -153,4 +158,8 @@ describe('The OVE Core server', () => {
             .not.toMatch(/\/\/ /);
     });
     /* jshint ignore:end */
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
 });

@@ -8,6 +8,11 @@ const log = global.log;
 // Some operations require a remote HTTP server to be running while the tests are in
 // progress. These require nock along with a clean up after each test has run.
 describe('The OVE Core server', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should be able to successfully create and delete sections with an app', async () => {
@@ -719,4 +724,8 @@ describe('The OVE Core server', () => {
         nock.cleanAll();
     });
     /* jshint ignore:end */
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
 });

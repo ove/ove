@@ -11,6 +11,11 @@ const Utils = global.Utils;
 
 // Core functionality tests.
 describe('The OVE Utils library', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     it('should export mandatory functionality', () => {
         // The App Base library exports a number of utilities to applications,
         // this test validates that list. The method below tests the rest.
@@ -330,4 +335,8 @@ describe('The OVE Utils library', () => {
         expect(res.statusCode).not.toEqual(HttpStatus.NOT_FOUND);
     });
     /* jshint ignore:end */
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
 });

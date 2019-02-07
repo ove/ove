@@ -11,7 +11,10 @@ describe('The OVE Utils library - Persistence', () => {
     const TIMEOUT = 500;
     let state;
 
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
         Utils.registerRoutesForPersistence();
         state = Utils.Persistence;
     });
@@ -555,5 +558,9 @@ describe('The OVE Utils library - Persistence', () => {
 
     afterEach(() => {
         nock.cleanAll();
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
     });
 });

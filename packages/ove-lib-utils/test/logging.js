@@ -3,6 +3,11 @@ const Utils = global.Utils;
 
 // Tests on logging.
 describe('The OVE Utils library', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     // The tests below validate whether the logging works both anonymously
     // and with a given name and also at various levels.
     it('should be logging to the console', () => {
@@ -81,5 +86,9 @@ describe('The OVE Utils library', () => {
         log.fatal('Some test message at FATAL level');
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
     });
 });
