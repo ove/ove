@@ -103,7 +103,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
         // if URLs were invalid. This is easily testable using an integration test-case, since
         // PM2/node will eventually report the error after several seconds.
         if (e) {
-            log.warn('Connection error when making request to persistence provider:', e);
+            log.warn('Connection error when making request to persistence service:', e);
         }
     };
 
@@ -130,10 +130,10 @@ function Persistence (appName, log, Utils, Constants, __private) {
     **************************************************************/
     const updateRemoteItem = function (item) {
         /* istanbul ignore if */
-        // The persistence provider should always be set before calling this method.
+        // The persistence service should always be set before calling this method.
         // This check is an additional precaution.
         if (!__private.provider) {
-            log.error('Unable to perform remote operation. The persistence provider has not been set');
+            log.error('Unable to perform remote operation. The persistence service has not been set');
             return;
         }
 
@@ -156,10 +156,10 @@ function Persistence (appName, log, Utils, Constants, __private) {
 
     const deleteRemoteItem = function (item) {
         /* istanbul ignore if */
-        // The persistence provider should always be set before calling this method.
+        // The persistence service should always be set before calling this method.
         // This check is an additional precaution.
         if (!__private.provider) {
-            log.error('Unable to perform remote operation. The persistence provider has not been set');
+            log.error('Unable to perform remote operation. The persistence service has not been set');
             return;
         }
 
@@ -377,13 +377,13 @@ function Persistence (appName, log, Utils, Constants, __private) {
 
     const sync = function () {
         if (!__private.provider) {
-            log.warn('Ignoring sync request. The persistence provider has not been set');
+            log.warn('Ignoring sync request. The persistence service has not been set');
             return;
         }
 
         request(__private.provider + '/' + appName, { json: true }, function (err, _res, remoteList) {
             if (err) {
-                log.error('Unable to get of keys from persistence provider:',
+                log.error('Unable to get of keys from persistence service:',
                     __private.provider, ', got:', err);
                 return;
             }
@@ -406,7 +406,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                     request(url, { json: true }, function (err, _res, result) {
                         if (err) {
                             log.error('Unable to read key:', convertedKey,
-                                'from persistence provider:', __private.provider, ', got:', err);
+                                'from persistence service:', __private.provider, ', got:', err);
                             return;
                         }
                         createParentIfNotExisting(convertedKey);

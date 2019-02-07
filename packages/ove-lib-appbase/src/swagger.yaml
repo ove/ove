@@ -35,7 +35,7 @@ paths:
     post:
       tags:
       - "common operations"
-      summary: "Sets the URL of the persistence provider"
+      summary: "Sets the URL of the persistence service"
       parameters:
       - name: "body"
         in: "body"
@@ -44,7 +44,7 @@ paths:
           properties:
             url:
               type: "string"
-              description: "URL of the persistence provider" 
+              description: "URL of the persistence service" 
         required: true
       produces:
       - "application/json"
@@ -62,7 +62,7 @@ paths:
     delete:
       tags:
       - "common operations"
-      summary: "Removes the URL of the persistence provider, if it exists"
+      summary: "Removes the URL of the persistence service, if it exists"
       produces:
       - "application/json"
       responses:
