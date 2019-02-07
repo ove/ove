@@ -1,0 +1,40 @@
+{
+  "name": "@ove-lib/filter",
+  "version": "0.3.0",
+  "main": "lib/index.js",
+  "scripts": {
+    "clean": "npx rimraf lib",
+    "build": "npx babel-cli src --out-dir lib --copy-files",
+    "test": "jest --runInBand --coverage --colors",
+    "lint": "eslint src/. --ext .js"
+  },
+  "files": [
+    "lib/*"
+  ],
+  "keywords": [
+    "OVE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/ove/ove",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ove/ove.git"
+  },
+  "author": "James Scott-Brown <james.scott-brown@imperial.ac.uk>",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "2.4.2"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "lib/**.js",
+      "!*/constants.js"
+    ],
+    "coverageReporters": [
+      "json-summary",
+      "text"
+    ]
+  }
+}
