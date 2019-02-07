@@ -91,9 +91,7 @@
                 .enter()
                 .append('li')
                 .html(d => 'Id: <b>' + d.id + '</b>: ' + '<a target=\'_blank\' href=\'' +
-                    d.app.url + '/control.html?oveSectionId=' + d.id + '\'>controller</a>' +
-                    ', ' + '<a target=\'_blank\' href=\'' + d.app.url + '/view.html?oveViewId=' +
-                    d.space + '-0.' + d.id + '\'></a>');
+                    d.app.url + '/control.html?oveSectionId=' + d.id + '\'>controller</a>');
 
             div.append('p')
                 .html('All sections that currently exist are listed on the <a href=\'//__OVEHOST__\'>' +
@@ -124,7 +122,7 @@
     <ul>
         <li><b>controller</b>, which can be accessed at <code id='control-url'>/control.html?oveSectionId=&lt;sectionId&gt;</code>
         </li>
-        <li><b>viewer</b>, which can be accessed at <code id='view-url'>/view.html?oveViewId=&lt;viewId&gt;</code></li>
+        <li>set of <b>viewers</b>, which can be accessed at <code id='view-url'>/view.html?oveViewId=&lt;oveClientId&gt;.&lt;sectionId&gt;</code></li>
     </ul>
 
     <h2>Sections</h2>
