@@ -4,7 +4,7 @@
 // Semantics: https://docs.oasis-open.org/odata/odata/v4.01/cs01/part2-url-conventions/odata-v4.01-cs01-part2-url-conventions.html#_Toc505773218
 
 const UNARY_POSTFIX_OPERATORS = [];
-const UNARY_PREFIX_OPERATORS = [];
+const UNARY_PREFIX_OPERATORS = ['not'];
 
 const UNARY_FUNCTIONS = ['length', 'toupper', 'tolower', 'trim', // String functions
     'day', 'hour', 'minute', 'month', 'second', 'year', // Date functions
@@ -16,10 +16,10 @@ const BINARY_FUNCTIONS = ['substringof', 'endswith', 'startswith', 'indexof', 'r
 
 const FUNCTION_ARGUMENT_SEPARATOR = ',';
 
-const UNARY_OPERATORS = [];
+const UNARY_OPERATORS = UNARY_PREFIX_OPERATORS.concat(UNARY_POSTFIX_OPERATORS);
 
 const BINARY_OPERATORS_LEFT_ASSOCIATIVE = ['eq', 'ne', 'gt', 'ge', 'lt', 'le',
-    'and', 'or', 'not',
+    'and', 'or',
     'add', 'sub', 'mul', 'div', 'mod'];
 
 const BINARY_OPERATORS_RIGHT_ASSOCIATIVE = [];
@@ -63,23 +63,28 @@ function constructAST (tokens) {
 function evaluate (operation, args) {
     // console.log('Evaluating ' + JSON.stringify(operation) + ' with ' + JSON.stringify(args));
     args = args.map(n => evaluateLeafNode(n));
-    let result;
 
     if (FUNCTIONS.includes(operation)) {
-        result = {
+        return {
             type: 'functioncall',
             func: operation,
             'args': args
         };
-        return result;
     }
 
-    result = {
-        type: operation,
-        left: args[1],
-        right: args[0]
-    };
-    return result;
+    if (args.length === 1){
+        return {
+            type: operation,
+            left: args[0]
+        };
+
+    } else {
+        return {
+            type: operation,
+            left: args[1],
+            right: args[0]
+        };
+    }
 }
 
 function evaluateLeafNode (node) {
