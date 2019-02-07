@@ -109,7 +109,7 @@ updateSections = function (m) {
                         frame.remove();
                     }
                 } else if (m.app) {
-                    const url = m.app.url + '/view.html?oveViewId=' + id + '.' + m.id;
+                    const url = m.app.url + '/view.html?oveSectionViewId=' + id + '.' + m.id;
                     log.info('Setting iFrame source URL:', url);
                     frame.attr('src', url);
                     frame.css('opacity', m.app.opacity);
