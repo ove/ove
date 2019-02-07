@@ -11,8 +11,9 @@ const UNARY_FUNCTIONS = ['length', 'toupper', 'tolower', 'trim', // String funct
     'round', 'floor', 'ceiling' // math functions
 ];
 
-const BINARY_FUNCTIONS = ['substringof', 'endswith', 'startswith', 'indexof', 'replace', 'substrings', 'substring', 'concat',
-    'isOf'];
+const BINARY_FUNCTIONS = ['substringof', 'endswith', 'startswith', 'indexof', 'concat', 'isOf'];
+
+const TERNARY_FUNCTIONS = ['replace', 'substring'];
 
 const FUNCTION_ARGUMENT_SEPARATOR = ',';
 
@@ -25,7 +26,7 @@ const BINARY_OPERATORS_LEFT_ASSOCIATIVE = ['eq', 'ne', 'gt', 'ge', 'lt', 'le',
 const BINARY_OPERATORS_RIGHT_ASSOCIATIVE = [];
 
 const BINARY_OPERATORS = BINARY_OPERATORS_LEFT_ASSOCIATIVE.concat(BINARY_OPERATORS_RIGHT_ASSOCIATIVE); // make manually ordered to set precedence: earlier is higher precedence
-const FUNCTIONS = UNARY_FUNCTIONS.concat(BINARY_FUNCTIONS);
+const FUNCTIONS = UNARY_FUNCTIONS.concat(BINARY_FUNCTIONS).concat(TERNARY_FUNCTIONS);
 
 const OPERATORS = BINARY_OPERATORS.concat(UNARY_OPERATORS);
 
@@ -45,6 +46,11 @@ function constructAST (tokens) {
             args = [stack.pop()];
 
             if (BINARY_OPERATORS.includes(token) || BINARY_FUNCTIONS.includes(token)) {
+                args.push(stack.pop());
+            }
+
+            if (TERNARY_FUNCTIONS.includes(token) || TERNARY_FUNCTIONS.includes(token)) {
+                args.push(stack.pop());
                 args.push(stack.pop());
             }
 
