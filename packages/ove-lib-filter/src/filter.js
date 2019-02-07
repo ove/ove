@@ -123,6 +123,8 @@ exports.getPredicate = function (filter) {
                 return left && right;
             case Constants.Evaluation.OR:
                 return left || right;
+            case Constants.Evaluation.NOT:
+                return !left;
             case Constants.Evaluation.ADD:
                 return (+left) + (+right);
         }

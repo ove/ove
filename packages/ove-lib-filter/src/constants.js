@@ -12,6 +12,7 @@ Constants.Evaluation = {
     GREATER_THAN_OR_EQUALS: 'ge',
     AND: 'and',
     OR: 'or',
+    NOT: 'not',
     ADD: 'add',
     SUBTRACT: 'sub',
     MULTIPLY: 'mul',
