@@ -63,8 +63,9 @@ exports.getPredicate = function (filter) {
                     // Unable to use secondArg and thirdArg as the replace method expects
                     // numeric arguments.
                     if (args.length > 2) {
-                        return firstArg.substring(evaluateN(element, args[1]),
-                            evaluateN(element, args[2]));
+                        let start = evaluateN(element, args[1]);
+                        let len = evaluateN(element, args[2]);
+                        return firstArg.substring(start, start + len);
                     }
                     return firstArg.substring(evaluateN(element, args[1]));
                 case Constants.Evaluation.Function.SUBSTRING_OF:
