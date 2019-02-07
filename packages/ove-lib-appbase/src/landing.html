@@ -49,8 +49,8 @@
                         });
                 });
 
-            d3.select('#control-url').html(appURL + '/control.html?oveSectionId=<i>&lt;sectionId&gt;</i>');
-            d3.select('#view-url').html(appURL + '/view.html?oveViewId=&lt;oveClientId&gt;.&lt;sectionId&gt;');
+            d3.select('#control-url').html(appURL + '/control.html?oveSectionId=&lt;sectionId&gt;');
+            d3.select('#view-url').html(appURL + '/view.html?oveSectionViewId=&lt;viewId&gt;.&lt;sectionId&gt;');
 
         }
 
@@ -120,11 +120,9 @@
     <p>Each section running @APP has its own:
 
     <ul>
-        <li><b>controller</b>, which can be accessed at <code id='control-url'>/control.html?oveSectionId=&lt;sectionId&gt;</code>
-        </li>
-        <li>set of <b>viewers</b>, which can be accessed at <code id='view-url'>/view.html?oveViewId=&lt;oveClientId&gt;.&lt;sectionId&gt;</code></li>
+        <li><b>controller</b>, which can be accessed at <code id='control-url'>/control.html?oveSectionId=&lt;sectionId&gt;</code></li>
+        <li>set of <b>viewers</b>, which can be accessed at <code id='view-url'>/view.html?oveSectionViewId=&lt;viewId&gt;.&lt;sectionId&gt;</code></li>
     </ul>
-
     <h2>Sections</h2>
 
 </div>

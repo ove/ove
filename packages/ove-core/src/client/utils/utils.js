@@ -215,8 +215,6 @@ function OVEUtils () {
         id = id.substring(0, id.lastIndexOf('.'));
         if (!id && sectionId) {
             //-- sectionId has not been provided as a part of oveViewId  --//
-            //-- oveViewId has the format "{space}-{client}.{sectionId}" --//
-            //-- the ".{sectionId}" portion is optional and can be omitted --//
             return OVE.Utils.getQueryParam('oveSectionId');
         } else {
             return sectionId;
@@ -336,8 +334,10 @@ function OVEUtils () {
     };
 
     this.getViewId = function () {
+        //-- All app-viewers will define a oveSectionViewId and all OVE core viewer will --//
+        //-- define a oveViewId.                                                         --//
         //-- BACKWARDS-COMPATIBILITY: For < v0.2.0 --//
-        return OVE.Utils.getQueryParam('oveViewId') || OVE.Utils.getQueryParam('oveClientId');
+        return OVE.Utils.getQueryParam('oveSectionViewId') || OVE.Utils.getQueryParam('oveViewId') || OVE.Utils.getQueryParam('oveClientId');
     };
 
     this.resizeController = function (contentDivName) {
