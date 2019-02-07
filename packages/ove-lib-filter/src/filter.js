@@ -124,10 +124,7 @@ exports.getPredicate = function (filter) {
             case Constants.Evaluation.OR:
                 return left || right;
             case Constants.Evaluation.ADD:
-                if (typeof left !== 'string' || typeof right !== 'string') {
-                    return (+left) + (+right);
-                }
-                return left + right;
+                return (+left) + (+right);
         }
 
         left = filter.left ? evaluateN(element, filter.left) : undefined;

@@ -109,6 +109,41 @@ describe('The OVE filter library', () => {
     // arithmetic
     // //     'add', 'sub', 'mul', 'div', 'mod'];
 
+    it('should correctly handle "add" (+)', () => {
+        const predicate = getPredicate(parse('(x add 1) eq 5'));
+        expect(predicate({ x: '5' })).toBe(false);
+        expect(predicate({ x: '4' })).toBe(true);
+    });
+
+    it('should correctly handle "sub" (-)', () => {
+        const predicate = getPredicate(parse('(x sub 1) eq 5'));
+        expect(predicate({ x: '5' })).toBe(false);
+        expect(predicate({ x: '6' })).toBe(true);
+    });
+
+    it('should correctly handle "mul" (*)', () => {
+        const predicate = getPredicate(parse('(x mul 2) eq 6'));
+        expect(predicate({ x: '3' })).toBe(true);
+        expect(predicate({ x: '6' })).toBe(false);
+    });
+
+    it('should correctly handle "div" (/)', () => {
+        const predicate = getPredicate(parse('(x div 2) eq 5'));
+        expect(predicate({ x: '5' })).toBe(false);
+        expect(predicate({ x: '10' })).toBe(true);
+    });
+
+
+    it('should correctly handle "mod" (%)', () => {
+        const predicate = getPredicate(parse('(x mod 3) eq y'));
+        expect(predicate({ x: '0', y: '0' })).toBe(true);
+        expect(predicate({ x: '1', y: '1' })).toBe(true);
+        expect(predicate({ x: '2', y: '2' })).toBe(true);
+        expect(predicate({ x: '3', y: '0' })).toBe(true);
+        expect(predicate({ x: '4', y: '1' })).toBe(true);
+    });
+
+
 
     afterAll(() => {
         global.console = OLD_CONSOLE;
