@@ -443,4 +443,4 @@ definitions:
             example: 100
 externalDocs:
   description: "Find out more about OVE"
-  url: "https://dsi.gitbook.io/ove"
+  url: "https://ove.readthedocs.io/en/stable/"

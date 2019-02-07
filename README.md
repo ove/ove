@@ -4,4 +4,4 @@ Open Visualisation Environment (OVE) is an open-source software stack, designed 
 
 We welcome collaboration under our [Code of Conduct](https://github.com/ove/ove/blob/master/CODE_OF_CONDUCT.md).
 
-The [OVE Documentation](https://dsi.gitbook.io/ove) provides [installation instructions](https://dsi.gitbook.io/ove/installation) and a [user guide](https://dsi.gitbook.io/ove/usage).
+The [OVE Documentation](https://ove.readthedocs.io/en/stable/) provides [installation instructions](https://ove.readthedocs.io/en/stable/docs/INSTALLATION.html) and a [user guide](https://ove.readthedocs.io/en/stable/docs/USAGE.html).
