@@ -74,7 +74,7 @@ function evaluate (operation, args) {
         return {
             type: 'functioncall',
             func: operation,
-            'args': args
+            'args': args.reverse()
         };
     }
 
