@@ -18,8 +18,11 @@ exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
     const getFromElement = function (element, propertyName) {
         if (!propertyName || !propertyName.includes('.')) {
-            return element[propertyName] ||
-                (element.attributes ? element.attributes[propertyName] : undefined);
+            if (element[propertyName] || element[propertyName] === false){
+                return element[propertyName];
+            } else {
+                return element.attributes ? element.attributes[propertyName] : undefined;
+            }
         }
         const firstPart = propertyName.substring(0, propertyName.indexOf('.'));
         const otherParts = propertyName.substring(propertyName.indexOf('.') + 1);

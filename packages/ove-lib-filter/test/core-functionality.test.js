@@ -76,15 +76,14 @@ describe('The OVE filter library', () => {
         expect(predicate({ x: '10' })).toBe(true);
     });
 
-
     // Logical operators
 
     it('should correctly handle "and"', () => {
         const predicate = getPredicate(parse('x and y'));
         expect(predicate({ x: true, y: true })).toBe(true);
         expect(predicate({ x: true, y: false })).toBe(false);
-       // expect(predicate({ x: false, y: true })).toBe(false);
-       // expect(predicate({ x: false, y: false })).toBe(false);
+        expect(predicate({ x: false, y: true })).toBe(false);
+        expect(predicate({ x: false, y: false })).toBe(false);
     });
 
     it('should correctly handle "or"', () => {
@@ -92,8 +91,7 @@ describe('The OVE filter library', () => {
         expect(predicate({ x: true, y: true })).toBe(true);
         expect(predicate({ x: true, y: false })).toBe(true);
         expect(predicate({ x: false, y: true })).toBe(true);
-        // expect(predicate({ x: false, y: false })).toBe(false);
-
+        expect(predicate({ x: false, y: false })).toBe(false);
     });
 
     /*
@@ -105,7 +103,7 @@ describe('The OVE filter library', () => {
         expect(predicate({ x: false, y: false })).toBe(true);
 
     });
-*/
+ */
 
 
     // arithmetic
