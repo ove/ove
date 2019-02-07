@@ -18,7 +18,7 @@ exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
     const getFromElement = function (element, propertyName) {
         if (!propertyName || !propertyName.includes('.')) {
-            if (element[propertyName] || element[propertyName] === false){
+            if (element[propertyName] !== undefined) {
                 return element[propertyName];
             } else {
                 return element.attributes ? element.attributes[propertyName] : undefined;
