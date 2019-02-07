@@ -78,12 +78,11 @@ function evaluate (operation, args) {
         };
     }
 
-    if (args.length === 1){
+    if (args.length === 1) {
         return {
             type: operation,
             left: args[0]
         };
-
     } else {
         return {
             type: operation,

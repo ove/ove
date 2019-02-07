@@ -11,8 +11,8 @@ filter = filter.nodesBy(function (n) {
 
 const { Constants } = require('./constants');
 
-// const { _, Utils } = require('@ove-lib/utils')(appName, app, dirs);
-// const log = Utils.Logger(appName);
+const { Utils } = require('@ove-lib/utils')();
+const log = Utils.Logger('ove-lib-utils');
 
 exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
