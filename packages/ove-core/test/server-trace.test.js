@@ -6,6 +6,10 @@ const cors = require('cors');
 jest.resetModules(); // This is important
 process.env.LOG_LEVEL = 6;
 
+// Do not expose console during init.
+const OLD_CONSOLE = global.console;
+global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
 const app = express();
 const wss = require('express-ws')(app).getWss('/');
 
@@ -26,6 +30,9 @@ app.use(express.json());
 const spaces = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
 const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, log, Utils, Constants);
 
+// Restore console before run.
+global.console = OLD_CONSOLE;
+
 // Separate test suite for scenarios where log level TRACE_SERVER is enabled.
 // Based on how mock-socket is implemented, we cannot group all tests together.
 describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
@@ -38,7 +45,9 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
         sockets.messages.push(m);
     };
 
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
         const url = 'ws://localhost:' + PORT;
         const peerUrl = 'ws://localhost:' + PEER_PORT;
         sockets.server = new Server(url);
@@ -84,5 +93,6 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
 
     afterAll(() => {
         sockets.server.stop();
+        global.console = OLD_CONSOLE;
     });
 });

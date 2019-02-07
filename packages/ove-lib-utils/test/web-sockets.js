@@ -11,7 +11,9 @@ describe('The OVE Core server', () => {
         sockets.messages.push(m);
     };
 
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
         const url = 'ws://localhost:' + PORT;
         sockets.server = new Server(url);
         sockets.open = new WebSocket(url);
@@ -70,5 +72,9 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.length).toEqual(1);
         expect(spy).not.toHaveBeenCalled();
         spy.mockRestore();
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
     });
 });

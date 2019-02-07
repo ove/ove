@@ -10,21 +10,30 @@ const Utils = global.Utils;
 const log = global.log;
 const server = global.server;
 
+// Do not expose console during init.
+const OLD_CONSOLE = global.console;
+global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
+const { WebSocket, Server } = require('mock-socket');
+const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
+const PORT = 5555;
+const PEER_PORT = 5545;
+const TIMEOUT = 500;
+
+// Restore console before run.
+global.console = OLD_CONSOLE;
+
 // WebSocket testing is done using a Mock Socket. The tests run a WSS and inject the mocked
 // WS into the express app.
 describe('The OVE Core server', () => {
-    const { WebSocket, Server } = require('mock-socket');
-    const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
-    const PORT = 5555;
-    const PEER_PORT = 5545;
-    const TIMEOUT = 500;
-
     let sockets = {};
     WebSocket.prototype.send = (m) => {
         sockets.messages.push(m);
     };
 
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
         const url = 'ws://localhost:' + PORT;
         const peerUrl = 'ws://localhost:' + PEER_PORT;
         sockets.server = new Server(url);
@@ -452,19 +461,17 @@ describe('The OVE Core server', () => {
             nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
             await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
             expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
-            setTimeout(() => {
-                expect(sockets.messages.length).toEqual(2);
+            expect(sockets.messages.length).toEqual(2);
 
-                // The order of these messages are not important.
-                expect(sockets.messages.includes(JSON.stringify(
-                    { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
-                ))).toBeTruthy();
-                expect(sockets.messages.includes(JSON.stringify(
-                    { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
-                ))).toBeTruthy();
-                nock.cleanAll();
-            }, TIMEOUT * 2);
-            jest.runOnlyPendingTimers();
+            // The order of these messages are not important.
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
+            ))).toBeTruthy();
+            expect(sockets.messages.includes(JSON.stringify(
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
+            ))).toBeTruthy();
+            nock.cleanAll();
+            global.console = OLD_CONSOLE;
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
@@ -478,5 +485,6 @@ describe('The OVE Core server', () => {
 
     afterAll(() => {
         sockets.server.stop();
+        sockets.peerServer.stop();
     });
 });

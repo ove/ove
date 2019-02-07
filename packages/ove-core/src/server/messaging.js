@@ -85,7 +85,7 @@ module.exports = function (server, log, Utils, Constants) {
         s.on('message', function (msg) {
             let m = JSON.parse(msg);
             // We will ignore anything that we have already forwarded.
-            if (m.forwardedBy && m.forwardedBy.indexOf(server.uuid) !== -1) {
+            if (m.forwardedBy && m.forwardedBy.includes(server.uuid)) {
                 return;
             }
 

@@ -5,6 +5,11 @@ const dirs = global.dirs;
 
 // Tests on constants.
 describe('The OVE Utils library', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     // The utilities carefully controls which constants are available for which
     // application/service. This allows multiple applications to reuse the
     // names of the constants without having naming conflicts. There are a
@@ -45,5 +50,9 @@ describe('The OVE Utils library', () => {
         expect(Object.keys(ConstantsA)).not.toContain('CORE_DUMMY');
         const ConstantsB = index('foo', app, newDirs).Constants;
         expect(Object.keys(ConstantsB)).not.toContain('FOO_DUMMY');
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
     });
 });

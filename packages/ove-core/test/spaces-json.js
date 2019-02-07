@@ -9,7 +9,10 @@ const spaces = global.spaces;
 const server = global.server;
 
 describe('The OVE Core server', () => {
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
         // We should test with the actual Spaces.json in this scenario.
         server.spaces = JSON.parse(fs.readFileSync(path.join(srcDir, 'client', Constants.SPACES_JSON_FILENAME)));
         server.spaceGeometries = {};
@@ -49,5 +52,7 @@ describe('The OVE Core server', () => {
         // Restore spaces after the tests have completed.
         server.spaces = spaces;
         server.spaceGeometries = {};
+
+        global.console = OLD_CONSOLE;
     });
 });

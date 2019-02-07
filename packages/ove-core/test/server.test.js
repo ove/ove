@@ -9,6 +9,10 @@ const nock = require('nock');
 const app = express();
 const wss = require('express-ws')(app).getWss('/');
 
+// Do not expose console during init.
+const OLD_CONSOLE = global.console;
+global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+
 // We always test against the distribution not the source.
 const srcDir = path.join(__dirname, '..', 'src');
 const dirs = {
@@ -44,8 +48,16 @@ global.log = log;
 global.spaces = spaces;
 global.server = server;
 
+// Restore console before run.
+global.console = OLD_CONSOLE;
+
 // Basic tests to ensure initialisation is fine.
 describe('The OVE Core server', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
     it('should initialize successfully', () => {
         expect(server).not.toBeUndefined();
     });
@@ -57,6 +69,10 @@ describe('The OVE Core server', () => {
             .expect('Access-Control-Allow-Origin', '*');
     });
     /* jshint ignore:end */
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
 });
 
 // It is hard to make these tests modular based on their interdependence and how
@@ -76,7 +92,9 @@ describe('The OVE Core server', () => {
     };
 
     let server;
+    const OLD_CONSOLE = global.console;
     beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
         server = app.listen(PORT);
     });
 
@@ -91,6 +109,7 @@ describe('The OVE Core server', () => {
 
     afterAll(() => {
         server.close();
+        global.console = OLD_CONSOLE;
     });
 });
 
