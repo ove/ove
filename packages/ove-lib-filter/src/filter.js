@@ -88,6 +88,12 @@ exports.getPredicate = function (filter) {
                     return firstArg.trim();
                 case Constants.Evaluation.Function.CONCAT:
                     return firstArg + secondArg;
+                case Constants.Evaluation.Function.ROUND:
+                    return Math.round(firstArg);
+                case Constants.Evaluation.Function.FLOOR:
+                    return Math.floor(firstArg);
+                case Constants.Evaluation.Function.CEILING:
+                    return Math.ceil(firstArg);
                 default:
                     // The specification is large and we don't support all types of
                     // operators/functions

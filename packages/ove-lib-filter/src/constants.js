@@ -31,7 +31,10 @@ Constants.Evaluation = {
         TO_LOWER: 'toLower'.toLowerCase(),
         TO_UPPER: 'toUpper'.toLowerCase(),
         TRIM: 'trim',
-        CONCAT: 'concat'
+        CONCAT: 'concat',
+        ROUND: 'round',
+        FLOOR: 'floor',
+        CEILING: 'ceiling'
     }
 };
 
