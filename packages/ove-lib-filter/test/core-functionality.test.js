@@ -260,6 +260,25 @@ describe('The OVE filter library - handling errors', () => {
         expect(() => predicate({ x: 0.7, y: 0.0 })).toThrow();
     });
 
+    it('test invalid type throw errors', () => {
+        const predicate = getPredicate({
+            type: 'eq',
+            left: { type: 'functioncall', func: 'ceiling', args: [{ type: 'NOT_A_REAL_PROPRTY', name: 'x' }] },
+            'right': { type: 'property', name: 'y' }
+        });
+        expect(() => predicate({ x: 0.7, y: 0.0 })).toThrow();
+    });
+
+    it('should correctly fetch attributes', () => {
+        const predicate = getPredicate(parse('x gt 5'));
+        expect(predicate({attributes: { x: 10, y: 1 } })).toBe(true);
+    });
+
+    it('should correctly fetch nested attributes', () => {
+        const predicate = getPredicate(parse('x.y gt 5'));
+        expect(predicate({attributes: { x: {y: 10 }, y: 1 } })).toBe(true);
+    });
+
     it('should correctly fetch nested values', () => {
         const predicate = getPredicate(parse('x.y gt 5'));
         expect(predicate({ x: { y: 10 }, y: 1 })).toBe(true);
@@ -279,6 +298,27 @@ describe('The OVE filter library - handling errors', () => {
         const predicate = getPredicate(parse('x.y gt 5'));
         expect(predicate({ y: 5  })).toBe(false);
     });
+
+
+    it('should handle missing 1st argument', () => {
+        const predicate = getPredicate(parse('replace(str, old, replacement)'));
+        expect(predicate({ str: 'car', old: 'ar', replacement: 'ell', new: 'cell' })).toBe('cell');
+        expect(predicate({ old: 'ar', replacement: 'ell', new: 'cell' })).toBe(undefined);
+    });
+
+    it('should handle missing 2nd argument', () => {
+        const predicate = getPredicate(parse('replace(str, old, replacement)'));
+        expect(predicate({ str: 'car', old: 'ar', replacement: 'ell', new: 'cell' })).toBe('cell');
+        expect(predicate({ str: 'car', replacement: 'ell', new: 'cell' })).toBe(undefined);
+    });
+
+    it('should handle missing 3rd argument', () => {
+        const predicate = getPredicate(parse('replace(str, old, replacement)'));
+        expect(predicate({ str: 'car', old: 'ar', replacement: 'ell', new: 'cell' })).toBe('cell');
+        expect(predicate({ str: 'car', old: 'ar', new: 'cell' })).toBe(undefined);
+    });
+
+
 
     afterAll(() => {
         global.console = OLD_CONSOLE;
