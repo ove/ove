@@ -260,6 +260,26 @@ describe('The OVE filter library - handling errors', () => {
         expect(() => predicate({ x: 0.7, y: 0.0 })).toThrow();
     });
 
+    it('should correctly fetch nested values', () => {
+        const predicate = getPredicate(parse('x.y gt 5'));
+        expect(predicate({ x: { y: 10 }, y: 1 })).toBe(true);
+    });
+
+    it('should return false if property is undefined', () => {
+        const predicate = getPredicate(parse('x gt 5'));
+        expect(predicate({ y: 5 })).toBe(false);
+    });
+
+    it('should return false if nested property is undefined', () => {
+        const predicate = getPredicate(parse('x.y gt 5'));
+        expect(predicate({ x: 1 })).toBe(false);
+    });
+
+    it('should return false if parent property is undefined ', () => {
+        const predicate = getPredicate(parse('x.y gt 5'));
+        expect(predicate({ y: 5  })).toBe(false);
+    });
+
     afterAll(() => {
         global.console = OLD_CONSOLE;
     });

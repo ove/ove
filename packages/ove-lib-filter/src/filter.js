@@ -17,6 +17,8 @@ const log = Utils.Logger('ove-lib-utils');
 exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
     const getFromElement = function (element, propertyName) {
+        if (element === undefined){ return undefined; }
+
         if (!propertyName || !propertyName.includes('.')) {
             if (element[propertyName] !== undefined) {
                 return element[propertyName];
