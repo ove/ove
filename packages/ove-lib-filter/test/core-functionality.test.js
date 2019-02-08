@@ -208,7 +208,7 @@ describe('The OVE filter library - string functions', () => {
     it('should correctly handle "concat()', () => {
         const predicate = getPredicate(parse('concat(str1, str2) eq res'));
         expect(predicate({ str1: 'abcd', str2: 'efg', res: 'abcdefg' })).toBe(true);
-        expect(predicate({ str: 'abcd', str2: 'efg', res: 'abcd' })).toBe(false);
+        expect(predicate({ str1: 'abcd', str2: 'efg', res: 'abcd' })).toBe(false);
     });
 
     afterAll(() => {
