@@ -5,6 +5,7 @@
 This allows all OVE applications to filter data (or to interpret a specification for highlightinh) in a consistent way.
 
 It exposes two methods: one accepts a query as a string, and parses this into a syntax tree; the second accepts this tree and returns a predicate function that evaluates whether an object matches the query.
+The intermediate syntax tree has a structure similar to that produced by [odata-parser](https://www.npmjs.com/package/odata-v4-parser).
 
 ## Install
 
