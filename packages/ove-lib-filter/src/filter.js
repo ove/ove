@@ -1,11 +1,3 @@
-/*
-filter = filter.nodesBy(function (n) {
-    if (evaluate(n, nodeFilter)) {
-        n.color = nodeColor;
-    }
-};
-*/
-
 // Calling getPredicate constructs a predicate function corresponding to the provided AST
 // Can be used like:
 
@@ -17,7 +9,7 @@ const log = Utils.Logger('ove-lib-utils');
 exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
     const getFromElement = function (element, propertyName) {
-        if (element === undefined){ return undefined; }
+        if (element === undefined) { return undefined; }
 
         if (!propertyName || !propertyName.includes('.')) {
             if (element[propertyName] !== undefined) {

@@ -54,7 +54,7 @@ function constructAST (tokens) {
                 args.push(stack.pop());
             }
 
-            if (token === 'substring_binary'){ token = 'substring'; }
+            if (token === 'substring_binary') { token = 'substring'; }
 
             result = evaluate(token, args);
             stack.push(result);
@@ -173,12 +173,11 @@ function convertTokensToRPN (tokens) {
 
             stack.pop(); // pop off the bracket
 
-
             let functionName = stack[stack.length - 1];
-            if (functionName === "substring" && numArguments === 2){
+            if (functionName === 'substring' && numArguments === 2) {
                 // There are two substring functions: one with 2 arguments, and one with 3
                 // This renames the function with two arguments, to help the evaluate() function
-                output.push("substring_binary");
+                output.push('substring_binary');
                 stack.pop();
             } else if (FUNCTIONS.includes(functionName)) {
                 output.push(stack.pop());
