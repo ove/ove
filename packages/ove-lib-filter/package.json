@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "scripts": {
     "clean": "npx rimraf lib",
-    "build": "npx babel-cli src --out-dir lib --copy-files",
+    "build": "npx babel-cli src --out-dir lib --copy-files && browserify -t uglifyify lib/index.js -o dist/filter.all.min.js",
     "test": "jest --runInBand --coverage --colors",
     "lint": "eslint src/. --ext .js"
   },
@@ -25,7 +25,10 @@
   "author": "James Scott-Brown <james.scott-brown@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "jest": "^24.1.0"
+    "browserify": "^16.2.3",
+    "jest": "^24.1.0",
+    "uglifyify": "^5.0.1",
+    "uniq": "^1.0.1"
   },
   "jest": {
     "collectCoverageFrom": [
