@@ -229,7 +229,3 @@ function tokenize (expr) {
 }
 
 exports.parse = parse;
-
-// parse('price gt 10');
-// parse('10 add floor(x add 5)');
-// parse('10 add floor(x add 5)');
