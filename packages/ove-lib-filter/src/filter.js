@@ -3,8 +3,12 @@
 
 const { Constants } = require('./constants');
 
-const { Utils } = require('@ove-lib/utils')();
-const log = Utils.Logger('ove-lib-utils');
+// Depending on where this is used, log might have been set using `const log = Utils.Logger('ove-lib-utils')`,
+// or OVE.Utils.Logger may have been exposed
+
+if (typeof log === 'undefined' || !log) {
+    log = (typeof OVE !== 'undefined' && OVE && OVE.Utils && OVE.Utils.Logger) ? OVE.Utils.Logger : { error: console.log };
+}
 
 exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
