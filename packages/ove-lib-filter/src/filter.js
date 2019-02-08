@@ -5,10 +5,14 @@ const { Constants } = require('./constants');
 
 // Depending on where this is used, log might have been set using `const log = Utils.Logger('ove-lib-utils')`,
 // or OVE.Utils.Logger may have been exposed
-
-if (typeof log === 'undefined' || !log) {
-    log = (typeof OVE !== 'undefined' && OVE && OVE.Utils && OVE.Utils.Logger) ? OVE.Utils.Logger : { error: console.log };
-}
+/* jshint ignore:start */
+const logger = (() => {
+    if (typeof log === 'undefined' || !log) {
+        return (typeof OVE !== 'undefined' && OVE && OVE.Utils && OVE.Utils.Logger) ? OVE.Utils.Logger : { error: console.log };
+    }
+    return log;
+})();
+/* jshint ignore:end */
 
 exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
@@ -97,7 +101,7 @@ exports.getPredicate = function (filter) {
                     // The specification is large and we don't support all types of
                     // operators/functions
                     const err = 'Unable to evaluate unknown function: ' + func;
-                    log.error(err);
+                    logger.error(err);
                     throw Error(err);
             }
         };
@@ -158,7 +162,7 @@ exports.getPredicate = function (filter) {
         // The OData specification is large and we don't support all types of
         // operators/functions
         const err = 'Unable to evaluate unknown type: ' + filter.type;
-        log.error(err);
+        logger.error(err);
         throw Error(err);
     };
 
