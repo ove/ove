@@ -5,14 +5,14 @@ const { Constants } = require('./constants');
 
 // Depending on where this is used, log might have been set using `const log = Utils.Logger('ove-lib-utils')`,
 // or OVE.Utils.Logger may have been exposed
-/* jshint ignore:start */
+/* eslint-disable */
 const logger = (() => {
     if (typeof log === 'undefined' || !log) {
         return (typeof OVE !== 'undefined' && OVE && OVE.Utils && OVE.Utils.Logger) ? OVE.Utils.Logger : { error: console.log };
     }
     return log;
 })();
-/* jshint ignore:end */
+/* eslint-enable */
 
 exports.getPredicate = function (filter) {
     // Helper method to retrieve a property from an element
