@@ -4,7 +4,7 @@
 // Semantics: https://docs.oasis-open.org/odata/odata/v4.01/cs01/part2-url-conventions/odata-v4.01-cs01-part2-url-conventions.html#_Toc505773218
 
 const { Constants } = require('./constants');
-let C  = Constants.Parsing;
+let C = Constants.Parsing;
 
 C.UNARY_OPERATORS = C.UNARY_PREFIX_OPERATORS.concat(C.UNARY_POSTFIX_OPERATORS);
 C.BINARY_OPERATORS = C.BINARY_OPERATORS_LEFT_ASSOCIATIVE.concat(C.BINARY_OPERATORS_RIGHT_ASSOCIATIVE); // make manually ordered to set precedence: earlier is higher precedence
