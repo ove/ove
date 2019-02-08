@@ -39,4 +39,3 @@ However, the implementation currently has the following limitations:
 
 * the type functions `IsOf(type p0)` and ` IsOf(expression p0, type p1)` are not implemented
 * none of the date functions are implemented
-* the function `substring(string p0, int pos)` is not accepted, though `substring(string p0, int pos, int length)` is

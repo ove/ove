@@ -11,7 +11,7 @@ const UNARY_FUNCTIONS = ['length', 'toupper', 'tolower', 'trim', // String funct
     'round', 'floor', 'ceiling' // math functions
 ];
 
-const BINARY_FUNCTIONS = ['substringof', 'endswith', 'startswith', 'indexof', 'concat', 'isOf'];
+const BINARY_FUNCTIONS = ['substringof', 'endswith', 'startswith', 'indexof', 'concat', 'isOf', 'substring_binary'];
 
 const TERNARY_FUNCTIONS = ['replace', 'substring'];
 
@@ -53,6 +53,8 @@ function constructAST (tokens) {
                 args.push(stack.pop());
                 args.push(stack.pop());
             }
+
+            if (token === 'substring_binary'){ token = 'substring'; }
 
             result = evaluate(token, args);
             stack.push(result);
@@ -129,6 +131,8 @@ function convertTokensToRPN (tokens) {
     let stack = [];
 
     // Process the stream of tokens
+    let numArguments = 0;
+
     for (let i = 0; i < tokens.length; i++) {
         if (UNARY_POSTFIX_OPERATORS.includes(tokens[i])) {
             output.push(tokens[i]);
@@ -136,9 +140,10 @@ function convertTokensToRPN (tokens) {
             stack.push(tokens[i]);
         } else if (FUNCTIONS.includes(tokens[i])) {
             // console.log('function');
-
+            numArguments = 1;
             stack.push(tokens[i]);
         } else if (tokens[i] === FUNCTION_ARGUMENT_SEPARATOR) {
+            numArguments++;
             while (stack.length > 0 && stack[stack.length - 1] !== '(') {
                 output.push(stack.pop());
             }
@@ -168,7 +173,14 @@ function convertTokensToRPN (tokens) {
 
             stack.pop(); // pop off the bracket
 
-            if (FUNCTIONS.includes(stack[stack.length - 1])) {
+
+            let functionName = stack[stack.length - 1];
+            if (functionName === "substring" && numArguments === 2){
+                // There are two substring functions: one with 2 arguments, and one with 3
+                // This renames the function with two arguments, to help the evaluate() function
+                output.push("substring_binary");
+                stack.pop();
+            } else if (FUNCTIONS.includes(functionName)) {
                 output.push(stack.pop());
             }
         } else {
