@@ -3,34 +3,16 @@
 
 // Semantics: https://docs.oasis-open.org/odata/odata/v4.01/cs01/part2-url-conventions/odata-v4.01-cs01-part2-url-conventions.html#_Toc505773218
 
-const UNARY_POSTFIX_OPERATORS = [];
-const UNARY_PREFIX_OPERATORS = ['not'];
+const { Constants } = require('./constants');
+let C  = Constants.Parsing;
 
-const UNARY_FUNCTIONS = ['length', 'toupper', 'tolower', 'trim', // String functions
-    'day', 'hour', 'minute', 'month', 'second', 'year', // Date functions
-    'round', 'floor', 'ceiling' // math functions
-];
+C.UNARY_OPERATORS = C.UNARY_PREFIX_OPERATORS.concat(C.UNARY_POSTFIX_OPERATORS);
+C.BINARY_OPERATORS = C.BINARY_OPERATORS_LEFT_ASSOCIATIVE.concat(C.BINARY_OPERATORS_RIGHT_ASSOCIATIVE); // make manually ordered to set precedence: earlier is higher precedence
+C.OPERATORS = C.BINARY_OPERATORS.concat(C.UNARY_OPERATORS);
 
-const BINARY_FUNCTIONS = ['substringof', 'endswith', 'startswith', 'indexof', 'concat', 'isOf', 'substring_binary'];
+C.FUNCTIONS = C.UNARY_FUNCTIONS.concat(C.BINARY_FUNCTIONS).concat(C.TERNARY_FUNCTIONS);
 
-const TERNARY_FUNCTIONS = ['replace', 'substring'];
-
-const FUNCTION_ARGUMENT_SEPARATOR = ',';
-
-const UNARY_OPERATORS = UNARY_PREFIX_OPERATORS.concat(UNARY_POSTFIX_OPERATORS);
-
-const BINARY_OPERATORS_LEFT_ASSOCIATIVE = ['eq', 'ne', 'gt', 'ge', 'lt', 'le',
-    'and', 'or',
-    'add', 'sub', 'mul', 'div', 'mod'];
-
-const BINARY_OPERATORS_RIGHT_ASSOCIATIVE = [];
-
-const BINARY_OPERATORS = BINARY_OPERATORS_LEFT_ASSOCIATIVE.concat(BINARY_OPERATORS_RIGHT_ASSOCIATIVE); // make manually ordered to set precedence: earlier is higher precedence
-const FUNCTIONS = UNARY_FUNCTIONS.concat(BINARY_FUNCTIONS).concat(TERNARY_FUNCTIONS);
-
-const OPERATORS = BINARY_OPERATORS.concat(UNARY_OPERATORS);
-
-const ALL_OPERATIONS = FUNCTIONS.concat(OPERATORS);
+C.ALL_OPERATIONS = C.FUNCTIONS.concat(C.OPERATORS);
 
 function constructAST (tokens) {
     // This uses the standard postfix evaluation algorithm
@@ -42,14 +24,14 @@ function constructAST (tokens) {
         token = tokens[i];
 
         // operators is any operator or function
-        if (ALL_OPERATIONS.includes(token)) {
+        if (C.ALL_OPERATIONS.includes(token)) {
             args = [stack.pop()];
 
-            if (BINARY_OPERATORS.includes(token) || BINARY_FUNCTIONS.includes(token)) {
+            if (C.BINARY_OPERATORS.includes(token) || C.BINARY_FUNCTIONS.includes(token)) {
                 args.push(stack.pop());
             }
 
-            if (TERNARY_FUNCTIONS.includes(token) || TERNARY_FUNCTIONS.includes(token)) {
+            if (C.TERNARY_FUNCTIONS.includes(token) || C.TERNARY_FUNCTIONS.includes(token)) {
                 args.push(stack.pop());
                 args.push(stack.pop());
             }
@@ -72,7 +54,7 @@ function evaluate (operation, args) {
     // console.log('Evaluating ' + JSON.stringify(operation) + ' with ' + JSON.stringify(args));
     args = args.map(n => evaluateLeafNode(n));
 
-    if (FUNCTIONS.includes(operation)) {
+    if (C.FUNCTIONS.includes(operation)) {
         return {
             type: 'functioncall',
             func: operation,
@@ -134,30 +116,30 @@ function convertTokensToRPN (tokens) {
     let numArguments = 0;
 
     for (let i = 0; i < tokens.length; i++) {
-        if (UNARY_POSTFIX_OPERATORS.includes(tokens[i])) {
+        if (C.UNARY_POSTFIX_OPERATORS.includes(tokens[i])) {
             output.push(tokens[i]);
-        } else if (UNARY_PREFIX_OPERATORS.includes(tokens[i])) {
+        } else if (C.UNARY_PREFIX_OPERATORS.includes(tokens[i])) {
             stack.push(tokens[i]);
-        } else if (FUNCTIONS.includes(tokens[i])) {
+        } else if (C.FUNCTIONS.includes(tokens[i])) {
             // console.log('function');
             numArguments = 1;
             stack.push(tokens[i]);
-        } else if (tokens[i] === FUNCTION_ARGUMENT_SEPARATOR) {
+        } else if (tokens[i] === C.FUNCTION_ARGUMENT_SEPARATOR) {
             numArguments++;
             while (stack.length > 0 && stack[stack.length - 1] !== '(') {
                 output.push(stack.pop());
             }
-        } else if (BINARY_OPERATORS.includes(tokens[i])) {
+        } else if (C.BINARY_OPERATORS.includes(tokens[i])) {
             // If A is left-associative, while there is an operator B of higher or equal precedence than A at the top of the stack, pop B off the stack and append it to the output.
-            if (BINARY_OPERATORS_LEFT_ASSOCIATIVE.includes(tokens[i])) {
-                while (stack.length > 0 && BINARY_OPERATORS.includes(stack[stack.length - 1]) && (BINARY_OPERATORS.indexOf(stack[stack.length - 1]) <= BINARY_OPERATORS.indexOf(tokens[i]))) {
+            if (C.BINARY_OPERATORS_LEFT_ASSOCIATIVE.includes(tokens[i])) {
+                while (stack.length > 0 && C.BINARY_OPERATORS.includes(stack[stack.length - 1]) && (C.BINARY_OPERATORS.indexOf(stack[stack.length - 1]) <= C.BINARY_OPERATORS.indexOf(tokens[i]))) {
                     output.push(stack.pop());
                 }
             }
 
             // If A is right-associative, while there is an operator B of higher precedence than A at the top of the stack, pop B off the stack and append it to the output.
-            if (BINARY_OPERATORS_RIGHT_ASSOCIATIVE.includes(tokens[i])) {
-                while (stack.length > 0 && BINARY_OPERATORS.includes(stack[stack.length - 1]) && (BINARY_OPERATORS.indexOf(stack[stack.length - 1]) < BINARY_OPERATORS.indexOf(tokens[i]))) {
+            if (C.BINARY_OPERATORS_RIGHT_ASSOCIATIVE.includes(tokens[i])) {
+                while (stack.length > 0 && C.BINARY_OPERATORS.includes(stack[stack.length - 1]) && (C.BINARY_OPERATORS.indexOf(stack[stack.length - 1]) < C.BINARY_OPERATORS.indexOf(tokens[i]))) {
                     output.push(stack.pop());
                 }
             }
@@ -179,7 +161,7 @@ function convertTokensToRPN (tokens) {
                 // This renames the function with two arguments, to help the evaluate() function
                 output.push('substring_binary');
                 stack.pop();
-            } else if (FUNCTIONS.includes(functionName)) {
+            } else if (C.FUNCTIONS.includes(functionName)) {
                 output.push(stack.pop());
             }
         } else {
