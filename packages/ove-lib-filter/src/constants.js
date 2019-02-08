@@ -1,20 +1,20 @@
 const Constants = { };
 
 Constants.Parsing = {
-     UNARY_POSTFIX_OPERATORS: [],
-     UNARY_PREFIX_OPERATORS: ['not'],
-     BINARY_OPERATORS_LEFT_ASSOCIATIVE: ['eq', 'ne', 'gt', 'ge', 'lt', 'le',
+    UNARY_POSTFIX_OPERATORS: [],
+    UNARY_PREFIX_OPERATORS: ['not'],
+    BINARY_OPERATORS_LEFT_ASSOCIATIVE: ['eq', 'ne', 'gt', 'ge', 'lt', 'le',
         'and', 'or',
         'add', 'sub', 'mul', 'div', 'mod'],
-     BINARY_OPERATORS_RIGHT_ASSOCIATIVE: [],
+    BINARY_OPERATORS_RIGHT_ASSOCIATIVE: [],
 
-     UNARY_FUNCTIONS: ['length', 'toupper', 'tolower', 'trim', // String functions
+    UNARY_FUNCTIONS: ['length', 'toupper', 'tolower', 'trim', // String functions
         'day', 'hour', 'minute', 'month', 'second', 'year', // Date functions
         'round', 'floor', 'ceiling' // math functions
     ],
-     BINARY_FUNCTIONS: ['substringof', 'endswith', 'startswith', 'indexof', 'concat', 'isOf', 'substring_binary'],
-     TERNARY_FUNCTIONS: ['replace', 'substring'],
-     FUNCTION_ARGUMENT_SEPARATOR: ','
+    BINARY_FUNCTIONS: ['substringof', 'endswith', 'startswith', 'indexof', 'concat', 'isOf', 'substring_binary'],
+    TERNARY_FUNCTIONS: ['replace', 'substring'],
+    FUNCTION_ARGUMENT_SEPARATOR: ','
 };
 
 Constants.Evaluation = {
