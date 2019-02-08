@@ -1,4 +1,3 @@
-const { Constants } = require('./constants');
 const getPredicate = require('./filter').getPredicate;
 const parse = require('./parser').parse;
 
