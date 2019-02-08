@@ -25,7 +25,10 @@ module.exports = function (baseDir, appName) {
 
     module.exports.express = express;
     module.exports.app = app;
-    if (fs.existsSync(configPath)) {
+    if (fs.existsSync(Constants.CONFIG_JSON_PATH(appName))) {
+        module.exports.config = JSON.parse(
+            fs.readFileSync(Constants.CONFIG_JSON_PATH(appName), Constants.UTF8));
+    } else if (fs.existsSync(configPath)) {
         module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
     } else {
         module.exports.config = [];

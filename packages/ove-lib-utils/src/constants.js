@@ -22,6 +22,9 @@ const Constants = {
     **************************************************************/
     WEBSOCKET_READY: 1,
     SWAGGER_API_DOCS_CONTEXT: '/api-docs',
+    CONFIG_JSON_PATH: function (appName) {
+        return process.env['OVE_' + appName.toUpperCase() + '_CONFIG_JSON'];
+    },
     PERSISTENCE_SYNC_INTERVAL: +(process.env.OVE_PERSISTENCE_SYNC_INTERVAL !==
         undefined ? process.env.OVE_PERSISTENCE_SYNC_INTERVAL : 2000), // Unit: milliseconds
     UTF8: 'utf8'
