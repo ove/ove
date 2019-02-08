@@ -172,14 +172,11 @@ describe('The OVE filter library - string functions', () => {
         expect(predicate({ str: 'car', old: 'c', replacement: 'b', new: 'bar' })).toBe(true);
     });
 
-    /*
-    // The binary substring() function is not currently correctly parse
     it('should correctly handle "substring()"', () => {
         const predicate = getPredicate(parse('substring(str, pos) eq res'));
         expect(predicate({ str: 'abcde', pos: 0, res: 'abcde' })).toBe(true);
         expect(predicate({ str: 'abcde', pos: 1, res: 'bcde' })).toBe(true);
     });
-    */
 
     it('should correctly handle "substring()" with specified length', () => {
         const predicate = getPredicate(parse('substring(str, pos, len) eq res'));
