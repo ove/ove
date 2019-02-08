@@ -1,8 +1,11 @@
 // We always test against the distribution not the source.
 const path = require('path');
 const srcDir = path.join(__dirname, '..', 'lib');
-const getPredicate = require(path.join(srcDir, 'filter')).getPredicate;
-const parse = require(path.join(srcDir, 'parser')).parse;
+
+// Include dependencies via index, rather than directly, so that index gets 100% test coverage (rather than 0%)
+const filterLib = require(path.join(srcDir, 'index'));
+const getPredicate = filterLib.getPredicate;
+const parse = filterLib.parse;
 
 describe('The OVE filter library - logical operations', () => {
     const OLD_CONSOLE = global.console;
