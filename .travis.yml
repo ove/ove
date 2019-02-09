@@ -9,6 +9,8 @@ install: npm install
 
 stages:
   - test
+  - name: publish
+    if: tag = true
   - name: deploy
     if: branch = master AND type != pull_request
 
@@ -19,6 +21,13 @@ jobs:
         - npm run lint 
         - npm run build:clean 
         - npm test
+    - stage: publish
+      script:
+        - npm run build:clean
+        - | 
+          echo "@ove:registry=https://registry.npmjs.org/" >> $HOME/.npmrc 2> /dev/null
+          echo "//registry.npmjs.org/:_authToken=\${NPM_PUBLISH_TOKEN}" >> $HOME/.npmrc 2> /dev/null
+        - lerna publish from-package --yes
     - stage: deploy
       script:
         - echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin 
