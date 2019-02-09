@@ -1,7 +1,7 @@
 {
   "name": "@ove/ove-core",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "The Core library of OVE",
   "main": "dist/index.js",
   "scripts": {
@@ -16,7 +16,7 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "@ove-lib/utils": "^0.3.0",
+    "@ove-lib/utils": "^0.3.1",
     "cors": "2.8.5",
     "d3": "5.9.0",
     "express": "4.16.4",

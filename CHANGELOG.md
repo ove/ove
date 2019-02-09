@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+<a name="0.3.1"></a>
+# [0.3.1](https://github.com/ove/ove/compare/v0.3.0...v0.3.1) (2019-02-09)
+
+### Features
+
+**feat:** Landing pages for OVE apps.
+
+### Fixes
+
+**fix:** Reporting errors when providing invalid payloads while updating sections.
+
 <a name="0.3.0"></a>
 # [0.3.0](https://github.com/ove/ove/compare/v0.2.0...v0.3.0) (2019-02-01)
 
