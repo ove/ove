@@ -578,11 +578,11 @@ definitions:
       w:
         type: "integer"
         format: "int32"
-        example: 30720
+        example: 4320
       h:
         type: "integer"
         format: "int32"
-        example: 4320
+        example: 2424
   Section:
     description: "Used when creating or updating a section"
     properties:
@@ -615,11 +615,11 @@ definitions:
       w:
         type: "integer"
         format: "int32"
-        example: 30720
+        example: 4320
       h:
         type: "integer"
         format: "int32"
-        example: 4320
+        example: 2424
   UpdateOperation:
     description: "Used when updating multiple sections"
     properties:
