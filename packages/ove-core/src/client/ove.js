@@ -169,9 +169,9 @@ function OVE (appId, hostname, sectionId) {
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
         if (!id) {
-            let sectionId = OVE.Utils.getSectionId(true) || __private.proposedSectionId;
+            let sectionId = OVE.Utils.getSectionId() || __private.proposedSectionId;
             if (!sectionId && sectionId !== 0) {
-                log.warn('Section id not found');
+                log.warn('Section id not provided');
             }
             fetchSection(sectionId);
             return;
@@ -187,6 +187,12 @@ function OVE (appId, hostname, sectionId) {
         }
         const client = id.substring(id.lastIndexOf('-') + 1);
         const space = id.substring(0, id.lastIndexOf('-'));
+        if (!space) {
+            log.warn('Name of space not provided');
+        }
+        if (!client && client !== 0) {
+            log.warn('Client id not provided');
+        }
         if (sectionId) {
             log.info('Running OVE for section:', sectionId, ', client:', client, ', space:', space);
         } else {

@@ -61,6 +61,12 @@ updateSections = function (m) {
     const id = OVE.Utils.getViewId();
     const client = id.substring(id.lastIndexOf('-') + 1);
     const space = id.substring(0, id.lastIndexOf('-'));
+    if (!space) {
+        log.warn('Name of space not provided');
+    }
+    if (!client && client !== 0) {
+        log.warn('Client id not provided');
+    }
     switch (m.action) {
         case Constants.Action.CREATE:
             let geometry = (m.spaces[space] || [])[client] || {};

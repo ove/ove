@@ -176,7 +176,11 @@ function OVEUtils () {
     //-----------------------------------------------------------//
     this.getSpace = function () {
         const viewId = OVE.Utils.getViewId();
-        return !viewId ? __private.space : viewId.substring(0, viewId.lastIndexOf('-'));
+        const space = !viewId ? __private.space : viewId.substring(0, viewId.lastIndexOf('-'));
+        if (!space) {
+            log.warn('Name of space not provided');
+        }
+        return space;
     };
 
     $(document).on(OVE.Event.LOADED, function () {
@@ -198,31 +202,33 @@ function OVEUtils () {
 
     this.getClient = function () {
         const viewId = OVE.Utils.getViewId();
+        let client;
         if (!viewId) {
-            return null;
+            client = null;
+        } else {
+            const parts = viewId.split('-');
+            client = +parts[parts.length - 1];
         }
-        const parts = viewId.split('-');
-        return +parts[parts.length - 1];
+        if (!client && client !== 0) {
+            log.warn('Client id not provided');
+        }
+        return client;
     };
 
-    this.getSectionId = function (canBeUndefined) {
+    this.getSectionId = function () {
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
-        let sectionId;
         if (!id) {
-            sectionId = OVE.Utils.getQueryParam('oveSectionId');
+            return OVE.Utils.getQueryParam('oveSectionId');
+        }
+        const sectionId = id.substring(id.lastIndexOf('.') + 1);
+        id = id.substring(0, id.lastIndexOf('.'));
+        if (!id && sectionId) {
+            //-- sectionId has not been provided as a part of oveViewId  --//
+            return OVE.Utils.getQueryParam('oveSectionId');
         } else {
-            sectionId = id.substring(id.lastIndexOf('.') + 1);
-            id = id.substring(0, id.lastIndexOf('.'));
-            if (!id && sectionId) {
-                //-- sectionId has not been provided as a part of oveViewId  --//
-                sectionId = OVE.Utils.getQueryParam('oveSectionId');
-            }
+            return sectionId;
         }
-        if (!canBeUndefined && !sectionId && sectionId !== 0) {
-            log.warn('Section id not found');
-        }
-        return sectionId;
     };
 
     //-----------------------------------------------------------//
