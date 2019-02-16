@@ -230,7 +230,7 @@ paths:
       tags:
       - "section"
       summary: "Creates a section on OVE and deploys an application instance into it."
-      description: "All parameters except for the load and cache parameters within the app configuration are mandatory."
+      description: "All parameters except for the load and cache parameters within the app configuration are mandatory. Please make sure to replace the hostname/port of the application URL if you are posting the example payload to a non-local OVE installation."
       consumes:
       - "application/json"
       produces:
@@ -285,7 +285,7 @@ paths:
       tags:
       - "section"
       summary: "Updates a section that has been created"
-      description: "Out of the parameters provided, section, x, y, w and h are optional. If these are not provided the existing values will be left unchanged. The app parameter is required, unless the intention is to remove the app from the section. The url parameter within the app configuration is mandatory but both load and cache are optional."
+      description: "Out of the parameters provided, section, x, y, w and h are optional. If these are not provided the existing values will be left unchanged. The app parameter is required, unless the intention is to remove the app from the section. The url parameter within the app configuration is mandatory but both load and cache are optional. Please make sure to replace the hostname/port of the application URL if you are posting the example payload to a non-local OVE installation."
       consumes:
       - "application/json"
       produces:
