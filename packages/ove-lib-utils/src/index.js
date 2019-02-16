@@ -282,7 +282,7 @@ function Utils (appName, app, dirs) {
     };
 
     this.isNullOrEmpty = function (input) {
-        return !input || this.JSON.equals(input, {}) || this.JSON.equals(input, []);
+        return (!input && input !== 0 && input !== false) || this.JSON.equals(input, {}) || this.JSON.equals(input, []);
     };
 }
 

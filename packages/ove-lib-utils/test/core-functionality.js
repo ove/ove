@@ -38,6 +38,10 @@ describe('The OVE Utils library', () => {
     it('should test null or empty', () => {
         expect(Utils.isNullOrEmpty(null)).toBeTruthy();
         expect(Utils.isNullOrEmpty(undefined)).toBeTruthy();
+        expect(Utils.isNullOrEmpty(0)).not.toBeTruthy();
+        expect(Utils.isNullOrEmpty(false)).not.toBeTruthy();
+        expect(Utils.isNullOrEmpty('')).toBeTruthy();
+        expect(Utils.isNullOrEmpty(NaN)).toBeTruthy();
         expect(Utils.isNullOrEmpty({})).toBeTruthy();
         expect(Utils.isNullOrEmpty('test')).toBeFalsy();
         expect(Utils.isNullOrEmpty(10.1)).toBeFalsy();
