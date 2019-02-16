@@ -169,7 +169,11 @@ function OVE (appId, hostname, sectionId) {
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
         if (!id) {
-            fetchSection(OVE.Utils.getSectionId() || __private.proposedSectionId);
+            let sectionId = OVE.Utils.getSectionId(true) || __private.proposedSectionId;
+            if (!sectionId && sectionId !== 0) {
+                log.warn('Section id not found');
+            }
+            fetchSection(sectionId);
             return;
         }
         let sectionId = id.substring(id.lastIndexOf('.') + 1);

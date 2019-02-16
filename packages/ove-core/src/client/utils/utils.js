@@ -205,20 +205,24 @@ function OVEUtils () {
         return +parts[parts.length - 1];
     };
 
-    this.getSectionId = function () {
+    this.getSectionId = function (canBeUndefined) {
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
+        let sectionId;
         if (!id) {
-            return OVE.Utils.getQueryParam('oveSectionId');
-        }
-        const sectionId = id.substring(id.lastIndexOf('.') + 1);
-        id = id.substring(0, id.lastIndexOf('.'));
-        if (!id && sectionId) {
-            //-- sectionId has not been provided as a part of oveViewId  --//
-            return OVE.Utils.getQueryParam('oveSectionId');
+            sectionId = OVE.Utils.getQueryParam('oveSectionId');
         } else {
-            return sectionId;
+            sectionId = id.substring(id.lastIndexOf('.') + 1);
+            id = id.substring(0, id.lastIndexOf('.'));
+            if (!id && sectionId) {
+                //-- sectionId has not been provided as a part of oveViewId  --//
+                sectionId = OVE.Utils.getQueryParam('oveSectionId');
+            }
         }
+        if (!canBeUndefined && !sectionId && sectionId !== 0) {
+            log.warn('Section id not found');
+        }
+        return sectionId;
     };
 
     //-----------------------------------------------------------//
