@@ -162,6 +162,19 @@
                 .attr('y', d => (y(d.y + d.h/2) + sectionTextSize*0.5))
                 .style('font-size', sectionTextSize + 'px')
                 .classed('section-label', true);
+
+            divs.append('p')
+                .text('The OVE Clients corresponding to this space have the URLs:');
+
+            let ul = divs.append("ul");
+            ul.append('li').html(d => {
+                  return `<a href="${window.location}view.html?oveViewId=${d}-0"><code>${window.location}view.html?oveViewId=${d}-0</code></a>`
+            });
+            ul.append('li').html('...');
+            ul.append('li').html(d => {
+                let maxIndex = spaces[d].length - 1;
+                return `<a href="${window.location}view.html?oveViewId=${d}-${maxIndex}"><code>${window.location}view.html?oveViewId=${d}-${maxIndex}</code></a>`
+            });
         }
 
         function tabulateSections(spaces, sections) {
