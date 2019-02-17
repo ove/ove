@@ -170,8 +170,12 @@
             ul.append('li').html(d => {
                   return `<a href="${window.location}view.html?oveViewId=${d}-0"><code>${window.location}view.html?oveViewId=${d}-0</code></a>`
             });
-            ul.append('li').html('...');
-            ul.append('li').html(d => {
+
+            ul.filter(d => spaces[d].length > 2)
+                .append('li').html('...');
+
+            ul.filter(d => spaces[d].length > 1)
+                .append('li').html(d => {
                 let maxIndex = spaces[d].length - 1;
                 return `<a href="${window.location}view.html?oveViewId=${d}-${maxIndex}"><code>${window.location}view.html?oveViewId=${d}-${maxIndex}</code></a>`
             });
