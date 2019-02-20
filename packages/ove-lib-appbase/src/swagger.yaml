@@ -205,6 +205,20 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid state name' if no state by the given name was found. Returns an error message 'invalid transformation' if the transformation was not provided or cannot be made."
+  /states:
+    get:
+      tags:
+      - "named state"
+      summary: "Reads names of all states that have been configured"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
   /state/{name}:
     get:
       tags:

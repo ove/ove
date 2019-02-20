@@ -98,6 +98,11 @@ module.exports = function (baseDir, appName) {
         }
     };
 
+    const readStateNames = function (_req, res) {
+        log.debug('Reading list of named states');
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(Object.keys(module.exports.config.states)));
+    };
+
     const readStateOfSection = function (req, res) {
         const state = appState.get('state[' + req.params.id + ']');
         if (state) {
@@ -225,6 +230,7 @@ module.exports = function (baseDir, appName) {
     app.post('/state/:name/transform', transformStateByName);
     app.post('/state/:name/diff', diffForStateByName);
     app.get('/state', readState);
+    app.get('/states', readStateNames);
     app.get('/:id/state', readStateOfSection);
     app.post('/:id/state', updateStateOfSection);
     app.post('/:id/state/transform', transformStateOfSection);

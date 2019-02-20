@@ -220,6 +220,19 @@ describe('The OVE App Base library', () => {
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
     });
 
+    it('should be able to list state names', async () => {
+        const payload1 = { url: 'http://dummy.com' };
+        await request(app).post('/state/foo').send(payload1);
+        await request(app).post('/state/bar').send({ url: 'http://dummy.com' });
+
+        let res = await request(app).get('/states');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(JSON.parse(res.text)).toContain('foo');
+        expect(JSON.parse(res.text)).toContain('bar');
+
+        await request(app).post('/flush');
+    });
+
     it('should make a debug log when a named state is saved', async () => {
         // A debug log is written when a named state is saved. This is an expensive
         // operation since it serializes the JSON payload. Another test below validates

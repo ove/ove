@@ -668,11 +668,11 @@ definitions:
       w:
         type: "integer"
         format: "int32"
-        example: 30720
+        example: 4320
       h:
         type: "integer"
         format: "int32"
-        example: 4320
+        example: 2424
       space:
         type: "string"
         example: "LocalNine"
