@@ -49,6 +49,14 @@ Constants.Evaluation = {
         TO_UPPER: 'toUpper'.toLowerCase(),
         TRIM: 'trim',
         CONCAT: 'concat',
+
+        SECOND: 'second',
+        MINUTE: 'minute',
+        HOUR: 'hour',
+        DAY: 'day',
+        MONTH: 'month',
+        YEAR: 'year',
+
         ROUND: 'round',
         FLOOR: 'floor',
         CEILING: 'ceiling'

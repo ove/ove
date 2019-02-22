@@ -14,7 +14,7 @@ const logger = (() => {
 })();
 /* eslint-enable */
 
-exports.getPredicate = function (filter) {
+exports.getPredicate = function (filter, dateFunction) {
     // Helper method to retrieve a property from an element
     const getFromElement = function (element, propertyName) {
         if (element === undefined) { return undefined; }
@@ -31,6 +31,16 @@ exports.getPredicate = function (filter) {
         const childElement = element[firstPart] ||
             (element.attributes ? element.attributes[firstPart] : undefined);
         return getFromElement(childElement, otherParts);
+    };
+
+    const convertDate = function (date) {
+        if (date instanceof Date) {
+            return date;
+        } else if (dateFunction) {
+            return dateFunction(date);
+        } else {
+            return new Date(Date.parse(date));
+        }
     };
 
     // IMPORTANT: There are no logs within the filter evaluation operations to ensure
@@ -89,6 +99,20 @@ exports.getPredicate = function (filter) {
                     return firstArg.toUpperCase();
                 case Constants.Evaluation.Function.TRIM:
                     return firstArg.trim();
+
+                case Constants.Evaluation.Function.SECOND:
+                    return convertDate(firstArg).getSeconds();
+                case Constants.Evaluation.Function.MINUTE:
+                    return convertDate(firstArg).getMinutes();
+                case Constants.Evaluation.Function.HOUR:
+                    return convertDate(firstArg).getHours();
+                case Constants.Evaluation.Function.DAY:
+                    return convertDate(firstArg).getDay();
+                case Constants.Evaluation.Function.MONTH:
+                    return convertDate(firstArg).getMonth();
+                case Constants.Evaluation.Function.YEAR:
+                    return convertDate(firstArg).getFullYear();
+
                 case Constants.Evaluation.Function.CONCAT:
                     return firstArg + secondArg;
                 case Constants.Evaluation.Function.ROUND:
