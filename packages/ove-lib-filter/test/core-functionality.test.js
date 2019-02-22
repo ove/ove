@@ -248,6 +248,51 @@ describe('The OVE filter library - math functions', () => {
     });
 });
 
+describe('The OVE filter library - date functions', () => {
+    const OLD_CONSOLE = global.console;
+    beforeAll(() => {
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
+    it('should correctly handle "year()"', () => {
+        const predicate = getPredicate(parse('year(date) eq y'));
+        expect(predicate({ date: '16 Jan 2014', y: 2014})).toBe(true);
+    });
+
+    it('should correctly handle "month()"', () => {
+        const predicate = getPredicate(parse('month(date) eq y'));
+        expect(predicate({ date: '16 Jan 2014', y: 0})).toBe(true);
+        expect(predicate({ date: '16 Dec 2014', y: 11})).toBe(true);
+    });
+
+    it('should correctly handle "day()"', () => {
+        const predicate = getPredicate(parse('day(date) eq y'));
+        expect(predicate({ date: '22 Feb 2019', y: 5})).toBe(true); // a Friday
+        expect(predicate({ date: '23 Feb 2019', y: 6})).toBe(true); // a Sat
+        expect(predicate({ date: '24 Feb 2019', y: 0})).toBe(true); // a Sun
+        expect(predicate({ date: '25 Feb 2019', y: 1})).toBe(true); // a Mon
+    });
+
+    it('should correctly handle "hour()"', () => {
+        const predicate = getPredicate(parse('hour(date) eq y'));
+        expect(predicate({ date: '24 Feb 2019 10:19:12', y: 10 })).toBe(true);
+    });
+
+    it('should correctly handle "minute()"', () => {
+        const predicate = getPredicate(parse('minute(date) eq y'));
+        expect(predicate({ date: '24 Feb 2019 10:19:12', y: 19 })).toBe(true);
+    });
+
+    it('should correctly handle "hour()"', () => {
+        const predicate = getPredicate(parse('second(date) eq y'));
+        expect(predicate({ date: '24 Feb 2019 10:19:12', y: 12 })).toBe(true);
+    });
+
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
+    });
+});
+
 describe('The OVE filter library - handling errors', () => {
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
