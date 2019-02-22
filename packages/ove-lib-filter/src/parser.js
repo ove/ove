@@ -42,7 +42,7 @@ function constructAST (tokens) {
             stack.push(result);
             // console.log('Pushed to stack to get:', JSON.stringify(stack));
         } else {
-            stack.push(token);
+            stack.push(((typeof token) === 'object' ? token.value : token));
         }
     }
     result = stack.pop();
@@ -53,6 +53,8 @@ function constructAST (tokens) {
 function evaluate (operation, args) {
     // console.log('Evaluating ' + JSON.stringify(operation) + ' with ' + JSON.stringify(args));
     args = args.map(n => evaluateLeafNode(n));
+
+    args.map(d => ((typeof d) === 'object' ? d.value : d));
 
     if (C.FUNCTIONS.includes(operation)) {
         return {
@@ -116,11 +118,14 @@ function convertTokensToRPN (tokens) {
     let numArguments = 0;
 
     for (let i = 0; i < tokens.length; i++) {
+        // Look ahead to next token to distinguish between functions and variables with the same name
+        let followedByParen = (tokens.length > (i + 1) && tokens[i + 1] === '(');
+
         if (C.UNARY_POSTFIX_OPERATORS.includes(tokens[i])) {
             output.push(tokens[i]);
         } else if (C.UNARY_PREFIX_OPERATORS.includes(tokens[i])) {
             stack.push(tokens[i]);
-        } else if (C.FUNCTIONS.includes(tokens[i])) {
+        } else if (C.FUNCTIONS.includes(tokens[i]) && followedByParen) {
             // console.log('function');
             numArguments = 1;
             stack.push(tokens[i]);
@@ -168,7 +173,7 @@ function convertTokensToRPN (tokens) {
             // token is an operand
 
             // console.log("THIS is an operand");
-            output.push(tokens[i]);
+            output.push({ type: 'operand', value: tokens[i] });
         }
 
         // console.log("\n");

@@ -293,10 +293,18 @@ describe('The OVE filter library - date functions', () => {
     });
 });
 
-describe('The OVE filter library - handling errors', () => {
+describe('The OVE filter library - general and handling errors', () => {
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
         global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+    });
+
+    it('handle variable names that overlap with function names', () => {
+        const predicate = getPredicate(parse('year(date) eq year'));
+        expect(predicate({ date: '16 Jan 2014', year: 2014 })).toBe(true);
+
+        const predicate2 = getPredicate(parse('month(date) eq month'));
+        expect(predicate2({ date: '16 Dec 2014', month: 11 })).toBe(true);
     });
 
     it('test invalid functions throw errors', () => {
