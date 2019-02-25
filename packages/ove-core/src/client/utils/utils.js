@@ -134,8 +134,8 @@ function OVEUtils () {
     //--                     Initialization                    --//
     //-----------------------------------------------------------//
 
-    //-- The difference between the two methods below is that the on-demand option does  --//
-    //-- not wait for OVE to load.                                                       --//
+    //-- The main difference between the two methods below is that the on-demand option  --//
+    //-- does not wait for OVE to load.                                                  --//
     this.initControlOnDemand = function (defaultState, initMethod) {
         const state = __private.getOVEInstance().state.name || defaultState;
         log.info('Initializing controller with state:', state);
@@ -146,7 +146,20 @@ function OVEUtils () {
     this.initControl = function (defaultState, initMethod) {
         $(document).on(OVE.Event.LOADED, function () {
             log.debug('Invoking OVE.Event.Loaded handler');
-            __self.initControlOnDemand(defaultState, initMethod);
+            __private.getOVEInstance().state.load().then(function () {
+                const current = __private.getOVEInstance().state.current;
+                if (current) {
+                    log.debug('Initializing controller with state:', current);
+                    initMethod(current);
+                } else {
+                    log.debug('Missing state information - loading default state');
+                    __self.initControlOnDemand(defaultState, initMethod);
+                }
+            }).catch(function () {
+                log.debug('State load failed - loading default state');
+                //-- If the promise is rejected, that means no current state is existing.--//
+                __self.initControlOnDemand(defaultState, initMethod);
+            });
         });
     };
 
