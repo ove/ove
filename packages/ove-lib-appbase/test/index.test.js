@@ -564,17 +564,22 @@ describe('The OVE App Base library', () => {
         process.env.LOG_LEVEL = 3;
     });
 
-    it('should be able to load app configuration from a environment variable', () => {
+    /* jshint ignore:start */
+    // current version of JSHint does not support async/await
+    it('should be able to load app configuration from a environment variable', async () => {
         process.env.OVE_DUMMY_CONFIG_JSON = path.join(srcDir, '..', 'test', 'resources', 'package.json');
         const index = require(path.join(srcDir, 'index'));
         const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
+        const { app } = base;
+        expect(base.config).toEqual(JSON.parse(fs.readFileSync(
+            path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
+        await request(app).post('/flush');
+        // Config must be reloaded after a flush operation
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
             path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
         delete process.env.OVE_DUMMY_CONFIG_JSON;
     });
 
-    /* jshint ignore:start */
-    // current version of JSHint does not support async/await
     it('should not make a debug log when debug logging is disabled', async () => {
         // See also, 'should make a debug log when a named state is saved' above.
         const index = require(path.join(srcDir, 'index'));
