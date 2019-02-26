@@ -10,7 +10,7 @@ install: npm install
 stages:
   - test
   - name: publish
-    if: tag = true
+    if: tag IS present
   - name: deploy
     if: branch = master AND type != pull_request
 
