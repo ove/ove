@@ -164,43 +164,6 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Section%20Metadata"
-    post:
-      tags:
-      - "sections"
-      summary: "Updates sections"
-      description: "Each section will be updated by invoking the corresponding update operation (a move to a new space or a transformation such as scale or translate). This operation will be limited to a subset of sections if a group id or a space was provided."
-      produces:
-      - "application/json"
-      parameters:
-      - name: "space"
-        in: "query"
-        type: "string"
-        description: "Name of space"
-        required: false
-      - name: "groupId"
-        in: "query"
-        type: "integer"
-        format: "int32"
-        description: "Group ID"
-        required: false
-      - in: "body"
-        name: "body"
-        description: "Update operation"
-        schema:
-          $ref: "#/definitions/UpdateOperation"
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            type: "object"
-        400:
-          description: "bad request"
-          schema:
-            type: "object"
-            properties:
-              error:
-                type: "string"
-                description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid space' if the name of the space was not found. Returns an error message 'invalid dimensions' if the dimensions for the operations were not properly provided or if the section does not fit within its space after a transformation."
     delete:
       tags:
       - "sections"
@@ -259,7 +222,7 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid space' if the name of the space was not provided or not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly setup. Returns an error message 'invalid app configuration' if the application configuration was not properly provided."
-  /section/{id}:
+  /sections/{id}:
     get:
       tags:
       - "section"
@@ -352,6 +315,106 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid section id' if the section id was not found."
+  /sections/moveTo:
+    post:
+      tags:
+      - "sections"
+      summary: "Moves sections"
+      description: "Each section will be moved to a new space. This operation will be limited to a subset of sections if a group id or a space was provided."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "space"
+        in: "query"
+        type: "string"
+        description: "Name of space"
+        required: false
+      - name: "groupId"
+        in: "query"
+        type: "integer"
+        format: "int32"
+        description: "Group ID"
+        required: false
+      - in: "body"
+        name: "body"
+        description: "MoveTo operation"
+        schema:
+          type: "object"
+          properties:
+            space:
+              type: "string"
+              description: "Name of space"
+              example: "LocalNine"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid space' if the name of the space was not found."
+  /sections/transform:
+    post:
+      tags:
+      - "sections"
+      summary: "Transforms sections"
+      description: "Each section will be updated using a scale or translate transformation. This operation will be limited to a subset of sections if a group id or a space was provided."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "space"
+        in: "query"
+        type: "string"
+        description: "Name of space"
+        required: false
+      - name: "groupId"
+        in: "query"
+        type: "integer"
+        format: "int32"
+        description: "Group ID"
+        required: false
+      - in: "body"
+        name: "body"
+        description: "Transform operation"
+        schema:
+          type: "object"
+          properties:
+            scale:
+              type: "object"
+              properties:
+                x:
+                  type: "integer"
+                  format: "int32"
+                y:
+                  type: "integer"
+                  format: "int32"
+            translate:
+              type: "object"
+              properties:
+                x:
+                  type: "integer"
+                  format: "int32"
+                y:
+                  type: "integer"
+                  format: "int32"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid dimensions' if the dimensions for the operations were not properly provided or if the section does not fit within its space after a transformation."
   /groups:
     get:
       tags:
@@ -408,7 +471,7 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid group' if the group was not an array or contained invalid section ids."
-  /group/{id}:
+  /groups/{id}:
     get:
       tags:
       - "group"
@@ -620,37 +683,6 @@ definitions:
         type: "integer"
         format: "int32"
         example: 2424
-  UpdateOperation:
-    description: "Used when updating multiple sections"
-    properties:
-      transform:
-        type: "object"
-        properties:
-          scale:
-            type: "object"
-            properties:
-              x:
-                type: "integer"
-                format: "int32"
-              y:
-                type: "integer"
-                format: "int32"
-          translate:
-            type: "object"
-            properties:
-              x:
-                type: "integer"
-                format: "int32"
-              y:
-                type: "integer"
-                format: "int32"
-      moveTo:
-        type: "object"
-        properties:
-          space:
-            type: "string"
-            description: "Name of space"
-            example: "LocalNine"
   Section Metadata:
     description: "Response format, when fetching section details"
     type: "object"

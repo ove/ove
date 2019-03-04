@@ -148,7 +148,7 @@ function OVE (appId, hostname, sectionId) {
         const fetchSection = function (sectionId) {
             if (sectionId) {
                 log.debug('Requesting details of section:', sectionId);
-                fetch(getHostName(true) + '/section/' + sectionId)
+                fetch(getHostName(true) + '/sections/' + sectionId)
                     .then(function (r) { return r.text(); }).then(function (text) {
                         const section = JSON.parse(text);
                         __self.geometry.section = { w: section.w, h: section.h };

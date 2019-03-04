@@ -27,7 +27,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
-        res = await request(app).get('/section/0');
+        res = await request(app).get('/sections/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).not.toEqual(Utils.JSON.EMPTY);
 
@@ -63,28 +63,28 @@ describe('The OVE Core server', () => {
     });
 
     it('should reject requests for deleting a section when it does not exist', async () => {
-        await request(app).delete('/section/0')
+        await request(app).delete('/sections/0')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     });
 
     it('should reject requests for updating a section when it does not exist', async () => {
-        await request(app).post('/section/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+        await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
     });
 
     it('should reject invalid requests when updating sections', async () => {
-        await request(app).post('/sections').send({ 'moveTo': { 'space': 'fake' } })
+        await request(app).post('/sections/moveTo').send({ 'space': 'fake' })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
-        await request(app).post('/sections').send({ 'transform': { 'scale': { x: 0 } } })
+        await request(app).post('/sections/transform').send({ 'scale': { x: 0 } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
-        await request(app).post('/sections').send({ 'transform': { 'translate': {} } })
+        await request(app).post('/sections/transform').send({ 'translate': {} })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
     });
 
     // This condition is important to avoid many errors getting printed on the browser
     // console as a result of a section not existing.
     it('should not reject requests for reading a section when it does not exist', async () => {
-        let res = await request(app).get('/section/0');
+        let res = await request(app).get('/sections/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
     });
@@ -101,17 +101,17 @@ describe('The OVE Core server', () => {
     });
 
     it('should reject requests for deleting a group when it does not exist', async () => {
-        await request(app).delete('/group/0')
+        await request(app).delete('/groups/0')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
     });
 
     it('should reject requests for updating a group when it does not exist', async () => {
-        await request(app).post('/group/0').send([0])
+        await request(app).post('/groups/0').send([0])
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group' }));
     });
 
     it('should reject requests for reading a group when it does not exist', async () => {
-        await request(app).get('/group/0').send([0])
+        await request(app).get('/groups/0').send([0])
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
     });
 
@@ -121,7 +121,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
-        res = await request(app).get('/section/0');
+        res = await request(app).get('/sections/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).not.toEqual(Utils.JSON.EMPTY);
 

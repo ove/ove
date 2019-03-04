@@ -202,7 +202,7 @@ describe('The OVE Core server', () => {
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).delete('/section/0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+        await request(app).delete('/sections/0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.DELETE, id: 0 } }
         ));
@@ -228,7 +228,7 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
-        await request(app).delete('/section/0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+        await request(app).delete('/sections/0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.DELETE, id: 0 } }
         ));
@@ -332,7 +332,7 @@ describe('The OVE Core server', () => {
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/section/0')
+        await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 20 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
@@ -370,7 +370,7 @@ describe('The OVE Core server', () => {
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
         let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/section/0')
+        await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -406,7 +406,7 @@ describe('The OVE Core server', () => {
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
         nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/section/0')
+        await request(app).post('/sections/0')
             .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -455,7 +455,7 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
             ));
             nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-            await request(app).post('/section/0')
+            await request(app).post('/sections/0')
                 .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 })
                 .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
             nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
