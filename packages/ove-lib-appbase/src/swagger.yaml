@@ -122,7 +122,7 @@ paths:
             type: "string"
             description: "Name of application"
           description: "successful operation"
-  /state/{name}/diff:
+  /states/{name}/diff:
     post:
       tags:
       - "state transformations"
@@ -165,7 +165,7 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid state name' if no state by the given name was found. Returns an error message 'invalid states' if the target state was not provided or if the operation failed."
-  /state/{name}/transform:
+  /states/{name}/transform:
     post:
       tags:
       - "state transformations"
@@ -219,7 +219,7 @@ paths:
             type: "array"
             items:
               type: "string"
-  /state/{name}:
+  /states/{name}:
     get:
       tags:
       - "named state"
@@ -293,16 +293,16 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid state name' if no state by the given name was found."
-  /{sectionId}/state/diff:
+  /instances/{id}/state/diff:
     post:
       tags:
       - "state transformations"
       summary: "Calculates difference between a configuration of given section and a target state"
       parameters:
-      - name: "sectionId"
+      - name: "id"
         in: "path"
         type: "string"
-        description: "Section ID"
+        description: "Instance ID which is equal to the OVE Section Id"
         required: true
       - name: "body"
         in: "body"
@@ -336,16 +336,16 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid section id' if no state configuration was found for the given section. Returns an error message 'invalid states' if the target state was not provided or if the operation failed."
-  /{sectionId}/state/transform:
+  /instances/{id}/state/transform:
     post:
       tags:
       - "state transformations"
       summary: "Applies given transformation on the state configuration of given section and returns the new state configuration of given section"
       parameters:
-      - name: "sectionId"
+      - name: "id"
         in: "path"
         type: "string"
-        description: "Section ID"
+        description: "Instance ID which is equal to the OVE Section Id"
         required: true
       - name: "body"
         in: "body"
@@ -376,7 +376,7 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid section id' if no state configuration was found for the given section. Returns an error message 'invalid transformation' if the transformation was not provided or cannot be made."
-  /{sectionId}/state:
+  /instances/{id}/state:
     get:
       tags:
       - "runtime state"
@@ -384,10 +384,10 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - name: "sectionId"
+      - name: "id"
         in: "path"
         type: "string"
-        description: "Section ID"
+        description: "Instance ID which is equal to the OVE Section Id"
         required: true
       responses:
         200:
@@ -405,10 +405,10 @@ paths:
       produces:
       - "application/json"
       parameters:
-      - name: "sectionId"
+      - name: "id"
         in: "path"
         type: "string"
-        description: "Section ID"
+        description: "Instance ID which is equal to the OVE Section Id"
         required: true
       - in: "body"
         name: "body"
@@ -419,22 +419,6 @@ paths:
       responses:
         200:
           description: "successful operation"
-  /state:
-    get:
-      tags:
-      - "runtime state"
-      summary: "Reads configuration of all states corresponding to all active sections"
-      produces:
-      - "application/json"
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            type: "array"
-            items:
-              type: "object"
-        204:
-          description: "no state found"
 definitions:
   Transformation:
     description: "A transformation from one state to another"

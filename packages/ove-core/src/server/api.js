@@ -158,6 +158,12 @@ module.exports = function (server, log, Utils, Constants) {
                 if (req.body.app.states.cache) {
                     Object.keys(req.body.app.states.cache).forEach(function (name) {
                         log.debug('Caching new named state for future use:', name);
+                        request.post(section.app.url + '/states/' + name, {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: req.body.app.states.cache[name]
+                        }, _handleRequestError);
+
+                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
                         request.post(section.app.url + '/state/' + name, {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.cache[name]
@@ -171,6 +177,12 @@ module.exports = function (server, log, Utils, Constants) {
                         log.debug('Loading existing named state:', section.app.state);
                     } else {
                         log.debug('Loading state configuration');
+                        request.post(section.app.url + '/instances/' + sectionId + '/state', {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: req.body.app.states.load
+                        }, _handleRequestError);
+
+                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
                         request.post(section.app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.load
@@ -416,6 +428,12 @@ module.exports = function (server, log, Utils, Constants) {
                 if (app.states.cache) {
                     Object.keys(app.states.cache).forEach(function (name) {
                         log.debug('Caching new named state for future use:', name);
+                        request.post(section.app.url + '/states/' + name, {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: app.states.cache[name]
+                        }, _handleRequestError);
+
+                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
                         request.post(section.app.url + '/state/' + name, {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.cache[name]
@@ -430,6 +448,12 @@ module.exports = function (server, log, Utils, Constants) {
                         log.debug('Loading existing named state:', section.app.state);
                     } else {
                         log.debug('Loading state configuration');
+                        request.post(section.app.url + '/instances/' + sectionId + '/state', {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: app.states.load
+                        }, _handleRequestError);
+
+                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
                         request.post(section.app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.load

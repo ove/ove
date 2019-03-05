@@ -213,16 +213,19 @@ function OVE (appId, hostname, sectionId) {
     const OVEState = function (__private) {
         //-- State can be cached/loaded at an app-level --//
         this.cache = function (url) {
-            const endpoint = url || (__private.sectionId + '/state');
+            const endpoint = url || ('/instances/' + __private.sectionId + '/state');
             const currentState = JSON.stringify(this.current);
             log.debug('Sending request to URL:', endpoint, ', state:', currentState);
             $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
+
+            //-- BACKWARDS-COMPATIBILITY: For <= v0.3.3 --//
+            $.ajax({ url: ('/' + __private.sectionId + '/state'), type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
             let __self = this;
             return new Promise(function (resolve, reject) {
-                const endpoint = url || (__private.sectionId + '/state');
-                $.get(endpoint).done(function (state) {
+                const endpoint = url || ('/instances/' + __private.sectionId + '/state');
+                const onLoad = function (state) {
                     if (state) {
                         __self.current = state;
                         log.debug('Got response from URL:', endpoint, ', state:', state);
@@ -232,7 +235,11 @@ function OVE (appId, hostname, sectionId) {
                         OVE.Utils.logThenResolve(log.debug, reject,
                             'state not pre-loaded, please load using controller');
                     }
-                });
+                };
+                $.get(endpoint).done(onLoad);
+
+                //-- BACKWARDS-COMPATIBILITY: For <= v0.3.3 --//
+                $.get(('/' + __private.sectionId + '/state')).done(onLoad);
             });
         };
         this.current = {};

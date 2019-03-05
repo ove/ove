@@ -140,6 +140,9 @@ function OVEUtils () {
         const state = __private.getOVEInstance().state.name || defaultState;
         log.info('Initializing controller with state:', state);
         //-- The default state URL is used here. --//
+        $.ajax({ url: 'states/' + state, dataType: 'json' }).done(initMethod).catch(log.error);
+
+        //-- BACKWARDS-COMPATIBILITY: For <= v0.3.3 --//
         $.ajax({ url: 'state/' + state, dataType: 'json' }).done(initMethod).catch(log.error);
     };
 

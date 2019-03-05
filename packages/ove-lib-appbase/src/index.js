@@ -87,17 +87,6 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    const readState = function (_req, res) {
-        const state = appState.get('state');
-        if (state.length > 0) {
-            log.debug('Reading state configuration');
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(state));
-        } else {
-            log.debug('No state configurations found');
-            res.sendStatus(HttpStatus.NO_CONTENT);
-        }
-    };
-
     const readStateNames = function (_req, res) {
         log.debug('Reading list of named states');
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(Object.keys(module.exports.config.states)));
@@ -227,17 +216,16 @@ module.exports = function (baseDir, appName) {
         return Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(appName));
     };
 
-    app.get('/state/:name', readStateByName);
-    app.post('/state/:name', createStateByName);
-    app.delete('/state/:name', deleteStateByName);
-    app.post('/state/:name/transform', transformStateByName);
-    app.post('/state/:name/diff', diffForStateByName);
-    app.get('/state', readState);
+    app.get('/states/:name', readStateByName);
+    app.post('/states/:name', createStateByName);
+    app.delete('/states/:name', deleteStateByName);
+    app.post('/states/:name/transform', transformStateByName);
+    app.post('/states/:name/diff', diffForStateByName);
     app.get('/states', readStateNames);
-    app.get('/:id/state', readStateOfSection);
-    app.post('/:id/state', updateStateOfSection);
-    app.post('/:id/state/transform', transformStateOfSection);
-    app.post('/:id/state/diff', diffForStateOfSection);
+    app.get('/instances/:id/state', readStateOfSection);
+    app.post('/instances/:id/state', updateStateOfSection);
+    app.post('/instances/:id/state/transform', transformStateOfSection);
+    app.post('/instances/:id/state/diff', diffForStateOfSection);
     app.post('/diff', diff);
     app.post('/flush', flush);
     app.get('/name', name);
