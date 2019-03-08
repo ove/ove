@@ -257,7 +257,6 @@ describe('The OVE filter library - date functions', () => {
     it('should correctly handle a date passed as a date object', () => {
         const predicate = getPredicate(parse('year(date) eq y'));
         expect(predicate({ date: new Date(Date.parse('22 Feb 2019')), y: 2019 })).toBe(true);
-        console.log('date test')
     });
 
     it('should correctly handle a date passed as a function', () => {
@@ -339,12 +338,12 @@ describe('The OVE filter library - general and handling errors', () => {
 
     it('should correctly fetch attributes', () => {
         const predicate = getPredicate(parse('x gt 5'));
-        expect(predicate({attributes: { x: 10, y: 1 } })).toBe(true);
+        expect(predicate({ attributes: { x: 10, y: 1 } })).toBe(true);
     });
 
     it('should correctly fetch nested attributes', () => {
         const predicate = getPredicate(parse('x.y gt 5'));
-        expect(predicate({attributes: { x: { y: 10 }, y: 1 } })).toBe(true);
+        expect(predicate({ attributes: { x: { y: 10 }, y: 1 } })).toBe(true);
     });
 
     it('should correctly fetch nested values', () => {
