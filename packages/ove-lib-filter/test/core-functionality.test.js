@@ -89,7 +89,7 @@ describe('The OVE filter library - logical operations', () => {
 describe('The OVE filter library - arithmetic operations', () => {
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     it('should correctly handle "add" (+)', () => {
@@ -133,7 +133,7 @@ describe('The OVE filter library - arithmetic operations', () => {
 describe('The OVE filter library - string functions', () => {
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     it('should correctly handle "substringof()"', () => {
@@ -219,7 +219,7 @@ describe('The OVE filter library - string functions', () => {
 describe('The OVE filter library - math functions', () => {
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     it('should correctly handle "round()"', () => {
@@ -380,7 +380,3 @@ describe('The OVE filter library - general and handling errors', () => {
         global.console = OLD_CONSOLE;
     });
 });
-
-// TODO:
-// - mis-matched parens
-//         const predicate = getPredicate(parse('endswith(x, \'def\''));
