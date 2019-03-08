@@ -34,9 +34,8 @@ exports.getPredicate = function (filter, dateFunction) {
     };
 
     const convertDate = function (date) {
-        if (date instanceof Date) {
-            return date;
-        } else if (dateFunction) {
+        // Don't need to handle the case of a Date object, as this will be converted to a string within evaluateF
+        if (dateFunction) {
             return dateFunction(date);
         } else {
             return new Date(Date.parse(date));

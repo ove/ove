@@ -254,6 +254,20 @@ describe('The OVE filter library - date functions', () => {
         global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
+    it('should correctly handle a date passed as a date object', () => {
+        const predicate = getPredicate(parse('year(date) eq y'));
+        expect(predicate({ date: new Date(Date.parse('22 Feb 2019')), y: 2019})).toBe(true);
+        console.log('date test')
+    });
+
+    it('should correctly handle a date passed as a function', () => {
+
+        let functionReturningDate = () => new Date(Date.parse('22 Feb 2019'));
+        const predicate = getPredicate(parse('year(date) eq y'), functionReturningDate);
+        expect(predicate({ date: new Date(Date.parse('NOT_A_STANDARD_DATE_FORMAT')), y: 2019})).toBe(true);
+        console.log('date test')
+    });
+
     it('should correctly handle "year()"', () => {
         const predicate = getPredicate(parse('year(date) eq y'));
         expect(predicate({ date: '16 Jan 2014', y: 2014})).toBe(true);
