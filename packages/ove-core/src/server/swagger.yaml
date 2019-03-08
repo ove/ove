@@ -540,7 +540,7 @@ paths:
       tags:
       - "group"
       summary: "Deletes the group with the given id"
-      description: "If there are no more non-empty groups at the end of this operation, it will reset all groups on the server."
+      description: "If there are no more non-empty groups at the end of this operation, it will reset all groups on the server. This operation does not delete any sections within the group."
       produces:
       - "application/json"
       parameters:
