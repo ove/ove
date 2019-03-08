@@ -256,35 +256,33 @@ describe('The OVE filter library - date functions', () => {
 
     it('should correctly handle a date passed as a date object', () => {
         const predicate = getPredicate(parse('year(date) eq y'));
-        expect(predicate({ date: new Date(Date.parse('22 Feb 2019')), y: 2019})).toBe(true);
+        expect(predicate({ date: new Date(Date.parse('22 Feb 2019')), y: 2019 })).toBe(true);
         console.log('date test')
     });
 
     it('should correctly handle a date passed as a function', () => {
-
         let functionReturningDate = () => new Date(Date.parse('22 Feb 2019'));
         const predicate = getPredicate(parse('year(date) eq y'), functionReturningDate);
-        expect(predicate({ date: new Date(Date.parse('NOT_A_STANDARD_DATE_FORMAT')), y: 2019})).toBe(true);
-        console.log('date test')
+        expect(predicate({ date: new Date(Date.parse('NOT_A_STANDARD_DATE_FORMAT')), y: 2019 })).toBe(true);
     });
 
     it('should correctly handle "year()"', () => {
         const predicate = getPredicate(parse('year(date) eq y'));
-        expect(predicate({ date: '16 Jan 2014', y: 2014})).toBe(true);
+        expect(predicate({ date: '16 Jan 2014', y: 2014 })).toBe(true);
     });
 
     it('should correctly handle "month()"', () => {
         const predicate = getPredicate(parse('month(date) eq y'));
-        expect(predicate({ date: '16 Jan 2014', y: 0})).toBe(true);
-        expect(predicate({ date: '16 Dec 2014', y: 11})).toBe(true);
+        expect(predicate({ date: '16 Jan 2014', y: 0 })).toBe(true);
+        expect(predicate({ date: '16 Dec 2014', y: 11 })).toBe(true);
     });
 
     it('should correctly handle "day()"', () => {
         const predicate = getPredicate(parse('day(date) eq y'));
-        expect(predicate({ date: '22 Feb 2019', y: 5})).toBe(true); // a Friday
-        expect(predicate({ date: '23 Feb 2019', y: 6})).toBe(true); // a Sat
-        expect(predicate({ date: '24 Feb 2019', y: 0})).toBe(true); // a Sun
-        expect(predicate({ date: '25 Feb 2019', y: 1})).toBe(true); // a Mon
+        expect(predicate({ date: '22 Feb 2019', y: 5 })).toBe(true); // a Friday
+        expect(predicate({ date: '23 Feb 2019', y: 6 })).toBe(true); // a Sat
+        expect(predicate({ date: '24 Feb 2019', y: 0 })).toBe(true); // a Sun
+        expect(predicate({ date: '25 Feb 2019', y: 1 })).toBe(true); // a Mon
     });
 
     it('should correctly handle "hour()"', () => {
@@ -346,7 +344,7 @@ describe('The OVE filter library - general and handling errors', () => {
 
     it('should correctly fetch nested attributes', () => {
         const predicate = getPredicate(parse('x.y gt 5'));
-        expect(predicate({attributes: { x: {y: 10 }, y: 1 } })).toBe(true);
+        expect(predicate({attributes: { x: { y: 10 }, y: 1 } })).toBe(true);
     });
 
     it('should correctly fetch nested values', () => {
@@ -366,9 +364,8 @@ describe('The OVE filter library - general and handling errors', () => {
 
     it('should return false if parent property is undefined ', () => {
         const predicate = getPredicate(parse('x.y gt 5'));
-        expect(predicate({ y: 5  })).toBe(false);
+        expect(predicate({ y: 5 })).toBe(false);
     });
-
 
     it('should handle missing 1st argument', () => {
         const predicate = getPredicate(parse('replace(str, old, replacement)'));
@@ -387,8 +384,6 @@ describe('The OVE filter library - general and handling errors', () => {
         expect(predicate({ str: 'car', old: 'ar', replacement: 'ell', new: 'cell' })).toBe('cell');
         expect(predicate({ str: 'car', old: 'ar', new: 'cell' })).toBe(undefined);
     });
-
-
 
     afterAll(() => {
         global.console = OLD_CONSOLE;
