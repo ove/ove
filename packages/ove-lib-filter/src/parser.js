@@ -40,7 +40,6 @@ function constructAST (tokens) {
 
             result = evaluate(token, args);
             stack.push(result);
-            // console.log('Pushed to stack to get:', JSON.stringify(stack));
         } else {
             stack.push(((typeof token) === 'object' ? token.value : token));
         }
@@ -51,7 +50,6 @@ function constructAST (tokens) {
 }
 
 function evaluate (operation, args) {
-    // console.log('Evaluating ' + JSON.stringify(operation) + ' with ' + JSON.stringify(args));
     args = args.map(n => evaluateLeafNode(n));
 
     args.map(d => ((typeof d) === 'object' ? d.value : d));
@@ -100,11 +98,7 @@ function evaluateLeafNode (node) {
 
 function parse (expr) {
     const tokens = tokenize(expr);
-    // console.log('Tokens: ' + tokens);
-
     const rpnTokens = convertTokensToRPN(tokens);
-    // console.log('RPN Tokens: ' + rpnTokens);
-
     return constructAST(rpnTokens);
 }
 
@@ -126,7 +120,6 @@ function convertTokensToRPN (tokens) {
         } else if (C.UNARY_PREFIX_OPERATORS.includes(tokens[i])) {
             stack.push(tokens[i]);
         } else if (C.FUNCTIONS.includes(tokens[i]) && followedByParen) {
-            // console.log('function');
             numArguments = 1;
             stack.push(tokens[i]);
         } else if (tokens[i] === C.FUNCTION_ARGUMENT_SEPARATOR) {
@@ -171,25 +164,14 @@ function convertTokensToRPN (tokens) {
             }
         } else {
             // token is an operand
-
-            // console.log("THIS is an operand");
             output.push({ type: 'operand', value: tokens[i] });
         }
-
-        // console.log("\n");
-        // console.log("After token: " + tokens[i])
-        // console.log("Stack: " + stack.join(" "));
-        // console.log("Output: " + output.join(" "))
     }
 
     // Deal with any remaining tokens
-    // console.log("About to do final iteration")
     while (stack.length > 0) {
         output.push(stack.pop());
     }
-
-    // console.log(tokens);
-    // console.log(output);
 
     return output;
 }

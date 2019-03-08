@@ -8,13 +8,15 @@ const { Constants } = require('./constants');
 /* eslint-disable */
 const logger = (() => {
     if (typeof log === 'undefined' || !log) {
-        return (typeof OVE !== 'undefined' && OVE && OVE.Utils && OVE.Utils.Logger) ? OVE.Utils.Logger : { error: console.log };
+        return (typeof OVE !== 'undefined' && OVE && OVE.Utils && OVE.Utils.Logger) ? OVE.Utils.Logger : { error: console.log, info: console.log };
     }
     return log;
 })();
 /* eslint-enable */
 
 exports.getPredicate = function (filter, dateFunction) {
+    logger.info('Generating predicate for filter:' + JSON.stringify(filter));
+
     // Helper method to retrieve a property from an element
     const getFromElement = function (element, propertyName) {
         if (element === undefined) { return undefined; }
