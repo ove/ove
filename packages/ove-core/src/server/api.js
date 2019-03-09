@@ -230,7 +230,12 @@ module.exports = function (server, log, Utils, Constants) {
         server.state.get('groups').forEach(function (e, groupId) {
             if (e.includes(parseInt(sectionId, 10))) {
                 // The outcome of this operation is logged within the internal utility method
-                _deleteGroupById(groupId);
+                if (e.length === 1) {
+                    _deleteGroupById(groupId);
+                } else {
+                    e.splice(e.indexOf(parseInt(sectionId, 10)), 1);
+                    server.state.set('groups[' + groupId + ']', e);
+                }
             }
         });
         server.state.set('sections[' + sectionId + ']', {});

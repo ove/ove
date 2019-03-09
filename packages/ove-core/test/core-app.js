@@ -214,7 +214,7 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
 
         await request(app).get('/groups/2')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+            .expect(HttpStatus.OK, JSON.stringify([1]));
 
         await request(app).get('/groups/1')
             .expect(HttpStatus.OK, JSON.stringify([1]));

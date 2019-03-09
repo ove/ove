@@ -232,7 +232,7 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
 
         await request(app).get('/groups/2')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+            .expect(HttpStatus.OK, JSON.stringify([1]));
 
         await request(app).get('/groups/1')
             .expect(HttpStatus.OK, JSON.stringify([1]));
@@ -350,9 +350,9 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
 
-        res = await request(app).post('/sections/moveTo?groupId=2').send({ 'space': 'TestingNine' });
+        res = await request(app).post('/sections/moveTo?groupId=2').send({ 'space': 'TestingFour' });
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(Utils.JSON.EMPTY);
+        expect(res.text).toEqual(JSON.stringify({ ids: [1] }));
 
         res = await request(app).post('/sections/moveTo').send({ 'space': 'TestingNine' });
         expect(res.statusCode).toEqual(HttpStatus.OK);
