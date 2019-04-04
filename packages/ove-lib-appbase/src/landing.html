@@ -43,9 +43,9 @@
                 .then(function (spaces) {
                     d3.json('//__OVEHOST__/sections')
                         .then(function (sections) {
+                            listSpacesInDemoLauncher(spaces);
                             listSections(spaces, sections);
                             setAppName();
-
                         });
                 });
 
@@ -99,6 +99,38 @@
 
         }
 
+        function listSpacesInDemoLauncher(spaces){
+            d3.select('#demo-spaces')
+                .selectAll('li')
+                .data(spaces)
+                .enter()
+                .append('li')
+                .text(d => d);
+        }
+
+        function loadDemo(appName, stateName){
+            var e = document.getElementById("demo-spaces");
+            const spaceName = e.options[e.selectedIndex].text;
+
+            const url = `http://${window.location.hostname}/apps/${appName}/section`;
+
+            const data = {
+                "app": {
+                    "url": `http://${window.location.hostname}/apps/${appName}`,
+                    "states": {
+                        "load": stateName
+                    }
+                },
+                "space": spaceName,
+                "x": 0,
+                "y": 0,
+                "w": 4320,
+                "h": 2424
+            };
+
+            $.ajax({ url: 'section', type: 'POST', data: currentState, contentType: 'application/json' });
+        }
+
 
     </script>
 </head>
@@ -116,6 +148,33 @@
 
 <div id='sections'>
 
+    <p>Each section running @APP has its own:
+
+    <ul>
+        <li><b>controller</b>, which can be accessed at <code id='control-url'>/control.html?oveSectionId=&lt;sectionId&gt;</code></li>
+        <li>set of <b>viewers</b>, which can be accessed at <code id='view-url'>/view.html?oveSectionViewId=&lt;viewId&gt;.&lt;sectionId&gt;</code></li>
+    </ul>
+    <h2>Sections</h2>
+
+</div>
+
+<div id='demos'>
+
+    <p>These buttons allow you to quickly launch demos to check that OVE apps are working correctly.</p>
+
+    <select id="demo-spaces"></select>
+
+    <ul>
+        <li>Audio App <button onclick="loadDemo('audio', 'WikiCommonsGoingHome')">Launch</button> </li>
+        <li>HTML App <button onclick="loadDemo('html', 'Matrix')">Launch</button> </li>
+        <li>Charts App <button onclick="loadDemo('charts', 'VegaSample')">Launch</button> </li>
+        <li>Images App <button onclick="loadDemo('images', 'Highsmith')">Launch</button> </li>
+        <li>Networks App <button onclick="loadDemo('networks', 'LesMiserables')">Launch</button> </li>
+        <li>PDF App <button onclick="loadDemo('pdf', 'TAMReview')">Launch</button> </li>
+        <li>SVG App <button onclick="loadDemo('svg', 'TrajansColumn')">Launch</button> </li>
+        <li>Videos App <button onclick="loadDemo('videos', 'DSIIntro')">Launch</button> </li>
+        <li>Whiteboard App <button onclick="loadDemo('html', 'LesMiserables')">Launch</button> </li>
+    </ul>
 
     <p>Each section running @APP has its own:
 
