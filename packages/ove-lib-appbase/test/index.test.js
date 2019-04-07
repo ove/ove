@@ -325,12 +325,57 @@ describe('The OVE App Base library', () => {
             diff: function (source, target) {
                 return op1(source, target, -1);
             },
-            canDiff: op2
+            canDiff: op2,
+            validateState: function (_state) {
+                return true;
+            }
         };
     });
 
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
+    it('should not fail to set runtime or named state when state validation is not available at an app-level', async () => {
+        let validateState = base.operations.validateState;
+
+        const spy = jest.spyOn(log, 'error');
+        base.operations.validateState = undefined;
+        const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
+        let res = await request(app).post('/states/foo').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/instances/0/state').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+
+        base.operations.validateState = validateState;
+
+        await request(app).post('/instances/flush');
+        res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should fail to set runtime or named state when state validation fails', async () => {
+        let validateState = base.operations.validateState;
+
+        const spy = jest.spyOn(log, 'error');
+        base.operations.validateState = function (_state) {
+            return false;
+        };
+        const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
+        let res = await request(app).post('/states/foo').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/instances/0/state').send(payload1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+
+        base.operations.validateState = validateState;
+
+        await request(app).post('/instances/flush');
+        res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
     it('should fail to transform when parameters were incorrect', async () => {
         const payload1 = { zoom: 1, pan: { x: 10, y: 10 } };
         let res = await request(app).post('/states/foo/transform').send(payload1);

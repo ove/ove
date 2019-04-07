@@ -55,12 +55,30 @@ module.exports = function (baseDir, appName) {
     **************************************************************/
     appState.set('state', []);
 
+    // Utility method to update named state
+    const _updateNamedState = function (name, state) {
+        if (!module.exports.operations.validateState || module.exports.operations.validateState(state)) {
+            module.exports.config.states[name] = state;
+        } else {
+            log.error('Unable to update invalid state:', state, 'with name:', name);
+        }
+    };
+
+    // Utility method to update state of section
+    const _updateStateOfSection = function (sectionId, state) {
+        if (!module.exports.operations.validateState || module.exports.operations.validateState(state)) {
+            appState.set('state[' + sectionId + ']', state);
+        } else {
+            log.error('Unable to update invalid state:', state, 'in section:', sectionId);
+        }
+    };
+
     const createStateByName = function (req, res) {
         log.info('Creating named state:', req.params.name);
         if (Constants.Logging.DEBUG) {
             log.debug('Got state configuration:', JSON.stringify(req.body));
         }
-        module.exports.config.states[req.params.name] = req.body;
+        _updateNamedState(req.params.name, req.body);
         Utils.sendEmptySuccess(res);
     };
 
@@ -105,7 +123,7 @@ module.exports = function (baseDir, appName) {
 
     const updateStateOfSection = function (req, res) {
         log.debug('Updating state of section:', req.params.id);
-        appState.set('state[' + req.params.id + ']', req.body);
+        _updateStateOfSection(req.params.id, req.body);
         Utils.sendEmptySuccess(res);
     };
 
@@ -137,7 +155,7 @@ module.exports = function (baseDir, appName) {
             log.error('No state configurations found for section:', req.params.name);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid state name' }));
         } else {
-            module.exports.config.states[req.params.name] = _transformState(namedState, req.body, res);
+            _updateNamedState(req.params.name, _transformState(namedState, req.body, res));
         }
     };
 
@@ -147,7 +165,7 @@ module.exports = function (baseDir, appName) {
             log.error('No state configurations found for section:', req.params.id);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
-            appState.set('state[' + req.params.id + ']', _transformState(state, req.body, res));
+            _updateStateOfSection(req.params.id, _transformState(state, req.body, res));
         }
     };
 
