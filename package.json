@@ -24,7 +24,7 @@
     "eslint-plugin-standard": "4.0.0",
     "eslint-plugin-jest": "22.4.1",
     "jest": "24.7.1",
-    "supertest": "3.4.2",
+    "supertest": "4.0.2",
     "node-mocks-http": "1.7.3",
     "remark": "10.0.1",
     "remark-preset-lint-recommended": "3.0.2",
