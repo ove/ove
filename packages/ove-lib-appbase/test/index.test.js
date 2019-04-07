@@ -53,7 +53,7 @@ describe('The OVE App Base library', () => {
         const newBase = newIndex(path.join(srcDir, '..', 'test', 'fake'), 'dummy');
         const { app: newApp } = newBase;
         expect(Object.keys(newBase)).toContain('config');
-        let res = await request(newApp).post('/flush');
+        let res = await request(newApp).post('/instances/flush');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
         expect(newBase.config).toEqual([]);
@@ -66,7 +66,7 @@ describe('The OVE App Base library', () => {
     });
 
     it('should be able to perform a flush operation', async () => {
-        let res = await request(app).post('/flush');
+        let res = await request(app).post('/instances/flush');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
         // Validation of post condition after flush. This is not the only
@@ -84,8 +84,40 @@ describe('The OVE App Base library', () => {
         let res = await request(app).get('/instances/0/state');
         expect(res.statusCode).not.toEqual(HttpStatus.NO_CONTENT);
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/0/flush');
         res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should be able to flush state of sections individually', async () => {
+        let res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+
+        const payload1 = { url: 'http://dummy.com' };
+        await request(app).post('/instances/0/state').send(payload1);
+
+        res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload1));
+
+        const payload2 = { url: 'http://another.dummy.com' };
+        await request(app).post('/instances/1/state').send(payload2);
+
+        res = await request(app).get('/instances/1/state');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify(payload2));
+
+        // Should not complain when flushing non-existing state
+        res = await request(app).post('/instances/2/flush');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/instances/1/flush');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/instances/0/flush');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+        res = await request(app).get('/instances/1/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
 
@@ -107,7 +139,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload2));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
         res = await request(app).get('/instances/1/state');
@@ -142,7 +174,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload2));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
         res = await request(app).get('/instances/1/state');
@@ -177,7 +209,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload2));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
@@ -210,7 +242,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).not.toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).not.toEqual(JSON.stringify({ error: 'invalid state name' }));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/states/bar');
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
@@ -226,7 +258,7 @@ describe('The OVE App Base library', () => {
         expect(JSON.parse(res.text)).toContain('foo');
         expect(JSON.parse(res.text)).toContain('bar');
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
     });
 
     it('should make a debug log when a named state is saved', async () => {
@@ -239,7 +271,7 @@ describe('The OVE App Base library', () => {
         await request(app).post('/states/foo').send(payload1);
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
     });
 
     it('should expose content under /data and /client directories', async () => {
@@ -329,7 +361,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid transformation' }));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
@@ -379,7 +411,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid states' }));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
@@ -443,7 +475,7 @@ describe('The OVE App Base library', () => {
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
         base.operations.canDiff = canDiff;
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
@@ -492,7 +524,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload3));
 
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
@@ -529,7 +561,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.NOT_IMPLEMENTED);
         expect(res.text).toEqual(JSON.stringify({ error: 'operation not implemented' }));
 
-        await request(newApp).post('/flush');
+        await request(newApp).post('/instances/flush');
         res = await request(newApp).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
     });
@@ -569,7 +601,7 @@ describe('The OVE App Base library', () => {
         const { app } = base;
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
             path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
         // Config must be reloaded after a flush operation
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
             path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
@@ -586,7 +618,7 @@ describe('The OVE App Base library', () => {
         await request(app).post('/states/foo').send(payload1);
         expect(spy).not.toHaveBeenCalled();
         spy.mockRestore();
-        await request(app).post('/flush');
+        await request(app).post('/instances/flush');
     });
     /* jshint ignore:end */
 

@@ -21,7 +21,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).delete('/sections/0');
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -49,7 +49,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
@@ -108,8 +108,8 @@ describe('The OVE Core server', () => {
         await request(app).get('/groups/1')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
 
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
@@ -198,8 +198,8 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ ids: [0, 1] }));
 
-        let scope1 = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        let scope2 = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope1 = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope2 = nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).delete('/sections?groupId=0');
         expect(scope1.isDone()).toBeTruthy(); // request should be made at this point.
         expect(scope2.isDone()).not.toBeTruthy(); // request should not be made at this point.
@@ -238,7 +238,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
 
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
 
         res = await request(app).delete('/sections?space=FakeSpace');
         expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
@@ -297,7 +297,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
 
         res = await request(app).get('/sections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -331,7 +331,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify([ { 'id': 1, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } } ]));
 
-        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
@@ -342,7 +342,7 @@ describe('The OVE Core server', () => {
 
     it('should be able to successfully pre-load application state during creation of a section', async () => {
         let scope = nock('http://localhost:8081').post('/instances/0/state', JSON.stringify({ 'foo': 'bar' })).reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        let scopeFlush = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scopeFlush = nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': { 'foo': 'bar' } } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).toBeTruthy(); // checks if the state load request was actually made.
@@ -360,7 +360,7 @@ describe('The OVE Core server', () => {
 
     it('should be able to successfully load named application state during creation of a section', async () => {
         let scope = nock('http://localhost:8081').post('/instances/0/state', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        let scopeFlush = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scopeFlush = nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': 'foo' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).not.toBeTruthy(); // no state must be loaded
@@ -379,7 +379,7 @@ describe('The OVE Core server', () => {
     it('should be able to successfully cache application states during creation of a section', async () => {
         let scope1 = nock('http://localhost:8081').post('/states/dummy', JSON.stringify({ 'foo': 'bar' })).reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let scope2 = nock('http://localhost:8081').post('/states/newDummy', JSON.stringify({ 'alpha': 'beta' })).reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        let scopeFlush = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scopeFlush = nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'cache': { 'dummy': { 'foo': 'bar' }, 'newDummy': { 'alpha': 'beta' } } } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope1.isDone()).toBeTruthy(); // checks if the state load request was actually made.
@@ -409,7 +409,7 @@ describe('The OVE Core server', () => {
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
         log.debug = mockCallback;
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -423,7 +423,7 @@ describe('The OVE Core server', () => {
         // dimensions should not change as the update only changes the app.
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
-        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        scope = nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -446,7 +446,7 @@ describe('The OVE Core server', () => {
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
         log.debug = mockCallback;
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -480,7 +480,7 @@ describe('The OVE Core server', () => {
         // dimensions should not change as the update only changes the app.
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingFour', 'app': { 'url': 'http://localhost:8082', 'opacity': '0.2' } }));
 
-        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        scope = nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -500,7 +500,7 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
@@ -512,7 +512,7 @@ describe('The OVE Core server', () => {
         // dimensions should not change as the update only changes the app.
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
-        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        scope = nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -535,7 +535,7 @@ describe('The OVE Core server', () => {
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
         log.debug = mockCallback;
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'app': { 'url': 'http://localhost:8082' } });
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -549,7 +549,7 @@ describe('The OVE Core server', () => {
         // dimensions should not change as the update only changes the app.
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8082' } }));
 
-        scope = nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        scope = nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -574,7 +574,7 @@ describe('The OVE Core server', () => {
         log.debug = mockCallback;
         // scopes stay intact until the end of the test. Therefore, this scope will receive the flush
         // request made when calling 'delete /sections' below.
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).not.toBeTruthy(); // checks if the flush request was actually made.
@@ -610,7 +610,7 @@ describe('The OVE Core server', () => {
         const mockCallback = jest.fn(x => x);
         const OLD_LOG_DEBUG = log.debug;
         log.debug = mockCallback;
-        let scope = nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
@@ -643,8 +643,8 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         // We know by now that /flush works as expected.
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let scope = nock('http://localhost:8082').post('/instances/0/state', JSON.stringify({ 'foo': 'bar' })).reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082', 'states': { 'load': { 'foo': 'bar' } } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
@@ -671,8 +671,8 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         // We know by now that /flush works as expected.
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let scope = nock('http://localhost:8082').post('/instances/0/state', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082', 'states': { 'load': 'foo' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
@@ -699,8 +699,8 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
 
         // We know by now that /flush works as expected.
-        nock('http://localhost:8081').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8082').post('/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let scope1 = nock('http://localhost:8082').post('/states/dummy', JSON.stringify({ 'foo': 'bar' })).reply(HttpStatus.OK, Utils.JSON.EMPTY);
         let scope2 = nock('http://localhost:8082').post('/states/newDummy', JSON.stringify({ 'alpha': 'beta' })).reply(HttpStatus.OK, Utils.JSON.EMPTY);
         res = await request(app).post('/sections/0')

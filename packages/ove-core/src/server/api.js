@@ -225,6 +225,9 @@ module.exports = function (server, log, Utils, Constants) {
         let section = server.state.get('sections[' + sectionId + ']');
         if (section.app && section.app.url) {
             log.debug('Flushing application at URL:', section.app.url);
+            request.post(section.app.url + '/instances/' + sectionId + '/flush', _handleRequestError);
+
+            // BACKWARDS-COMPATIBILITY: For <= v0.3.3
             request.post(section.app.url + '/flush', _handleRequestError);
         }
         server.state.get('groups').forEach(function (e, groupId) {
@@ -279,12 +282,23 @@ module.exports = function (server, log, Utils, Constants) {
             log.info('Successfully deleted sections:', deletedSections);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
         } else {
+            let appsToFlush = [];
             while (sections.length !== 0) {
                 let section = sections.pop();
                 if (section.app && section.app.url) {
                     log.debug('Flushing application at URL:', section.app.url);
-                    request.post(section.app.url + '/flush', _handleRequestError);
+                    appsToFlush.push(section.app.url);
                 }
+            }
+            appsToFlush = appsToFlush.filter(function (e, i) {
+                return appsToFlush.indexOf(e) === i;
+            });
+            while (appsToFlush.length !== 0) {
+                let appToFlush = appsToFlush.pop();
+                request.post(appToFlush + '/instances/flush', _handleRequestError);
+
+                // BACKWARDS-COMPATIBILITY: For <= v0.3.3
+                request.post(appToFlush + '/flush', _handleRequestError);
             }
             server.state.set('sections', []);
             server.state.set('groups', []);
@@ -418,6 +432,9 @@ module.exports = function (server, log, Utils, Constants) {
             needsUpdate = needsUpdate || (url !== oldURL);
             if (oldURL && (url !== oldURL)) {
                 log.debug('Flushing application at URL:', oldURL);
+                request.post(oldURL + '/instances/' + sectionId + '/flush', _handleRequestError);
+
+                // BACKWARDS-COMPATIBILITY: For <= v0.3.3
                 request.post(oldURL + '/flush', _handleRequestError);
             }
             section.app = { 'url': url };
@@ -489,6 +506,9 @@ module.exports = function (server, log, Utils, Constants) {
             }
         } else if (oldURL) {
             log.debug('Flushing application at URL:', oldURL);
+            request.post(oldURL + '/instances/' + sectionId + '/flush', _handleRequestError);
+
+            // BACKWARDS-COMPATIBILITY: For <= v0.3.3
             request.post(oldURL + '/flush', _handleRequestError);
         }
 

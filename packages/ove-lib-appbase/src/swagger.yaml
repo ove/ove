@@ -21,16 +21,6 @@ tags:
 schemes:
 - "http"
 paths:
-  /flush:
-    post:
-      tags:
-      - "common operations"
-      summary: "Restores the application state and configuration to what they were when the application started"
-      produces:
-      - "application/json"
-      responses:
-        200:
-          description: "successful operation"
   /persistence:
     post:
       tags:
@@ -293,6 +283,32 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid state name' if no state by the given name was found."
+  /instances/flush:
+    post:
+      tags:
+      - "common operations"
+      summary: "Restores the application state and configuration to what they were when the application started"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+  /instances/{id}/flush:
+    post:
+      tags:
+      - "common operations"
+      summary: "Restores the application state of the given section. If this was the only remaining section, then the application configuration will also be restored to what it was when the application started"
+      parameters:
+      - name: "id"
+        in: "path"
+        type: "string"
+        description: "Instance ID which is equal to the OVE Section Id"
+        required: true
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
   /instances/{id}/state/diff:
     post:
       tags:

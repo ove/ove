@@ -198,7 +198,24 @@ module.exports = function (baseDir, appName) {
         }
     };
 
-    const flush = function (_req, res) {
+    const flush = function (req, res) {
+        const sectionId = req.params.id;
+        if (sectionId || sectionId === 0) {
+            const states = appState.get('state');
+            if (states[sectionId]) {
+                delete states[sectionId];
+            }
+            let hasMoreStates = false;
+            states.forEach(function (e) {
+                hasMoreStates = hasMoreStates || e;
+            });
+            if (hasMoreStates) {
+                appState.set('state', states);
+                log.debug('Flushing state of section', sectionId);
+                Utils.sendEmptySuccess(res);
+                return;
+            }
+        }
         log.debug('Flushing application');
         appState.set('state', []);
         if (fs.existsSync(Constants.CONFIG_JSON_PATH(appName))) {
@@ -227,7 +244,8 @@ module.exports = function (baseDir, appName) {
     app.post('/instances/:id/state/transform', transformStateOfSection);
     app.post('/instances/:id/state/diff', diffForStateOfSection);
     app.post('/diff', diff);
-    app.post('/flush', flush);
+    app.post('/instances/flush', flush);
+    app.post('/instances/:id/flush', flush);
     app.get('/name', name);
 
     // Swagger API documentation
