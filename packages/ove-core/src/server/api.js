@@ -162,12 +162,6 @@ module.exports = function (server, log, Utils, Constants) {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.cache[name]
                         }, _handleRequestError);
-
-                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-                        request.post(section.app.url + '/state/' + name, {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: req.body.app.states.cache[name]
-                        }, _handleRequestError);
                     });
                 }
                 if (req.body.app.states.load) {
@@ -178,12 +172,6 @@ module.exports = function (server, log, Utils, Constants) {
                     } else {
                         log.debug('Loading state configuration');
                         request.post(section.app.url + '/instances/' + sectionId + '/state', {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: req.body.app.states.load
-                        }, _handleRequestError);
-
-                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-                        request.post(section.app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: req.body.app.states.load
                         }, _handleRequestError);
@@ -226,9 +214,6 @@ module.exports = function (server, log, Utils, Constants) {
         if (section.app && section.app.url) {
             log.debug('Flushing application at URL:', section.app.url);
             request.post(section.app.url + '/instances/' + sectionId + '/flush', _handleRequestError);
-
-            // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-            request.post(section.app.url + '/flush', _handleRequestError);
         }
         server.state.get('groups').forEach(function (e, groupId) {
             if (e.includes(parseInt(sectionId, 10))) {
@@ -296,9 +281,6 @@ module.exports = function (server, log, Utils, Constants) {
             while (appsToFlush.length !== 0) {
                 let appToFlush = appsToFlush.pop();
                 request.post(appToFlush + '/instances/flush', _handleRequestError);
-
-                // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-                request.post(appToFlush + '/flush', _handleRequestError);
             }
             server.state.set('sections', []);
             server.state.set('groups', []);
@@ -433,9 +415,6 @@ module.exports = function (server, log, Utils, Constants) {
             if (oldURL && (url !== oldURL)) {
                 log.debug('Flushing application at URL:', oldURL);
                 request.post(oldURL + '/instances/' + sectionId + '/flush', _handleRequestError);
-
-                // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-                request.post(oldURL + '/flush', _handleRequestError);
             }
             section.app = { 'url': url };
             log.debug('Got URL for app:', url);
@@ -454,12 +433,6 @@ module.exports = function (server, log, Utils, Constants) {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.cache[name]
                         }, _handleRequestError);
-
-                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-                        request.post(section.app.url + '/state/' + name, {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: app.states.cache[name]
-                        }, _handleRequestError);
                     });
                     needsUpdate = true;
                 }
@@ -471,12 +444,6 @@ module.exports = function (server, log, Utils, Constants) {
                     } else {
                         log.debug('Loading state configuration');
                         request.post(section.app.url + '/instances/' + sectionId + '/state', {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: app.states.load
-                        }, _handleRequestError);
-
-                        // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-                        request.post(section.app.url + '/' + sectionId + '/state', {
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                             json: app.states.load
                         }, _handleRequestError);
@@ -507,9 +474,6 @@ module.exports = function (server, log, Utils, Constants) {
         } else if (oldURL) {
             log.debug('Flushing application at URL:', oldURL);
             request.post(oldURL + '/instances/' + sectionId + '/flush', _handleRequestError);
-
-            // BACKWARDS-COMPATIBILITY: For <= v0.3.3
-            request.post(oldURL + '/flush', _handleRequestError);
         }
 
         // Notify OVE viewers/controllers

@@ -217,9 +217,6 @@ function OVE (appId, hostname, sectionId) {
             const currentState = JSON.stringify(this.current);
             log.debug('Sending request to URL:', endpoint, ', state:', currentState);
             $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
-
-            //-- BACKWARDS-COMPATIBILITY: For <= v0.3.3 --//
-            $.ajax({ url: ('/' + __private.sectionId + '/state'), type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
             let __self = this;
@@ -237,9 +234,6 @@ function OVE (appId, hostname, sectionId) {
                     }
                 };
                 $.get(endpoint).done(onLoad);
-
-                //-- BACKWARDS-COMPATIBILITY: For <= v0.3.3 --//
-                $.get(('/' + __private.sectionId + '/state')).done(onLoad);
             });
         };
         this.current = {};
