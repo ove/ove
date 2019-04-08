@@ -138,7 +138,10 @@ function OVEUtils () {
     //-- does not wait for OVE to load.                                                  --//
     this.initControlOnDemand = function (defaultState, initMethod) {
         const state = __private.getOVEInstance().state.name || defaultState;
-        log.info('Initializing controller with state:', state);
+        log.debug('Initializing controller with state:', state);
+        $(window).resize(function () {
+            location.reload();
+        });
         //-- The default state URL is used here. --//
         $.ajax({ url: 'states/' + state, dataType: 'json' }).done(initMethod).catch(log.error);
     };
@@ -150,6 +153,9 @@ function OVEUtils () {
                 const current = __private.getOVEInstance().state.current;
                 if (current) {
                     log.debug('Initializing controller with state:', current);
+                    $(window).resize(function () {
+                        location.reload();
+                    });
                     initMethod(current);
                 } else {
                     log.debug('Missing state information - loading default state');
