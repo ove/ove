@@ -37,6 +37,41 @@ module.exports = function (baseDir, appName) {
     module.exports.log = log;
     module.exports.operations = {};
 
+    const validateState = function (state, combinations) {
+        let valid = true;
+        // Example rules:
+        // 1. An optional property which is a literal.
+        // {
+        //     prefix: ['state', 'state.a']
+        // }
+        // 2. An optional property which is an object. x and y are mandatory properties of this object.
+        // {
+        //     prefix: ['state', 'state.a'],
+        //     value: ['state.a.x', 'state.a.y']
+        // }
+        // 3. All mandatory properties - literals and objects
+        // {
+        //     value: ['state.a', 'state.b', 'state.b.x']
+        // }
+        combinations.forEach(function (e) {
+            let prefixExists = !Utils.isNullOrEmpty(Utils.JSON.getDescendant('state', { state: state }));
+            (e.prefix || []).forEach(function (x) {
+                prefixExists = prefixExists && !Utils.isNullOrEmpty(Utils.JSON.getDescendant(x, { state: state }));
+            });
+            if (!prefixExists) {
+                return;
+            }
+            let result = true;
+            if (e.value) {
+                e.value.forEach(function (x) {
+                    result = result && !Utils.isNullOrEmpty(Utils.JSON.getDescendant(x, { state: state }));
+                });
+            }
+            valid = valid && result;
+        });
+        return valid;
+    };
+
     // Exported functionality from Utils
     module.exports.Utils = {
         JSON: Utils.JSON,
@@ -44,7 +79,8 @@ module.exports = function (baseDir, appName) {
         getSafeSocket: Utils.getSafeSocket,
         sendMessage: Utils.sendMessage,
         sendEmptySuccess: Utils.sendEmptySuccess,
-        isNullOrEmpty: Utils.isNullOrEmpty
+        isNullOrEmpty: Utils.isNullOrEmpty,
+        validateState: validateState
     };
 
     Utils.registerRoutesForPersistence();

@@ -36,6 +36,7 @@ describe('The OVE App Base library', () => {
         expect(Object.keys(base)).toContain('log');
         expect(Object.keys(base)).toContain('operations');
         expect(Object.keys(base)).toContain('Utils');
+        expect(Object.keys(base.Utils)).toContain('validateState');
         expect(Object.keys(base)).toContain('appState');
     });
 
@@ -63,6 +64,67 @@ describe('The OVE App Base library', () => {
         let res = await request(app).get('/name');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify('dummy'));
+    });
+
+    it('should validate state', () => {
+        expect(Object.keys(base.Utils)).toContain('validateState');
+
+        expect(base.Utils.validateState({
+            'sessionId': 'random',
+            'maxSessions': 8
+        }, [ { value: ['state.sessionId'] }, { prefix: ['state.maxSessions'] } ])).toEqual(true);
+
+        expect(base.Utils.validateState({
+            'url': 'https://raw.githubusercontent.com/mozilla/pdf.js/master/test/pdfs/TAMReview.pdf',
+            'settings': {
+                'scale': 2,
+                'scrolling': 'vertical'
+            }
+        }, [
+            { value: ['state.url'] },
+            {
+                prefix: ['state.offset'],
+                value: ['state.offset.x', 'state.offset.y']
+            },
+            { prefix: ['state.scale'] }
+        ])).toEqual(true);
+
+        expect(base.Utils.validateState({
+            'settings': {
+                'scale': 2,
+                'scrolling': 'vertical'
+            }
+        }, [
+            { value: ['state.url'] },
+            {
+                prefix: ['state.offset'],
+                value: ['state.offset.x', 'state.offset.y']
+            },
+            { prefix: ['state.scale'] }
+        ])).not.toEqual(true);
+
+        expect(base.Utils.validateState({
+            'neo4j': {
+                'x': { 'min': 0, 'max': 100 },
+                'y': { 'min': 0, 'max': 100 },
+                'db': { 'url': 'http://localhost:7474', 'user': 'neo4j', 'password': 'admin' },
+                'query': 'MATCH (n) WHERE n.y >= Y_MIN AND n.y < Y_MAX AND n.x >= X_MIN AND n.x < X_MAX RETURN n LIMIT 100'
+            },
+            'settings': {
+                'autoRescale': true,
+                'clone': false,
+                'rescaleIgnoreSize': true,
+                'skipErrors': true
+            },
+            'renderer': 'canvas'
+        }, [
+            { value: ['state.neo4j', 'state.neo4j.db', 'state.neo4j.db.url', 'state.neo4j.query'] },
+            { prefix: ['state.settings'] },
+            { prefix: ['state.renderer'] },
+            { prefix: ['state.neo4j.db.user', 'state.neo4j.db.password'] },
+            { prefix: ['state.neo4j.x'], value: ['state.neo4j.x.min', 'state.neo4j.x.max'] },
+            { prefix: ['state.neo4j.y'], value: ['state.neo4j.y.min', 'state.neo4j.y.max'] }
+        ])).toEqual(true);
     });
 
     it('should be able to perform a flush operation', async () => {
