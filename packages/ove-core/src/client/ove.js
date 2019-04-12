@@ -213,7 +213,7 @@ function OVE (appId, hostname, sectionId) {
     const OVEState = function (__private) {
         //-- State can be cached/loaded at an app-level --//
         this.cache = function (url) {
-            const endpoint = url || ('/instances/' + __private.sectionId + '/state');
+            const endpoint = url || ('instances/' + __private.sectionId + '/state');
             const currentState = JSON.stringify(this.current);
             log.debug('Sending request to URL:', endpoint, ', state:', currentState);
             $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
@@ -221,7 +221,7 @@ function OVE (appId, hostname, sectionId) {
         this.load = function (url) {
             let __self = this;
             return new Promise(function (resolve, reject) {
-                const endpoint = url || ('/instances/' + __private.sectionId + '/state');
+                const endpoint = url || ('instances/' + __private.sectionId + '/state');
                 const onLoad = function (state) {
                     if (state) {
                         __self.current = state;
