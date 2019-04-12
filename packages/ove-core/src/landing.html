@@ -77,7 +77,7 @@
             if (url) {
                 d3.json(url + '/name').then(name => {
                     const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
-                    element.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs\'>API</a>)';
+                    element.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs/\'>API</a>)';
                 });
             }
         }
@@ -255,7 +255,7 @@
     <p>The Links below provide more information on OVE:</p>
     <ul>
         <li><a href='https://ove.readthedocs.io/en/stable/'>User Documentation</a></li>
-        <li><a href='api-docs'>API Documentation for OVE Core</a>, which can also be used to make API requests. Documentation for other OVE services and applications can be accessed from the <code>/api-docs</code> route of the appropriate hostname.</li>
+        <li><a href='api-docs/'>API Documentation for OVE Core</a>, which can also be used to make API requests. Documentation for other OVE services and applications can be accessed from the <code>/api-docs/</code> route of the appropriate hostname.</li>
         <li><a href='https://github.com/ove/ove/issues'>Report Issues for OVE Core</a></li>
         <li><a href='https://data-science.doc.ic.ac.uk/ove/'>Unified list of Open Issues across all OVE repositories</a></li>
         <li><a href='https://github.com/ove'>OVE organisation on GitHub</a></li>
