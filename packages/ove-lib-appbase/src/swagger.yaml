@@ -8,7 +8,7 @@ info:
   license:
     name: "@LICENSE License"
     url: "https://raw.githubusercontent.com/ove/ove/master/LICENSE"
-basePath: "/"
+basePath: "/app/@APP_NAME/"
 tags:
 - name: "named state"
   description: "Named state configurations stored within the application"

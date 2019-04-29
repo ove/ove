@@ -198,6 +198,7 @@ function Utils (appName, app, dirs) {
         log.debug('Building Swagger API documentation');
         // Swagger API documentation
         let swaggerDoc = (function (swagger, pjson) {
+            swagger.basePath = swagger.basePath.replace(Constants.RegExp.Annotation.APP_NAME, appName);
             swagger.info.title = swagger.info.title.replace(Constants.RegExp.Annotation.NAME, pjson.name);
             swagger.info.version = swagger.info.version.replace(Constants.RegExp.Annotation.VERSION, pjson.version);
             swagger.info.license.name = swagger.info.license.name.replace(Constants.RegExp.Annotation.LICENSE, pjson.license);

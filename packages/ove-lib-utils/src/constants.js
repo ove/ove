@@ -52,6 +52,7 @@ Constants.Action = {
 
 Constants.RegExp.Annotation = {
     NAME: /@NAME/g,
+    APP_NAME: /@APP_NAME/g,
     VERSION: /@VERSION/g,
     LICENSE: /@LICENSE/g,
     AUTHOR: /@AUTHOR/g
