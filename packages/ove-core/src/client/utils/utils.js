@@ -321,7 +321,7 @@ function OVEUtils () {
 
         //-- No conversions along the z-axis as yet --//
         const Conversions = {};
-        if (g.x !== undefined && g.y !== undefined && !g.offset) {
+        if (g.x !== undefined && g.y !== undefined && g.offset) {
             Conversions.SCREEN_TO_SECTION = [g.x - g.offset.x, g.y - g.offset.y, 0];
             Conversions.SECTION_TO_SCREEN = [g.offset.x - g.x, g.offset.y - g.y, 0];
             if (section !== undefined) {
