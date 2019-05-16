@@ -13,16 +13,14 @@
         $(() => {
             const displayError = () => {
                 $('<div>').addClass('alert alert-danger').css({ display: 'table-cell' })
-                    .html('<strong>Error:</strong> Please provide <strong>oveHost</strong>, <strong>oveAppName</strong>, and <strong>oveSectionId</strong> query parameters.')
+                    .html('<strong>Error:</strong> Please provide <strong>oveAppName</strong>, and <strong>oveSectionId</strong> query parameters.')
                     .appendTo('.outer');
             };
             $('.outer').css({ margin: '0.5vw', display: 'block', width: '85vw' });
-            let hostname = new URLSearchParams(location.search.slice(1)).get('oveHost');
-            if (!hostname) {
-                displayError();
-                return;
-            }
+
+            let hostname = new URL(document.location).origin;
             hostname = hostname.substring(hostname.indexOf('//') + 2);
+
             $.getScript('http://' + hostname + '/ove.js', () => {
                 if (!OVE.Utils.getQueryParam('oveAppName') || !OVE.Utils.getQueryParam('oveSectionId')) {
                     displayError();
@@ -39,7 +37,7 @@
 </head>
 
 <body unselectable="on" class="unselectable bg-dark">
-    <div class="outer"></div>
+<div class="outer"></div>
 </body>
 
 </html>

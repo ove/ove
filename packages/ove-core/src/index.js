@@ -9,7 +9,8 @@ const dirs = {
     base: __dirname,
     nodeModules: path.join(__dirname, '..', '..', '..', 'node_modules'),
     constants: path.join(__dirname, 'client', 'utils'),
-    rootPage: path.join(__dirname, 'landing.html')
+    rootPage: path.join(__dirname, 'landing.html'),
+    socketDebugPage: path.join(__dirname, 'socket-debug-tool.html')
 };
 const { Constants, Utils } = require('@ove-lib/utils')('core', app, dirs);
 const log = Utils.Logger('OVE');

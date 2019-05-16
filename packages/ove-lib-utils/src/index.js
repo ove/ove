@@ -146,6 +146,10 @@ function Utils (appName, app, dirs) {
             });
         }
 
+        app.get('/messages', function (_req, res) {
+            res.sendFile(dirs.socketDebugPage);
+        });
+
         // Each CSS file is combination of {type}/{name}.css and common/{name}.css.
         // Each JS file is combination of {type}/{name}.js, common/{name}.js and
         // constants/{name}.js files from the filesystem.

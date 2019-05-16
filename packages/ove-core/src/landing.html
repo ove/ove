@@ -76,8 +76,11 @@
         function setAppName(element, url) {
             if (url) {
                 d3.json(url + '/name').then(name => {
+                    const sectionData = d3.select(element.parentElement).datum();
+                    const socketDebugURL = `./messages?oveAppName=${name}&oveSectionId=${sectionData.id}`;
+
                     const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
-                    element.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs/\'>API</a>)';
+                    element.innerHTML = `${nameInTitleCase} (<a target='_blank' href='${url}/api-docs/'>API</a>, <a target='_blank' href='${socketDebugURL}'>messages</a>)`;
                 });
             }
         }
