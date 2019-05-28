@@ -416,6 +416,7 @@ paths:
       tags:
       - "runtime state"
       summary: "Creates or updates state configuration of given section"
+      description: "Despite this API being used heavily internally, within OVE, please note that invoking this API using an external tool/SDK will not immediately change the state of an application that has already been rendered, unless the application-instance specific controller is used to refresh what is being displayed. However, it is possible to use the '/sections/{id}' API exposed by OVE core to update the state and reload the entire application."
       consumes:
       - "application/json"
       produces:
