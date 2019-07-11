@@ -715,6 +715,22 @@ describe('The OVE App Base library', () => {
         delete process.env.OVE_DUMMY_CONFIG_JSON;
     });
 
+    it('should accept an entire structure instead of the baseDir', async () => {
+        process.env.OVE_DUMMY_CONFIG_JSON = path.join(srcDir, '..', 'test', 'resources', 'package.json');
+        const index = require(path.join(srcDir, 'index'));
+        const baseDir = path.join(srcDir, '..', 'test', 'resources', 'src');
+        const dirs = {
+            base: baseDir,
+            nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
+            constants: path.join(baseDir, 'client', 'constants'),
+            rootPage: path.join(__dirname, 'landing.html')
+        };
+        const base = index(dirs, 'dummy');
+        expect(base.config).toEqual(JSON.parse(fs.readFileSync(
+            path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
+        delete process.env.OVE_DUMMY_CONFIG_JSON;
+    });
+
     it('should not make a debug log when debug logging is disabled', async () => {
         // See also, 'should make a debug log when a named state is saved' above.
         const index = require(path.join(srcDir, 'index'));

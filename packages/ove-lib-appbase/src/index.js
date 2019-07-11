@@ -6,15 +6,17 @@ const HttpStatus = require('http-status-codes');
 const app = express();
 
 module.exports = function (baseDir, appName) {
-    const dirs = {
+    // Usually the baseDir is a string, but in some situations it may be required to pass
+    // the entire dir structure, for example, when node_modules are located elsewhere.
+    const dirs = typeof baseDir === 'string' ? {
         base: baseDir,
         nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
         constants: path.join(baseDir, 'client', 'constants'),
         rootPage: path.join(__dirname, 'landing.html')
-    };
+    } : baseDir;
     const { Constants, Utils } = require('@ove-lib/utils')(appName, app, dirs);
     const log = Utils.Logger(appName);
-    const configPath = path.join(baseDir, 'config.json');
+    const configPath = path.join(dirs.base, 'config.json');
 
     log.debug('Starting application:', appName);
     log.debug('Application directories:', JSON.stringify(dirs));
@@ -304,17 +306,17 @@ module.exports = function (baseDir, appName) {
 
     // Swagger API documentation
     const swaggerPath = path.join(__dirname, 'swagger.yaml');
-    const packagePath = path.join(baseDir, '..', 'package.json');
-    const swaggerExtPath = path.join(baseDir, 'swagger-extensions.yaml');
+    const packagePath = path.join(dirs.base, '..', 'package.json');
+    const swaggerExtPath = path.join(dirs.base, 'swagger-extensions.yaml');
     Utils.buildAPIDocs(swaggerPath, packagePath, swaggerExtPath);
 
     /**************************************************************
                     Embedded Data and Static Content
     **************************************************************/
-    app.use('/data', express.static(path.join(baseDir, 'data')));
+    app.use('/data', express.static(path.join(dirs.base, 'data')));
 
     Utils.registerRoutesForContent(fs.existsSync(packagePath) ? require(packagePath) : null);
-    app.use('/', express.static(path.join(baseDir, 'client')));
+    app.use('/', express.static(path.join(dirs.base, 'client')));
 
     return module.exports;
 };
