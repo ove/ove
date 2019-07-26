@@ -315,6 +315,40 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid section id' if the section id was not found."
+  /sections/{id}/refresh:
+    post:
+      tags:
+      - "section"
+      summary: "Refreshes the section with the given id"
+      description: "Each application associated with each existing section will be refreshed."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        type: "integer"
+        format: "int32"
+        description: "Section ID"
+        required: true      
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              ids:
+                type: "array"
+                items:
+                  type: "integer"
+                  format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'invalid section id' if the section id was not found."
   /sections/moveTo:
     post:
       tags:
@@ -358,6 +392,31 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid space' if the name of the space was not found."
+  /sections/refresh:
+    post:
+      tags:
+      - "sections"
+      summary: "Refreshes sections"
+      description: "Each application associated with each existing section will be refreshed. This will make applications reload their state, if they were updated. This operation will be limited to subset of sections if a group id or a space was provided."
+      produces:
+      - "application/json"
+      parameters:
+      - name: "space"
+        in: "query"
+        type: "string"
+        description: "Name of space"
+        required: false
+      - name: "groupId"
+        in: "query"
+        type: "integer"
+        format: "int32"
+        description: "Group ID"
+        required: false
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
   /sections/transform:
     post:
       tags:

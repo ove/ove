@@ -605,6 +605,68 @@ module.exports = function (server, log, Utils, Constants) {
         _updateSections({ moveTo: req.body }, req.query.space, req.query.groupId, res);
     };
 
+    // Internal utility function to refresh a section by the given id.
+    const _refreshSectionById = function (sectionId) {
+        server.wss.clients.forEach(function (c) {
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                c.safeSend(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: parseInt(sectionId, 10) }));
+            }
+        });
+    };
+
+    // Refreshes individual section
+    const refreshSectionById = function (req, res) {
+        let sectionId = req.params.id;
+        if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
+            log.error('Invalid Section Id:', sectionId);
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        } else {
+            _refreshSectionById(sectionId);
+            log.info('Successfully refreshed section:', sectionId);
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
+        }
+    };
+
+    // Refreshes all sections
+    const refreshSections = function (req, res) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        let sectionsToRefresh = [];
+        if (groupId) {
+            if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
+                log.info('Refreshing sections of group:', groupId);
+                const group = server.state.get('groups[' + groupId + ']').slice();
+                group.forEach(function (e) {
+                    sectionsToRefresh.push(parseInt(e, 10));
+                });
+            }
+        } else if (space) {
+            let i = -1;
+            let findSectionsBySpace = function (e, x) {
+                return x > i && !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
+            };
+            let sections = server.state.get('sections');
+            log.info('Refreshing sections of space:', space);
+            i = sections.findIndex(findSectionsBySpace);
+            while (i !== -1) {
+                sectionsToRefresh.push(parseInt(i, 10));
+                i = sections.findIndex(findSectionsBySpace);
+            }
+        } else {
+            server.wss.clients.forEach(function (c) {
+                if (c.readyState === Constants.WEBSOCKET_READY) {
+                    c.safeSend(JSON.stringify({ operation: Constants.Operation.REFRESH }));
+                }
+            });
+            log.info('Successfully refreshed all sections');
+            Utils.sendEmptySuccess(res);
+            return;
+        }
+        sectionsToRefresh.forEach(_refreshSectionById);
+        log.info('Successfully refreshed sections:', sectionsToRefresh);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToRefresh }));
+    };
+
     // Fetches details of an individual section
     const readSectionById = function (req, res) {
         let sectionId = req.params.id;
@@ -765,6 +827,8 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.get('/sections/:id([0-9]+)', readSectionById);
     server.app.post('/sections/:id([0-9]+)', updateSectionById);
     server.app.delete('/sections/:id([0-9]+)', deleteSectionById);
+    server.app.post('/sections/refresh', refreshSections);
+    server.app.post('/sections/:id([0-9]+)/refresh', refreshSectionById);
     server.app.post('/sections/transform', transformSections);
     server.app.post('/sections/moveTo', moveSectionsTo);
     server.app.get('/groups', readGroups);

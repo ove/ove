@@ -23,4 +23,11 @@ const Constants = {
     APP_NAME: 'core'
 };
 
+//-----------------------------------------------------------//
+//--                         Enums                         --//
+//-----------------------------------------------------------//
+Constants.Operation = {
+    REFRESH: 'refresh'
+};
+
 exports.Constants = Constants;

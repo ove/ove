@@ -180,6 +180,7 @@ function OVEUtils () {
         $(document).on(OVE.Event.LOADED, function () {
             log.debug('Invoking OVE.Event.Loaded handler');
             if (!__private.getOVEInstance().context.isInitialized) {
+                __private.getOVEInstance().state.onRefresh(loadContentMethod);
                 //-- Ignore promise rejection, as it is expected if no state exists.     --//
                 __private.getOVEInstance().state.load().then(loadContentMethod).catch(function (_err) { });
             }

@@ -173,6 +173,114 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
     });
 
+    it('should trigger an event to its sockets when all sections are refreshed', async () => {
+        await request(app).post('/sections/refresh').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH }));
+    });
+
+    it('should trigger an event to its sockets when sections are refreshed by group', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        res = await request(app).post('/group').send([0]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        res = await request(app).post('/group').send([0, 1]);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 1 }));
+
+        sockets.messages = [];
+
+        await request(app).post('/sections/refresh?groupId=0').expect(HttpStatus.OK, { ids: [0] });
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
+
+        await request(app).post('/sections/refresh?groupId=1').expect(HttpStatus.OK, { ids: [0, 1] });
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 1 }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
+
+        await request(app).post('/sections/refresh?groupId=2').expect(HttpStatus.OK, { ids: [] });
+        expect(sockets.messages.length).toEqual(0);
+
+        res = await request(app).delete('/sections?groupId=0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        sockets.messages = [];
+
+        await request(app).post('/sections/refresh?groupId=0').expect(HttpStatus.OK, { ids: [] });
+        expect(sockets.messages.length).toEqual(0);
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should trigger an event to its sockets when sections are refreshed by space', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        sockets.messages = [];
+
+        await request(app).post('/sections/refresh?space=TestingNine').expect(HttpStatus.OK, { ids: [0] });
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
+
+        await request(app).post('/sections/refresh?space=Fake').expect(HttpStatus.OK, { ids: [] });
+        expect(sockets.messages.length).toEqual(0);
+
+        res = await request(app).delete('/sections?space=TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        sockets.messages = [];
+
+        await request(app).post('/sections/refresh?space=TestingNine').expect(HttpStatus.OK, { ids: [] });
+        expect(sockets.messages.length).toEqual(0);
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should trigger an event to its sockets when a section is refreshed', async () => {
+        let res = await request(app).post('/section')
+            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+
+        sockets.messages = [];
+
+        await request(app).post('/sections/0/refresh').expect(HttpStatus.OK, { ids: [0] });
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
+
+        await request(app).post('/sections/1/refresh').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        expect(sockets.messages.length).toEqual(0);
+
+        res = await request(app).delete('/sections?space=TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [0] }));
+
+        sockets.messages = [];
+
+        await request(app).post('/sections/0/refresh').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        expect(sockets.messages.length).toEqual(0);
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should be logging errors when sockets are failing, but only if the failure was not related to their readyState', async () => {

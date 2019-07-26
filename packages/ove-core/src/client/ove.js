@@ -79,7 +79,7 @@ function OVE (appId, hostname, sectionId) {
         };
     };
 
-    const OVESocket = function (__private) {
+    const OVESocket = function (__self, __private) {
         //-- Default onMessage handler does nothing --//
         let onMessage = function () { return 0; };
 
@@ -94,11 +94,20 @@ function OVE (appId, hostname, sectionId) {
                 const data = JSON.parse(m.data);
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
-                if (data.appId === __private.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
+                if (!data.sectionId || data.sectionId === __private.sectionId) {
                     if (Constants.Logging.TRACE) {
                         log.trace('Reading message:', JSON.stringify(data));
                     }
-                    onMessage(data.message);
+                    if (data.operation === Constants.Operation.REFRESH && __private.appId !== Constants.APP_NAME) {
+                        if (__private.stateRefresh) {
+                            log.debug('Refreshing state');
+                            __self.state.load().then(__private.stateRefresh);
+                        } else {
+                            log.warn('Unable to refresh application state');
+                        }
+                    } else if (data.appId === __private.appId) {
+                        onMessage(data.message);
+                    }
                 }
             });
             __private.ws.addEventListener('close', function () {
@@ -211,6 +220,14 @@ function OVE (appId, hostname, sectionId) {
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
     const OVEState = function (__private) {
+        //-- Default onRefresh handler does nothing --//
+        __private.stateRefresh = function () { return 0; };
+
+        //-- This function will be invoked if the state changes --//
+        this.onRefresh = function (func) {
+            __private.stateRefresh = func;
+        };
+
         //-- State can be cached/loaded at an app-level --//
         this.cache = function (url) {
             const endpoint = url || ('instances/' + __private.sectionId + '/state');
@@ -260,7 +277,7 @@ function OVE (appId, hostname, sectionId) {
         hostname: getHostName(true)
     };
 
-    this.socket = new OVESocket(__private);
+    this.socket = new OVESocket(this, __private);
     this.frame = new OVEFrame(this, __private);
     this.state = new OVEState(__private);
     setGeometry(this, __private);
