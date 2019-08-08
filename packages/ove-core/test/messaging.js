@@ -38,9 +38,17 @@ describe('The OVE Core server', () => {
         const peerUrl = 'ws://localhost:' + PEER_PORT;
         sockets.server = new Server(url);
         sockets.peerServer = new Server(peerUrl);
-        let socket = new WebSocket(url);
-        socket.readyState = 1;
-        wss.clients.add(socket);
+        sockets.client1 = new WebSocket(url);
+        sockets.client1.readyState = 1;
+        sockets.client1.space = 'TestingNine';
+        sockets.client1.client = '6';
+        wss.clients.add(sockets.client1);
+
+        // Another client socket, but created by a section
+        sockets.client2 = new WebSocket(url);
+        sockets.client2.readyState = 1;
+        sockets.client2.sectionId = '0';
+        wss.clients.add(sockets.client2);
 
         // There should also be a socket which is not ready to receive messages, and sockets
         // that fail to send messages which will ensure all code branches are tested.
@@ -86,15 +94,17 @@ describe('The OVE Core server', () => {
 
     it('should be able to receive events', () => {
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
     });
 
     it('should forward events to peers if they exist', () => {
         server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.length).toEqual(3);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         server.peers = {};
     });
@@ -102,8 +112,9 @@ describe('The OVE Core server', () => {
     it('should forward events to peers if they arrived from another peer', () => {
         server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
-        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.length).toEqual(3);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid', server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
         server.peers = {};
     });
@@ -118,7 +129,8 @@ describe('The OVE Core server', () => {
     it('should not forward events to peers if they are not ready', () => {
         server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocketNotReady;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        expect(sockets.messages.length).toEqual(1); // We are expecting one event instead of two.
+        expect(sockets.messages.length).toEqual(2); // We are expecting two events instead of three.
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         server.peers = {};
     });
@@ -138,6 +150,31 @@ describe('The OVE Core server', () => {
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(spy).not.toHaveBeenCalled();
         spy.mockRestore();
+    });
+
+    it('should be able to set space and client on sockets', () => {
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', registration: { space: 'foo', client: '3' } }));
+        expect(sockets.serverSocket.space).toEqual('foo');
+        expect(sockets.serverSocket.client).toEqual('3');
+        delete sockets.serverSocket.space;
+        delete sockets.serverSocket.client;
+    });
+
+    it('should be able to set sectionId on sockets', () => {
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', registration: { sectionId: '1' } }));
+        expect(sockets.serverSocket.sectionId).toEqual('1');
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', sectionId: '2', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', sectionId: '2', message: { action: Constants.Action.READ } }));
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', sectionId: '0', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', sectionId: '0', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', sectionId: '0', message: { action: Constants.Action.READ } }));
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
+        delete sockets.serverSocket.sectionId;
     });
 
     /* jshint ignore:start */
@@ -175,7 +212,8 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when all sections are refreshed', async () => {
         await request(app).post('/sections/refresh').expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH }));
     });
 
@@ -201,12 +239,15 @@ describe('The OVE Core server', () => {
         sockets.messages = [];
 
         await request(app).post('/sections/refresh?groupId=0').expect(HttpStatus.OK, { ids: [0] });
-        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
 
         await request(app).post('/sections/refresh?groupId=1').expect(HttpStatus.OK, { ids: [0, 1] });
-        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.length).toEqual(4);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 1 }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 1 }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
 
         await request(app).post('/sections/refresh?groupId=2').expect(HttpStatus.OK, { ids: [] });
@@ -234,7 +275,8 @@ describe('The OVE Core server', () => {
         sockets.messages = [];
 
         await request(app).post('/sections/refresh?space=TestingNine').expect(HttpStatus.OK, { ids: [0] });
-        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
 
         await request(app).post('/sections/refresh?space=Fake').expect(HttpStatus.OK, { ids: [] });
@@ -262,7 +304,8 @@ describe('The OVE Core server', () => {
         sockets.messages = [];
 
         await request(app).post('/sections/0/refresh').expect(HttpStatus.OK, { ids: [0] });
-        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ operation: Constants.Operation.REFRESH, sectionId: 0 }));
 
         await request(app).post('/sections/1/refresh').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));

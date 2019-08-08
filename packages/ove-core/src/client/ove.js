@@ -79,6 +79,19 @@ function OVE (appId, hostname, sectionId) {
         };
     };
 
+    const sendWhenReady = function (callback) {
+        //-- We always wait for the socket to be ready before broadcast. The same code blocks messages  --//
+        //-- when a socket is temporarily closed.                                                       --//
+        new Promise(function (resolve) {
+            const x = setInterval(function () {
+                if (__private.ws.readyState === WebSocket.OPEN) {
+                    clearInterval(x);
+                    resolve('socket open');
+                }
+            }, Constants.SOCKET_READY_DELAY);
+        }).then(callback);
+    };
+
     const OVESocket = function (__self, __private) {
         //-- Default onMessage handler does nothing --//
         let onMessage = function () { return 0; };
@@ -88,6 +101,31 @@ function OVE (appId, hostname, sectionId) {
             __private.ws = new WebSocket(url);
             __private.ws.addEventListener('error', log.error);
             __private.ws.addEventListener('open', function () {
+                if (__private.appId !== Constants.APP_NAME) {
+                    sendWhenReady(function () {
+                        __private.ws.send(JSON.stringify({
+                            appId: __private.appId,
+                            registration: { sectionId: (__private.sectionId || '-1') }
+                        }));
+                    });
+                } else {
+                    let id = OVE.Utils.getViewId();
+                    if (id) {
+                        if (id.lastIndexOf('.') !== -1) {
+                            id = id.substring(0, id.lastIndexOf('.'));
+                        }
+                        const client = id.substring(id.lastIndexOf('-') + 1);
+                        const space = id.substring(0, id.lastIndexOf('-'));
+                        if (space && client) {
+                            sendWhenReady(function () {
+                                __private.ws.send(JSON.stringify({
+                                    appId: __private.appId,
+                                    registration: { client: client, space: space }
+                                }));
+                            });
+                        }
+                    }
+                }
                 log.debug('WebSocket connection made with:', url);
             });
             __private.ws.addEventListener('message', function (m) {
@@ -126,16 +164,7 @@ function OVE (appId, hostname, sectionId) {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
             const targetAppId = (arguments.length > 1 && appId) ? appId : __private.appId;
 
-            //-- We always wait for the socket to be ready before broadcast. The same code blocks messages  --//
-            //-- when a socket is temporarily closed.                                                       --//
-            new Promise(function (resolve) {
-                const x = setInterval(function () {
-                    if (__private.ws.readyState === WebSocket.OPEN) {
-                        clearInterval(x);
-                        resolve('socket open');
-                    }
-                }, Constants.SOCKET_READY_DELAY);
-            }).then(function () {
+            sendWhenReady(function () {
                 //-- The same code works for the OVE Core viewer (which has no sectionId) and OVE Core Apps --//
                 let data;
                 if (__private.sectionId) {
@@ -167,6 +196,12 @@ function OVE (appId, hostname, sectionId) {
                         //-- failing on '0'                                              --//
                         if (section.id !== undefined) {
                             __private.sectionId = section.id.toString();
+                            sendWhenReady(function () {
+                                __private.ws.send(JSON.stringify({
+                                    appId: __private.appId,
+                                    registration: { sectionId: __private.sectionId }
+                                }));
+                            });
                             log.debug('Got details from section:', __private.sectionId);
                         }
                         //-- We wait for section information to be available before      --//

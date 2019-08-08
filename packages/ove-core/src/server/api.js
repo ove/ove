@@ -119,6 +119,17 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
+    // method to determine whether a corresponding operation applies to the given socket or not.
+    const _isInGeometry = function (socket, spaces) {
+        if (socket.sectionId) {
+            return false;
+        } else if (!spaces) {
+            return true;
+        }
+        let geometry = (spaces[socket.space] || [])[socket.client] || {};
+        return Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0;
+    };
+
     // Creates an individual section
     const createSection = function (req, res) {
         if (!req.body.space || !server.spaces[req.body.space]) {
@@ -188,7 +199,7 @@ module.exports = function (server, log, Utils, Constants) {
 
         // Notify OVE viewers/controllers
         server.wss.clients.forEach(function (c) {
-            if (c.readyState === Constants.WEBSOCKET_READY) {
+            if (_isInGeometry(c, section.spaces) && c.readyState === Constants.WEBSOCKET_READY) {
                 // Sections are created on the browser and then the application is deployed after a
                 // short delay. This will ensure proper frame sizes.
                 c.safeSend(JSON.stringify({ appId: Constants.APP_NAME,
@@ -229,7 +240,7 @@ module.exports = function (server, log, Utils, Constants) {
         server.state.set('sections[' + sectionId + ']', {});
 
         server.wss.clients.forEach(function (c) {
-            if (c.readyState === Constants.WEBSOCKET_READY) {
+            if (_isInGeometry(c) && c.readyState === Constants.WEBSOCKET_READY) {
                 c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE, id: parseInt(sectionId, 10) } }));
             }
         });
@@ -285,7 +296,7 @@ module.exports = function (server, log, Utils, Constants) {
             server.state.set('sections', []);
             server.state.set('groups', []);
             server.wss.clients.forEach(function (c) {
-                if (c.readyState === Constants.WEBSOCKET_READY) {
+                if (_isInGeometry(c) && c.readyState === Constants.WEBSOCKET_READY) {
                     c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.DELETE } }));
                 }
             });
@@ -371,7 +382,7 @@ module.exports = function (server, log, Utils, Constants) {
             oldOpacity = section.app.opacity;
             log.debug('Deleting existing application configuration');
             delete section.app;
-            commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } }));
+            commands.push({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10) } });
         }
 
         let needsUpdate = false;
@@ -405,7 +416,7 @@ module.exports = function (server, log, Utils, Constants) {
                 delete section.spaces;
                 section.spaces = {};
                 section.spaces[spaceName] = layout;
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), spaces: section.spaces } }));
+                commands.push({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), spaces: section.spaces } });
             }
         }
 
@@ -465,7 +476,7 @@ module.exports = function (server, log, Utils, Constants) {
                 if (opacity) {
                     $app.opacity = opacity;
                 }
-                commands.push(JSON.stringify({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: $app } }));
+                commands.push({ appId: Constants.APP_NAME, message: { action: Constants.Action.UPDATE, id: parseInt(sectionId, 10), app: $app } });
             } else {
                 // There is no need to check if the old url was set, because, if it was not, needsUpdate would be true anyway.
                 // Removes the first update command.
@@ -480,7 +491,9 @@ module.exports = function (server, log, Utils, Constants) {
         server.wss.clients.forEach(function (c) {
             if (c.readyState === Constants.WEBSOCKET_READY) {
                 commands.forEach(function (m) {
-                    c.safeSend(m);
+                    if (_isInGeometry(c, m.message.spaces)) {
+                        c.safeSend(JSON.stringify(m));
+                    }
                 });
             }
         });
