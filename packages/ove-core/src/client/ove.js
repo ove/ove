@@ -162,7 +162,7 @@ function OVE (appId, hostname, sectionId) {
                 for (let i = 0; i < Constants.CLOCK_SYNC_ATTEMPTS; i++) {
                     //-- If we lost socket connection in between syncs, we may have already  --//
                     //-- made some sync requests.                                            --//
-                    if (__private.syncResults.length < Constants.CLOCK_SYNC_ATTEMPTS) {
+                    if (__private.syncResults.length + i < Constants.CLOCK_SYNC_ATTEMPTS) {
                         setTimeout(clockSyncRequest, Math.random() *
                             (Constants.CLOCK_SYNC_INTERVAL / Constants.CLOCK_SYNC_ATTEMPTS) | 0);
                     }

@@ -5,16 +5,13 @@ module.exports = function (server, log, Constants) {
     /* istanbul ignore next */
     // It is not worth the effort to test the following code block, which will cause an
     // internal representation to be exposed in an unwanted way.
-    setTimeout(function () {
-        setInterval(function () {
-            server.wss.clients.forEach(function (c) {
-                if (c.readyState === Constants.WEBSOCKET_READY) {
-                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, clockReSync: true }));
-                }
-            });
-        }, Constants.CLOCK_RE_SYNC_DURATION);
-    // Always run this after a timeout to avoid this causing a server crash
-    }, Constants.CLOCK_RE_SYNC_DURATION);
+    setInterval(function () {
+        server.wss.clients.forEach(function (c) {
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, clockReSync: true }));
+            }
+        });
+    }, Constants.CLOCK_RE_SYNC_INTERVAL);
     return function () {
         let diffs = [];
         let clients = [];
@@ -42,6 +39,7 @@ module.exports = function (server, log, Constants) {
         // differences and synchronise all clocks including its own. When we computes averages
         // we only consider values between the first and third quartiles. If a client's clock is
         // not in sync, the server broadcasts a 'clockDiff' message.
+        // For more information on the Berkeley Algorithm, see https://doi.org/10.1109/32.29484.
         if (clients.length !== 0) {
             let q1 = diffs.length * 0.25 - 1;
             if (q1 === Math.floor(q1)) {

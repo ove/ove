@@ -28,13 +28,14 @@ describe('The OVE App Base library', () => {
     it('should export utilities for OVE applications', () => {
         // Precise validation of number of items exported and then check their
         // names one by one.
-        expect(Object.keys(base).length).toEqual(8);
+        expect(Object.keys(base).length).toEqual(9);
         expect(Object.keys(base)).toContain('express');
         expect(Object.keys(base)).toContain('app');
         expect(Object.keys(base)).toContain('config');
         expect(Object.keys(base)).toContain('nodeModules');
         expect(Object.keys(base)).toContain('log');
         expect(Object.keys(base)).toContain('operations');
+        expect(Object.keys(base)).toContain('clock');
         expect(Object.keys(base)).toContain('Utils');
         expect(Object.keys(base.Utils)).toContain('validateState');
         expect(Object.keys(base)).toContain('appState');
@@ -64,6 +65,150 @@ describe('The OVE App Base library', () => {
         let res = await request(app).get('/name');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify('dummy'));
+    });
+
+    it('should return a clock', async () => {
+        let messages = [];
+        base.clock.setWS({
+            safeSend: function (m) {
+                messages.push(m);
+            }
+        });
+        base.clock.init();
+        expect((base.clock.getTime() - new Date().getTime()) / 10 | 0).toEqual(0);
+        expect(base.clock.sync({})).toEqual(false);
+        let syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                serverDiff: 0
+            }
+        });
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(1);
+        expect(JSON.parse(messages.pop()).sync.id).toEqual('uuid');
+
+        const mockCallback = jest.fn(x => x);
+        const OLD_LOG_TRACE = log.trace;
+        const OLD_LOG_DEBUG = log.debug;
+        log.trace = mockCallback;
+        log.debug = mockCallback;
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[0][0]).toBe('Clock skew detection attempt:');
+        expect(mockCallback.mock.calls[0][1]).toBe(1);
+        expect(mockCallback.mock.calls[1][0]).toBe('Responded to sync request');
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(0);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[2][1]).toBe(2);
+        expect(syncResult).toEqual(true);
+        base.clock.init(); // re-init should not delete results
+        expect(messages.length).toEqual(0);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[4][1]).toBe(3);
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(0);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[6][1]).toBe(4);
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(0);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[8][1]).toBe(5);
+        expect(syncResult).toEqual(true);
+        expect(messages.length).not.toEqual(0);
+        expect(JSON.parse(messages.pop()).syncResults.length).toEqual(5);
+        expect(syncResult).toEqual(true);
+        base.clock.init(); // re-init should not delete results
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[10][1]).toBe(6);
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(0);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            clockReSync: true
+        });
+        expect(syncResult).toEqual(true);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[12][1]).toBe(1);
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(0);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            clockDiff: {}
+        });
+        expect(syncResult).toEqual(true);
+        expect(mockCallback.mock.calls[14][0]).toBe('Got a clock difference of:');
+        expect(mockCallback.mock.calls[14][1]).toBe(undefined);
+        syncResult = base.clock.sync({
+            appId: 'foo',
+            sync: {
+                id: 'uuid',
+                t1: new Date().getTime(),
+                t2: new Date().getTime(),
+                serverDiff: 0
+            }
+        });
+        expect(mockCallback.mock.calls[15][1]).toBe(2);
+        expect(syncResult).toEqual(true);
+        expect(messages.length).toEqual(0);
+        log.trace = OLD_LOG_TRACE;
+        log.debug = OLD_LOG_DEBUG;
     });
 
     it('should validate state', () => {
