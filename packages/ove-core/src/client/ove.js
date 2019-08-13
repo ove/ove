@@ -31,11 +31,59 @@ function OVE (appId, hostname, sectionId) {
     //--                  Messaging Functions                  --//
     //-----------------------------------------------------------//
 
+    const OVEClock = function (__private) {
+        //-- SDK functions --//
+        this.getTime = function () {
+            return new Date().getTime() - (__private.clockDiff || 0);
+        };
+    };
+
     const OVEFrame = function (__self, __private) {
         let onMessage = __self.socket.on;
 
+        const syncClock = function (__self, __private) {
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    appId: Constants.APP_NAME,
+                    sync: { id: __self.context.uuid }
+                }, '*');
+            }
+        };
+
         window.addEventListener('message', function (m) {
             const data = m.data;
+            //-- The clock sync request is the one with the highest priority and the server should make --//
+            //-- no further checks before responding. Matching code is used in client and server sides. --//
+            if (data.sync) {
+                log.trace('Responded to sync request');
+                let clockDiff = {};
+                clockDiff[data.sync.id] = __private.clockDiff;
+                for (let i = 0; i < window.frames.length; i++) {
+                    window.frames[i].postMessage({
+                        appId: Constants.APP_NAME,
+                        clockDiff: clockDiff
+                    }, '*');
+                }
+                return;
+            } else if (data.clockDiff) {
+                if (data.clockDiff[__self.context.uuid] !== undefined) {
+                    __private.syncResults = new Array(Constants.CLOCK_SYNC_ATTEMPTS);
+                    __private.clockReSync = function (__self, __private) {
+                        setTimeout(function () {
+                            syncClock(__self, __private);
+                        }, Constants.CLOCK_SYNC_INTERVAL);
+                    };
+                    let diff = data.clockDiff[__self.context.uuid];
+                    __private.clockDiff = (__private.clockDiff || 0) + diff;
+                    log.debug('Got a clock difference of:', diff);
+                    if (diff) {
+                        //-- Prevent sync over sockets --//
+                        __private.clockReSync(__self, __private);
+                    }
+                }
+                return;
+            }
+
             //-- Apps receive the message if either it was sent to all sections or the specific section --//
             //-- of the app. Apps will not receive messages sent to other apps.                         --//
             if (data.appId === __private.appId && (!data.sectionId || data.sectionId === __private.sectionId)) {
@@ -45,6 +93,7 @@ function OVE (appId, hostname, sectionId) {
                 onMessage(data.message);
             }
         });
+        syncClock(__self, __private);
 
         //-- SDK functions --//
         this.on = function (func) {
@@ -96,6 +145,36 @@ function OVE (appId, hostname, sectionId) {
         //-- Default onMessage handler does nothing --//
         let onMessage = function () { return 0; };
 
+        const syncClock = function (__self, __private) {
+            if (!__private.syncResults) {
+                __private.syncResults = [];
+            }
+            if (__private.syncResults.length < Constants.CLOCK_SYNC_ATTEMPTS) {
+                const clockSyncRequest = function () {
+                    sendWhenReady(function () {
+                        __private.ws.send(JSON.stringify({
+                            appId: Constants.APP_NAME,
+                            sync: { id: __self.context.uuid }
+                        }));
+                    });
+                };
+                //-- We trigger a clock-sync 5 times within a 2 minute period. --//
+                for (let i = 0; i < Constants.CLOCK_SYNC_ATTEMPTS; i++) {
+                    //-- If we lost socket connection in between syncs, we may have already  --//
+                    //-- made some sync requests.                                            --//
+                    if (__private.syncResults.length < Constants.CLOCK_SYNC_ATTEMPTS) {
+                        setTimeout(clockSyncRequest, Math.random() *
+                            (Constants.CLOCK_SYNC_INTERVAL / Constants.CLOCK_SYNC_ATTEMPTS) | 0);
+                    }
+                }
+            }
+        };
+
+        __private.clockReSync = function (__self, __private) {
+            __private.syncResults = [];
+            syncClock(__self, __private);
+        };
+
         //-- Socket init code --//
         const getSocket = function (url) {
             __private.ws = new WebSocket(url);
@@ -126,10 +205,74 @@ function OVE (appId, hostname, sectionId) {
                         }
                     }
                 }
+                syncClock(__self, __private);
                 log.debug('WebSocket connection made with:', url);
             });
             __private.ws.addEventListener('message', function (m) {
                 const data = JSON.parse(m.data);
+                //-- The clock sync request is the one with the highest priority and the server should make --//
+                //-- no further checks before responding. Matching code is used in client and server sides. --//
+                if (data.sync) {
+                    if (!data.sync.t2) {
+                        try {
+                            __private.ws.send(JSON.stringify({
+                                appId: data.appId,
+                                sync: {
+                                    id: data.sync.id,
+                                    serverDiff: data.sync.serverDiff,
+                                    t1: new Date().getTime()
+                                }
+                            }));
+                        } catch (e) {
+                            if (__private.ws.readyState === WebSocket.OPEN) {
+                                log.error('Error sending message:', e.message);
+                            }
+                            //-- ignore all other errors, since there is no value in recording them.        --//
+                        }
+                    } else {
+                        //-- We must construct the sync result similar to the server, to avoid differences. --//
+                        let syncResult = {
+                            appId: data.appId,
+                            sync: {
+                                id: data.sync.id,
+                                serverDiff: data.sync.serverDiff,
+                                t3: new Date().getTime(),
+                                t2: data.sync.t2,
+                                t1: data.sync.t1
+                            }
+                        };
+                        //-- Always broadcast a difference as an integer --//
+                        let diff = ((syncResult.sync.t1 + syncResult.sync.t3) / 2 -
+                            syncResult.sync.t2 - syncResult.sync.serverDiff) | 0;
+                        if (__private.clockDiff) {
+                            diff -= __private.clockDiff;
+                        }
+                        __private.syncResults.push({ id: data.sync.id, diff: diff });
+                        log.trace('Clock skew detection attempt:', __private.syncResults.length, 'difference:', diff);
+                        if (__private.syncResults.length === Constants.CLOCK_SYNC_ATTEMPTS) {
+                            sendWhenReady(function () {
+                                __private.ws.send(JSON.stringify({
+                                    appId: __private.appId,
+                                    syncResults: __private.syncResults
+                                }));
+                            });
+                        }
+                    }
+                    log.trace('Responded to sync request');
+                    return;
+                } else if (data.clockDiff) {
+                    let diff = data.clockDiff[__self.context.uuid];
+                    __private.clockDiff = (__private.clockDiff || 0) + diff;
+                    log.debug('Got a clock difference of:', diff);
+                    if (diff) {
+                        __private.clockReSync(__self, __private);
+                    }
+                    return;
+                } else if (data.clockReSync) {
+                    __private.clockReSync(__self, __private);
+                    return;
+                }
+
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
                 if (!data.sectionId || data.sectionId === __private.sectionId) {
@@ -315,6 +458,7 @@ function OVE (appId, hostname, sectionId) {
     this.socket = new OVESocket(this, __private);
     this.frame = new OVEFrame(this, __private);
     this.state = new OVEState(__private);
+    this.clock = new OVEClock(__private);
     setGeometry(this, __private);
 }
 

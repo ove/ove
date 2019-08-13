@@ -84,6 +84,37 @@ module.exports = function (server, log, Utils, Constants) {
         s.safeSend(JSON.stringify({ func: 'connect' }));
         s.on('message', function (msg) {
             let m = JSON.parse(msg);
+            // The clock sync request is the one with the highest priority and the server should
+            // make no further checks before responding.
+            if (m.sync) {
+                if (!m.sync.t1) {
+                    s.safeSend(JSON.stringify({
+                        appId: m.appId,
+                        sync: { id: m.sync.id, serverDiff: (server.clockDiff || 0) }
+                    }));
+                } else {
+                    s.safeSend(JSON.stringify({
+                        appId: m.appId,
+                        sync: {
+                            id: m.sync.id,
+                            serverDiff: m.sync.serverDiff,
+                            t2: new Date().getTime(),
+                            t1: m.sync.t1
+                        }
+                    }));
+                }
+                log.trace('Responded to sync request for client:', m.sync.id);
+                return;
+            } else if (m.syncResults) {
+                m.syncResults.forEach(function (r) {
+                    if (!server.clockSyncResults[r.id]) {
+                        server.clockSyncResults[r.id] = [];
+                    }
+                    server.clockSyncResults[r.id].push(r.diff);
+                });
+                return;
+            }
+
             // We will ignore anything that we have already forwarded.
             if (m.forwardedBy && m.forwardedBy.includes(server.uuid)) {
                 return;

@@ -56,11 +56,16 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     // Static content
     Utils.registerRoutesForContent(pjson);
 
-    // Persistence;
+    // Persistence
     Utils.registerRoutesForPersistence();
     this.state = Utils.Persistence;
     this.state.set('sections', []);
     this.state.set('groups', []);
+
+    // Clock synchronisation
+    this.clockSyncResults = {};
+    setInterval(require(path.join(__dirname, 'clock'))(this, log, Constants),
+        Constants.CLOCK_SYNC_INTERVAL);
 
     // APIs
     require(path.join(__dirname, 'api'))(this, log, Utils, Constants);

@@ -24,7 +24,7 @@ const TIMEOUT = 500;
 global.console = OLD_CONSOLE;
 
 // WebSocket testing is done using a Mock Socket. The tests run a WSS and inject the mocked
-// WS into the express app.
+// WS into the express app. These tests also include clock sync related scenarios.
 describe('The OVE Core server', () => {
     let sockets = {};
     WebSocket.prototype.send = (m) => {
@@ -175,6 +175,90 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         delete sockets.serverSocket.sectionId;
+    });
+
+    it('should perform the clock synchronisation handshake', () => {
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid' } }));
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid', serverDiff: 0 } }));
+        let t1 = new Date().getTime();
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid', serverDiff: 0, t1: t1 } }));
+        expect(sockets.messages.length).toEqual(1);
+        let message = sockets.messages.pop();
+        let t2 = JSON.parse(message).sync.t2;
+        expect(message).toEqual(JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid', serverDiff: 0, t2: t2, t1: t1 } }));
+    });
+
+    it('should set clock sync results at a server-level', () => {
+        server.syncResults = {};
+        expect(server.clockSyncResults.some_uuid1).toEqual(undefined);
+        expect(server.clockSyncResults.some_uuid2).toEqual(undefined);
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', syncResults: [{ id: 'some_uuid1', diff: 1 }, { id: 'some_uuid1', diff: 1 }, { id: 'some_uuid2', diff: 2 }] }));
+        expect(server.clockSyncResults.some_uuid1).toEqual([1, 1]);
+        expect(server.clockSyncResults.some_uuid2).toEqual([2]);
+        server.syncResults = {};
+    });
+
+    it('should do clock synchronisation', () => {
+        const clock = require(path.join(srcDir, 'server', 'clock'))(server, log, Constants);
+        server.clockSyncResults = {
+            uuid: [1, 2, 3, 4, 5]
+        };
+        clock();
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', clockDiff: { uuid: -2 } }
+        ));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', clockDiff: { uuid: -2 } }
+        ));
+        expect(server.clockSyncResults.uuid).toEqual(undefined);
+        server.clockSyncResults = {
+            uuid: [1, 2, 3, 4, 5, 6]
+        };
+        clock();
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', clockDiff: { uuid: -3 } }
+        ));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', clockDiff: { uuid: -3 } }
+        ));
+        expect(server.clockSyncResults.uuid).toEqual(undefined);
+        server.clockSyncResults = {
+            uuid1: [210, 212, 213, 212, 220],
+            uuid2: [10, 11, 13, 12, 18],
+            uuid3: [12, 15, 13, 10, 11],
+            uuid4: [15, 16, 20, 16, 16]
+        };
+        clock();
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', clockDiff: { uuid1: 197, uuid2: -3, uuid3: -3 } }
+        ));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify(
+            { appId: 'core', clockDiff: { uuid1: 197, uuid2: -3, uuid3: -3 } }
+        ));
+        expect(server.clockDiff).toEqual(16);
+        expect(server.clockSyncResults.uuid).toEqual(undefined);
+        server.clockSyncResults = {
+            uuid1: [1, 1, 1, 1, 1],
+            uuid2: [1, 1, 1, 1, 1],
+            uuid3: [1, 1, 1, 1, 1],
+            uuid4: [1, 1, 1, 1, 1]
+        };
+        clock();
+        expect(sockets.messages.length).toEqual(0);
+        expect(server.clockDiff).toEqual(1);
+        expect(server.clockSyncResults.uuid).toEqual(undefined);
+        server.clockSyncResults = {
+            uuid1: [1, 1, 1, 1],
+            uuid2: [1, 1, 1]
+        };
+        clock();
+        expect(sockets.messages.length).toEqual(0);
+        expect(server.clockDiff).toEqual(1);
+        expect(server.clockSyncResults.uuid).toEqual(undefined);
     });
 
     /* jshint ignore:start */
