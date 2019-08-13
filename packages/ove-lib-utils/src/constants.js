@@ -25,6 +25,12 @@ const Constants = {
     CONFIG_JSON_PATH: function (appName) {
         return process.env['OVE_' + appName.toUpperCase() + '_CONFIG_JSON'];
     },
+    CLOCK_SYNC_ATTEMPTS: +(process.env.OVE_CLOCK_SYNC_ATTEMPTS !==
+        undefined ? process.env.OVE_CLOCK_SYNC_ATTEMPTS : 5),
+    CLOCK_SYNC_INTERVAL: +(process.env.OVE_CLOCK_SYNC_INTERVAL !==
+        undefined ? process.env.OVE_CLOCK_SYNC_INTERVAL : 120000), // Unit: milliseconds
+    CLOCK_RE_SYNC_INTERVAL: +(process.env.OVE_CLOCK_RE_SYNC_INTERVAL !==
+        undefined ? process.env.OVE_CLOCK_RE_SYNC_INTERVAL : 3600000), // Unit: milliseconds
     PERSISTENCE_SYNC_INTERVAL: +(process.env.OVE_PERSISTENCE_SYNC_INTERVAL !==
         undefined ? process.env.OVE_PERSISTENCE_SYNC_INTERVAL : 2000), // Unit: milliseconds
     UTF8: 'utf8'
