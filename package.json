@@ -29,6 +29,6 @@
     "remark": "10.0.1",
     "remark-preset-lint-recommended": "3.0.2",
     "lerna": "3.13.4",
-    "rimraf": "2.6.3"
+    "rimraf": "2.7.0"
   }
 }
