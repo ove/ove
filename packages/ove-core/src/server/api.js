@@ -6,8 +6,24 @@ module.exports = function (server, log, Utils, Constants) {
     // It is required that we are able to clean-up variables like these during testing.
     server.spaceGeometries = {};
 
+    const operation = {};
+
+    // Internal utility method to forward a payload to a peer.
+    const _messagePeers = function (op, req) {
+        server.sendToPeer({ appId: Constants.APP_NAME, message: { op: op, req: req } });
+    };
+    server.receiveFromPeer.push(function (m) {
+        let fn = operation[m.op];
+        if (fn) {
+            if (Constants.Logging.TRACE_SERVER) {
+                log.trace('Got message from peer:', m.forwardedBy, ', message:', m);
+            }
+            fn(m.req, { status: function () { return { set: function () { return { send: function () {} }; } }; } });
+        }
+    });
+
     // Lists details of all spaces, and accepts filters as a part of its query string.
-    const listSpaces = function (req, res) {
+    operation.listSpaces = function (req, res) {
         let sectionId = req.query.oveSectionId;
         if (sectionId === undefined) {
             log.debug('Returning parsed result of ' + Constants.SPACES_JSON_FILENAME);
@@ -38,7 +54,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Gets geometry of a named space.
-    const getSpaceGeometry = function (req, res) {
+    operation.getSpaceGeometry = function (req, res) {
         const spaceName = req.params.name;
         const geometry = _getSpaceGeometries()[spaceName];
         if (Utils.isNullOrEmpty(geometry)) {
@@ -131,7 +147,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Creates an individual section
-    const createSection = function (req, res) {
+    operation.createSection = function (req, res) {
         if (!req.body.space || !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
@@ -146,6 +162,7 @@ module.exports = function (server, log, Utils, Constants) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
             return;
         }
+        _messagePeers('createSection', { body: req.body });
         let section = { w: req.body.w, h: req.body.h, x: req.body.x, y: req.body.y, spaces: {} };
         section.spaces[req.body.space] = _calculateSectionLayout(req.body.space, {
             x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h
@@ -247,9 +264,10 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Deletes all sections
-    const deleteSections = function (req, res) {
+    operation.deleteSections = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
+        _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
         let sections = server.state.get('sections');
         if (groupId) {
             let deletedSections = [];
@@ -308,7 +326,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Returns details of sections
-    const readSections = function (req, res) {
+    operation.readSections = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
         const geometry = req.query.geometry;
@@ -609,13 +627,19 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Transforms sections
-    const transformSections = function (req, res) {
-        _updateSections({ transform: req.body }, req.query.space, req.query.groupId, res);
+    operation.transformSections = function (req, res) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        _messagePeers('transformSections', { body: req.body, query: { space: space, groupId: groupId } });
+        _updateSections({ transform: req.body }, space, groupId, res);
     };
 
     // Moves sections to another space
-    const moveSectionsTo = function (req, res) {
-        _updateSections({ moveTo: req.body }, req.query.space, req.query.groupId, res);
+    operation.moveSectionsTo = function (req, res) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        _messagePeers('moveSectionsTo', { body: req.body, query: { space: space, groupId: groupId } });
+        _updateSections({ moveTo: req.body }, space, groupId, res);
     };
 
     // Internal utility function to refresh a section by the given id.
@@ -628,12 +652,13 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Refreshes individual section
-    const refreshSectionById = function (req, res) {
+    operation.refreshSectionById = function (req, res) {
         let sectionId = req.params.id;
         if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
+            _messagePeers('refreshSectionById', { params: { id: sectionId } });
             _refreshSectionById(sectionId);
             log.info('Successfully refreshed section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
@@ -641,9 +666,10 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Refreshes all sections
-    const refreshSections = function (req, res) {
+    operation.refreshSections = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
+        _messagePeers('refreshSections', { query: { space: space, groupId: groupId } });
         let sectionsToRefresh = [];
         if (groupId) {
             if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
@@ -681,7 +707,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Fetches details of an individual section
-    const readSectionById = function (req, res) {
+    operation.readSectionById = function (req, res) {
         let sectionId = req.params.id;
         let s = server.state.get('sections[' + sectionId + ']');
         if (Utils.isNullOrEmpty(s)) {
@@ -702,7 +728,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Updates an app associated with a section
-    const updateSectionById = function (req, res) {
+    operation.updateSectionById = function (req, res) {
         let sectionId = req.params.id;
         if (!(req.body.space || req.body.app || req.body.x || req.body.y || req.body.w || req.body.h)) {
             // An attempt to do something we don't understand
@@ -728,6 +754,7 @@ module.exports = function (server, log, Utils, Constants) {
             log.error('Both x and y positions are required for a resize operation', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
         } else {
+            _messagePeers('updateSectionById', { body: req.body, params: { id: sectionId } });
             _updateSectionById(sectionId, req.body.space, { x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h }, req.body.app);
             log.info('Successfully updated section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
@@ -735,19 +762,20 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Deletes an individual section
-    const deleteSectionById = function (req, res) {
+    operation.deleteSectionById = function (req, res) {
         let sectionId = req.params.id;
         if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
+            _messagePeers('deleteSectionById', { params: { id: sectionId } });
             _deleteSectionById(sectionId);
             log.info('Successfully deleted section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
         }
     };
 
-    const readGroups = function (_req, res) {
+    operation.readGroups = function (_req, res) {
         let result = [];
         server.state.get('groups').forEach(function (e, i) {
             if (!Utils.isNullOrEmpty(server.state.get('groups[' + i + ']'))) {
@@ -781,12 +809,13 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Creates an individual group
-    const createGroup = function (req, res) {
+    operation.createGroup = function (req, res) {
+        _messagePeers('createGroup', { body: req.body });
         _createOrUpdateGroup(server.state.get('groups').length, 'create', req, res);
     };
 
     // Fetches details of an individual group
-    const readGroupById = function (req, res) {
+    operation.readGroupById = function (req, res) {
         let groupId = req.params.id;
         if (Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
             log.error('Invalid Group Id:', groupId);
@@ -798,8 +827,10 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     // Updates an individual group
-    const updateGroupById = function (req, res) {
-        _createOrUpdateGroup(req.params.id, 'update', req, res);
+    operation.updateGroupById = function (req, res) {
+        let groupId = req.params.id;
+        _messagePeers('updateGroupById', { body: req.body, params: { id: groupId } });
+        _createOrUpdateGroup(groupId, 'update', req, res);
     };
 
     // Internal utility function to delete a group by the given id
@@ -821,34 +852,35 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Deletes an individual group. If there are no more non-empty groups at the end of this
     // operation, it will reset all groups on the server.
-    const deleteGroupById = function (req, res) {
+    operation.deleteGroupById = function (req, res) {
         let groupId = req.params.id;
         if (Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
             log.error('Invalid Group Id:', groupId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
         } else {
+            _messagePeers('deleteGroupById', { params: { id: groupId } });
             _deleteGroupById(groupId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
         }
     };
 
-    server.app.get('/spaces', listSpaces);
-    server.app.get('/spaces/:name/geometry', getSpaceGeometry);
-    server.app.get('/sections', readSections);
-    server.app.delete('/sections', deleteSections);
-    server.app.post('/section', createSection);
-    server.app.get('/sections/:id([0-9]+)', readSectionById);
-    server.app.post('/sections/:id([0-9]+)', updateSectionById);
-    server.app.delete('/sections/:id([0-9]+)', deleteSectionById);
-    server.app.post('/sections/refresh', refreshSections);
-    server.app.post('/sections/:id([0-9]+)/refresh', refreshSectionById);
-    server.app.post('/sections/transform', transformSections);
-    server.app.post('/sections/moveTo', moveSectionsTo);
-    server.app.get('/groups', readGroups);
-    server.app.post('/group', createGroup);
-    server.app.get('/groups/:id([0-9]+)', readGroupById);
-    server.app.post('/groups/:id([0-9]+)', updateGroupById);
-    server.app.delete('/groups/:id([0-9]+)', deleteGroupById);
+    server.app.get('/spaces', operation.listSpaces);
+    server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
+    server.app.get('/sections', operation.readSections);
+    server.app.delete('/sections', operation.deleteSections);
+    server.app.post('/section', operation.createSection);
+    server.app.get('/sections/:id([0-9]+)', operation.readSectionById);
+    server.app.post('/sections/:id([0-9]+)', operation.updateSectionById);
+    server.app.delete('/sections/:id([0-9]+)', operation.deleteSectionById);
+    server.app.post('/sections/refresh', operation.refreshSections);
+    server.app.post('/sections/:id([0-9]+)/refresh', operation.refreshSectionById);
+    server.app.post('/sections/transform', operation.transformSections);
+    server.app.post('/sections/moveTo', operation.moveSectionsTo);
+    server.app.get('/groups', operation.readGroups);
+    server.app.post('/group', operation.createGroup);
+    server.app.get('/groups/:id([0-9]+)', operation.readGroupById);
+    server.app.post('/groups/:id([0-9]+)', operation.updateGroupById);
+    server.app.delete('/groups/:id([0-9]+)', operation.deleteGroupById);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));

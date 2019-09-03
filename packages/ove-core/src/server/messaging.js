@@ -12,6 +12,29 @@ module.exports = function (server, log, Utils, Constants) {
         let v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
+    // We maintain an array of handler that would be called when we receive a message
+    // from a a peer. Each handler should validate the message and ignore if it was not
+    // the message that it expected.
+    server.receiveFromPeer = [];
+    server.sendToPeer = function (m) {
+        Object.keys(server.peers).forEach(function (p) {
+            const c = server.peers[p];
+            if (c.readyState === Constants.WEBSOCKET_READY) {
+                if (Constants.Logging.TRACE_SERVER) {
+                    log.trace('Sending to peer:', p, ', message:', m);
+                }
+                // We set a forwardedBy property on the message to avoid it being forwarded
+                // in a loop. There can be more than one peer participating in a broadcast
+                // so we need to keep track of multiple peers who have forwarded the same
+                // message.
+                if (!m.forwardedBy) {
+                    m.forwardedBy = [];
+                }
+                m.forwardedBy.push(server.uuid);
+                c.safeSend(JSON.stringify(m));
+            }
+        });
+    };
 
     const getSocket = function (peerHost) {
         const socketURL = 'ws://' + peerHost;
@@ -115,9 +138,16 @@ module.exports = function (server, log, Utils, Constants) {
                 return;
             }
 
-            // We will ignore anything that we have already forwarded.
-            if (m.forwardedBy && m.forwardedBy.includes(server.uuid)) {
-                return;
+            if (m.forwardedBy) {
+                // We will ignore anything that we have already forwarded.
+                if (m.forwardedBy.includes(server.uuid)) {
+                    return;
+                } else if (m.message.op) {
+                    server.receiveFromPeer.forEach(function (fn) {
+                        fn(m.message);
+                    });
+                    return;
+                }
             }
 
             // The registration operation is meant for associating a socket with its corresponding
@@ -155,23 +185,7 @@ module.exports = function (server, log, Utils, Constants) {
                     }
                 });
                 // We forward the same message to all peers
-                Object.keys(server.peers).forEach(function (p) {
-                    const c = server.peers[p];
-                    if (c.readyState === Constants.WEBSOCKET_READY) {
-                        if (Constants.Logging.TRACE_SERVER) {
-                            log.trace('Sending to peer:', p, ', message:', msg);
-                        }
-                        // We set a forwardedBy property on the message to avoid it being forwarded
-                        // in a loop. There can be more than one peer participating in a broadcast
-                        // so we need to keep track of multiple peers who have forwarded the same
-                        // message.
-                        if (!m.forwardedBy) {
-                            m.forwardedBy = [];
-                        }
-                        m.forwardedBy.push(server.uuid);
-                        c.safeSend(JSON.stringify(m));
-                    }
-                });
+                server.sendToPeer(m);
                 return;
             }
 

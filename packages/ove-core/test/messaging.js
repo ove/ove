@@ -15,7 +15,9 @@ const OLD_CONSOLE = global.console;
 global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
 
 const { WebSocket, Server } = require('mock-socket');
+const receiveFromPeer = server.receiveFromPeer;
 const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
+server.receiveFromPeer = receiveFromPeer;
 const PORT = 5555;
 const PEER_PORT = 5545;
 const TIMEOUT = 500;
@@ -292,6 +294,56 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(sockets.messages.length).toEqual(1);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+    });
+
+    it('should trigger an event to peers when a section is deleted', async () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.length).toEqual(2);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.uuid] }));
+        server.peers = {};
+    });
+
+    it('should perform a delete operation when a delete message is received from a peer', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.receiveFromPeer.push(function (m) {
+            sockets.messages.push(JSON.stringify(m));
+        });
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
+        expect(sockets.messages.length).toEqual(3);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.uuid] }));
+        server.peers = {};
+        server.receiveFromPeer.pop();
+    });
+
+    it('should not perform any operations when an invalid message is received from a peer', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.receiveFromPeer.push(function (m) {
+            sockets.messages.push(JSON.stringify(m));
+        });
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { op: 'fake', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
+        expect(sockets.messages.length).toEqual(1);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ op: 'fake', req: { query: { space: undefined, groupId: undefined } } }));
+        server.peers = {};
+        server.receiveFromPeer.pop();
+    });
+
+    it('should ignore messages without an operation when a message is received from a peer', () => {
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.receiveFromPeer.push(function (m) {
+            sockets.messages.push(JSON.stringify(m));
+        });
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
+        expect(sockets.messages.length).toEqual(3);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid', server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
+        server.peers = {};
+        server.receiveFromPeer.pop();
     });
 
     it('should trigger an event to its sockets when all sections are refreshed', async () => {

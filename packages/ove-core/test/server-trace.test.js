@@ -75,6 +75,30 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
         };
     });
 
+    it('should be logging all events received from a peer', () => {
+        const receiveFromPeer = server.receiveFromPeer;
+        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
+        server.receiveFromPeer = receiveFromPeer;
+        middleware(sockets.serverSocket);
+
+        sockets.messages = [];
+
+        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        const spy = jest.spyOn(log, 'trace');
+        server.receiveFromPeer.push(function (m) {
+            sockets.messages.push(JSON.stringify(m));
+        });
+        sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
+        expect(sockets.messages.length).toEqual(3);
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.uuid] }));
+        expect(spy).toHaveBeenCalled();
+        spy.mockRestore();
+        server.peers = {};
+        server.receiveFromPeer.pop();
+    });
+
     it('should be logging all received events', () => {
         const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
         middleware(sockets.serverSocket);
