@@ -15,9 +15,7 @@ const OLD_CONSOLE = global.console;
 global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
 
 const { WebSocket, Server } = require('mock-socket');
-const receiveFromPeer = server.receiveFromPeer;
-const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
-server.receiveFromPeer = receiveFromPeer;
+const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants);
 const PORT = 5555;
 const PEER_PORT = 5545;
 const TIMEOUT = 500;
@@ -102,39 +100,39 @@ describe('The OVE Core server', () => {
     });
 
     it('should forward events to peers if they exist', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.length).toEqual(3);
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.peers.uuid] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        server.peers = {};
+        server.peers.clients = {};
     });
 
     it('should forward events to peers if they arrived from another peer', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.length).toEqual(3);
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid', server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid', server.peers.uuid] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: ['some_uuid'] }));
-        server.peers = {};
+        server.peers.clients = {};
     });
 
     it('should drop events if they originated from self', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
-        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.peers.uuid] }));
         expect(sockets.messages.length).toEqual(0);
-        server.peers = {};
+        server.peers.clients = {};
     });
 
     it('should not forward events to peers if they are not ready', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocketNotReady;
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocketNotReady;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.length).toEqual(2); // We are expecting two events instead of three.
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
-        server.peers = {};
+        server.peers.clients = {};
     });
 
     // This scenario would happen only if section information would be requested by an app within a section.
@@ -193,20 +191,20 @@ describe('The OVE Core server', () => {
 
     it('should set clock sync results at a server-level', () => {
         server.syncResults = {};
-        expect(server.clockSyncResults.some_uuid1).toEqual(undefined);
-        expect(server.clockSyncResults.some_uuid2).toEqual(undefined);
+        expect(server.clock.syncResults.some_uuid1).toEqual(undefined);
+        expect(server.clock.syncResults.some_uuid2).toEqual(undefined);
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', syncResults: [{ id: 'some_uuid1', diff: 1 }, { id: 'some_uuid1', diff: 1 }, { id: 'some_uuid2', diff: 2 }] }));
-        expect(server.clockSyncResults.some_uuid1).toEqual([1, 1]);
-        expect(server.clockSyncResults.some_uuid2).toEqual([2]);
+        expect(server.clock.syncResults.some_uuid1).toEqual([1, 1]);
+        expect(server.clock.syncResults.some_uuid2).toEqual([2]);
         server.syncResults = {};
     });
 
     it('should do clock synchronisation', () => {
         const clock = require(path.join(srcDir, 'server', 'clock'))(server, log, Constants);
-        server.clockSyncResults = {
+        clock.syncResults = {
             uuid: [1, 2, 3, 4, 5]
         };
-        clock();
+        clock.sync();
         expect(sockets.messages.length).toEqual(2);
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', clockDiff: { uuid: -2 } }
@@ -214,11 +212,11 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', clockDiff: { uuid: -2 } }
         ));
-        expect(server.clockSyncResults.uuid).toEqual(undefined);
-        server.clockSyncResults = {
+        expect(clock.syncResults.uuid).toEqual(undefined);
+        clock.syncResults = {
             uuid: [1, 2, 3, 4, 5, 6]
         };
-        clock();
+        clock.sync();
         expect(sockets.messages.length).toEqual(2);
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', clockDiff: { uuid: -3 } }
@@ -226,14 +224,14 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', clockDiff: { uuid: -3 } }
         ));
-        expect(server.clockSyncResults.uuid).toEqual(undefined);
-        server.clockSyncResults = {
+        expect(clock.syncResults.uuid).toEqual(undefined);
+        clock.syncResults = {
             uuid1: [210, 212, 213, 212, 220],
             uuid2: [10, 11, 13, 12, 18],
             uuid3: [12, 15, 13, 10, 11],
             uuid4: [15, 16, 20, 16, 16]
         };
-        clock();
+        clock.sync();
         expect(sockets.messages.length).toEqual(2);
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', clockDiff: { uuid1: 197, uuid2: -3, uuid3: -3 } }
@@ -241,52 +239,52 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', clockDiff: { uuid1: 197, uuid2: -3, uuid3: -3 } }
         ));
-        expect(server.clockDiff).toEqual(16);
-        expect(server.clockSyncResults.uuid).toEqual(undefined);
-        server.clockSyncResults = {
+        expect(clock.diff).toEqual(16);
+        expect(clock.syncResults.uuid).toEqual(undefined);
+        clock.syncResults = {
             uuid1: [1, 1, 1, 1, 1],
             uuid2: [1, 1, 1, 1, 1],
             uuid3: [1, 1, 1, 1, 1],
             uuid4: [1, 1, 1, 1, 1]
         };
-        clock();
+        clock.sync();
         expect(sockets.messages.length).toEqual(0);
-        expect(server.clockDiff).toEqual(1);
-        expect(server.clockSyncResults.uuid).toEqual(undefined);
-        server.clockSyncResults = {
+        expect(clock.diff).toEqual(1);
+        expect(clock.syncResults.uuid).toEqual(undefined);
+        clock.syncResults = {
             uuid1: [1, 1, 1, 1],
             uuid2: [1, 1, 1]
         };
-        clock();
+        clock.sync();
         expect(sockets.messages.length).toEqual(0);
-        expect(server.clockDiff).toEqual(1);
-        expect(server.clockSyncResults.uuid).toEqual(undefined);
+        expect(clock.diff).toEqual(1);
+        expect(clock.syncResults.uuid).toEqual(undefined);
     });
 
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should be able to update peers', async () => {
-        expect(Object.keys(server.peers).length).toEqual(0);
+        expect(Object.keys(server.peers.clients).length).toEqual(0);
         await request(app).post('/peers').send({})
             .expect(HttpStatus.BAD_REQUEST, Utils.JSON.EMPTY);
-        expect(Object.keys(server.peers).length).toEqual(0);
+        expect(Object.keys(server.peers.clients).length).toEqual(0);
         await request(app).post('/peers').send([{ url: 'http://localhost:' + PEER_PORT }])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        expect(Object.keys(server.peers).length).toEqual(1);
-        expect(Object.keys(server.peers)[0]).toEqual('localhost:' + PEER_PORT);
+        expect(Object.keys(server.peers.clients).length).toEqual(1);
+        expect(Object.keys(server.peers.clients)[0]).toEqual('localhost:' + PEER_PORT);
         await request(app).post('/peers').send([{ url: 'http://localhost:' + PEER_PORT }, { url: 'somehost:' + PEER_PORT }, {}])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        expect(Object.keys(server.peers).length).toEqual(2);
-        expect(Object.keys(server.peers)[0]).toEqual('localhost:' + PEER_PORT);
-        expect(Object.keys(server.peers)[1]).toEqual('somehost:' + PEER_PORT);
+        expect(Object.keys(server.peers.clients).length).toEqual(2);
+        expect(Object.keys(server.peers.clients)[0]).toEqual('localhost:' + PEER_PORT);
+        expect(Object.keys(server.peers.clients)[1]).toEqual('somehost:' + PEER_PORT);
         await request(app).post('/peers').send([{ url: 'somehost:' + PEER_PORT + '/' }])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        expect(Object.keys(server.peers).length).toEqual(1);
-        expect(Object.keys(server.peers)[0]).toEqual('somehost:' + PEER_PORT);
+        expect(Object.keys(server.peers.clients).length).toEqual(1);
+        expect(Object.keys(server.peers.clients)[0]).toEqual('somehost:' + PEER_PORT);
         await request(app).post('/peers').send([])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        expect(Object.keys(server.peers).length).toEqual(0);
-        server.peers = {};
+        expect(Object.keys(server.peers.clients).length).toEqual(0);
+        server.peers.clients = {};
     });
 
     it('should trigger an event to its sockets when a section is deleted', async () => {
@@ -297,53 +295,53 @@ describe('The OVE Core server', () => {
     });
 
     it('should trigger an event to peers when a section is deleted', async () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         await request(app).delete('/sections')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(sockets.messages.length).toEqual(2);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.uuid] }));
-        server.peers = {};
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.peers.uuid] }));
+        server.peers.clients = {};
     });
 
     it('should perform a delete operation when a delete message is received from a peer', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
-        server.receiveFromPeer.push(function (m) {
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.receive.push(function (m) {
             sockets.messages.push(JSON.stringify(m));
         });
         sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.length).toEqual(3);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.uuid] }));
-        server.peers = {};
-        server.receiveFromPeer.pop();
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.peers.uuid] }));
+        server.peers.clients = {};
+        server.peers.receive.pop();
     });
 
     it('should not perform any operations when an invalid message is received from a peer', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
-        server.receiveFromPeer.push(function (m) {
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.receive.push(function (m) {
             sockets.messages.push(JSON.stringify(m));
         });
         sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { op: 'fake', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.length).toEqual(1);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ op: 'fake', req: { query: { space: undefined, groupId: undefined } } }));
-        server.peers = {};
-        server.receiveFromPeer.pop();
+        server.peers.clients = {};
+        server.peers.receive.pop();
     });
 
     it('should ignore messages without an operation when a message is received from a peer', () => {
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
-        server.receiveFromPeer.push(function (m) {
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.receive.push(function (m) {
             sockets.messages.push(JSON.stringify(m));
         });
         sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.length).toEqual(3);
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid', server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid', server.peers.uuid] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
-        server.peers = {};
-        server.receiveFromPeer.pop();
+        server.peers.clients = {};
+        server.peers.receive.pop();
     });
 
     it('should trigger an event to its sockets when all sections are refreshed', async () => {

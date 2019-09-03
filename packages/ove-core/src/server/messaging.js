@@ -1,104 +1,5 @@
-const HttpStatus = require('http-status-codes');
-
-module.exports = function (server, log, Utils, Constants) {
-    /**************************************************************
-                           Peers of OVE Core
-    **************************************************************/
-
-    // It is required that we are able to access variables like these during testing.
-    server.peers = {};
-    server.uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        let r = Math.random() * 16 | 0;
-        let v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-    // We maintain an array of handler that would be called when we receive a message
-    // from a a peer. Each handler should validate the message and ignore if it was not
-    // the message that it expected.
-    server.receiveFromPeer = [];
-    server.sendToPeer = function (m) {
-        Object.keys(server.peers).forEach(function (p) {
-            const c = server.peers[p];
-            if (c.readyState === Constants.WEBSOCKET_READY) {
-                if (Constants.Logging.TRACE_SERVER) {
-                    log.trace('Sending to peer:', p, ', message:', m);
-                }
-                // We set a forwardedBy property on the message to avoid it being forwarded
-                // in a loop. There can be more than one peer participating in a broadcast
-                // so we need to keep track of multiple peers who have forwarded the same
-                // message.
-                if (!m.forwardedBy) {
-                    m.forwardedBy = [];
-                }
-                m.forwardedBy.push(server.uuid);
-                c.safeSend(JSON.stringify(m));
-            }
-        });
-    };
-
-    const getSocket = function (peerHost) {
-        const socketURL = 'ws://' + peerHost;
-        log.debug('Establishing WebSocket connection with:', socketURL);
-
-        let ws = new (require('ws'))(socketURL);
-        ws.on('close', function (code) {
-            log.warn('Lost websocket connection: closed with code:', code);
-            log.warn('Attempting to reconnect in ' + Constants.SOCKET_REFRESH_DELAY + 'ms');
-            // If the socket is closed, we try to refresh it.
-            setTimeout(getSocket, Constants.SOCKET_REFRESH_DELAY);
-        });
-        ws.on('error', log.error);
-        return Utils.getSafeSocket(ws);
-    };
-
-    // Utility function to get peer socket URL
-    const _getPeerSocketURL = function (peerURL) {
-        let host = peerURL;
-        /* istanbul ignore else */
-        // The host should never be null, empty or undefined based on how this method is used.
-        // This check is an additional precaution.
-        if (host) {
-            if (host.indexOf('//') >= 0) {
-                host = host.substring(host.indexOf('//') + 2);
-            }
-            if (host.indexOf('/') >= 0) {
-                host = host.substring(0, host.indexOf('/'));
-            }
-        }
-        return host;
-    };
-
-    const updatePeers = function (req, res) {
-        if (!(req.body instanceof Array)) {
-            log.error('Invalid request to update peers:', JSON.stringify(req.body));
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, Utils.JSON.EMPTY);
-            return;
-        }
-        const peers = [];
-        req.body.forEach(function (peer) {
-            if (peer.url) {
-                peers.push(_getPeerSocketURL(peer.url));
-            }
-        });
-        peers.forEach(function (peer) {
-            if (!server.peers[peer]) {
-                log.debug('Adding peer:', peer);
-                server.peers[peer] = getSocket(peer);
-            }
-        });
-        Object.keys(server.peers).forEach(function (peer) {
-            if (peers.indexOf(peer) === -1) {
-                log.debug('Removing peer:', peer);
-                server.peers[peer].close();
-                delete server.peers[peer];
-            }
-        });
-        log.info('Successfully updated peers of node');
-        log.debug('Existing active peers:', Object.keys(server.peers).length);
-        Utils.sendEmptySuccess(res);
-    };
-
-    server.app.post('/peers', updatePeers);
+module.exports = function (server, log, Constants) {
+    const peers = server.peers;
 
     /**************************************************************
                         Messaging Functionality
@@ -113,7 +14,7 @@ module.exports = function (server, log, Utils, Constants) {
                 if (!m.sync.t1) {
                     s.safeSend(JSON.stringify({
                         appId: m.appId,
-                        sync: { id: m.sync.id, serverDiff: (server.clockDiff || 0) }
+                        sync: { id: m.sync.id, serverDiff: (server.clock.diff || 0) }
                     }));
                 } else {
                     s.safeSend(JSON.stringify({
@@ -130,20 +31,20 @@ module.exports = function (server, log, Utils, Constants) {
                 return;
             } else if (m.syncResults) {
                 m.syncResults.forEach(function (r) {
-                    if (!server.clockSyncResults[r.id]) {
-                        server.clockSyncResults[r.id] = [];
+                    if (!server.clock.syncResults[r.id]) {
+                        server.clock.syncResults[r.id] = [];
                     }
-                    server.clockSyncResults[r.id].push(r.diff);
+                    server.clock.syncResults[r.id].push(r.diff);
                 });
                 return;
             }
 
             if (m.forwardedBy) {
                 // We will ignore anything that we have already forwarded.
-                if (m.forwardedBy.includes(server.uuid)) {
+                if (m.forwardedBy.includes(peers.uuid)) {
                     return;
                 } else if (m.message.op) {
-                    server.receiveFromPeer.forEach(function (fn) {
+                    peers.receive.forEach(function (fn) {
                         fn(m.message);
                     });
                     return;
@@ -185,7 +86,7 @@ module.exports = function (server, log, Utils, Constants) {
                     }
                 });
                 // We forward the same message to all peers
-                server.sendToPeer(m);
+                peers.send(m);
                 return;
             }
 

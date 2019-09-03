@@ -76,42 +76,40 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
     });
 
     it('should be logging all events received from a peer', () => {
-        const receiveFromPeer = server.receiveFromPeer;
-        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
-        server.receiveFromPeer = receiveFromPeer;
+        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants);
         middleware(sockets.serverSocket);
 
         sockets.messages = [];
 
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         const spy = jest.spyOn(log, 'trace');
-        server.receiveFromPeer.push(function (m) {
+        server.peers.receive.push(function (m) {
             sockets.messages.push(JSON.stringify(m));
         });
         sockets.server.emit('message', JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: ['some_uuid'] }));
         expect(sockets.messages.length).toEqual(3);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { op: 'deleteSections', req: { query: { space: undefined, groupId: undefined } } }, forwardedBy: [server.peers.uuid] }));
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
-        server.peers = {};
-        server.receiveFromPeer.pop();
+        server.peers.clients = {};
+        server.peers.receive.pop();
     });
 
     it('should be logging all received events', () => {
-        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Utils, Constants);
+        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants);
         middleware(sockets.serverSocket);
 
         sockets.messages = [];
         const spy = jest.spyOn(log, 'trace');
-        server.peers['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
+        server.peers.clients['ws://localhost:' + PEER_PORT] = sockets.peerSocket;
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(sockets.messages.length).toEqual(2);
-        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.uuid] }));
+        expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ }, forwardedBy: [server.peers.uuid] }));
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', message: { action: Constants.Action.READ } }));
         expect(spy).toHaveBeenCalled();
-        server.peers = {};
+        server.peers.clients = {};
         spy.mockRestore();
     });
 

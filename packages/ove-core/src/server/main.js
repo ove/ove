@@ -63,16 +63,17 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     this.state.set('groups', []);
 
     // Clock synchronisation
-    this.clockSyncResults = {};
-    setInterval(require(path.join(__dirname, 'clock'))(this, log, Constants),
-        Constants.CLOCK_SYNC_INTERVAL);
+    this.clock = require(path.join(__dirname, 'clock'))(this, log, Constants);
+    setInterval(this.clock.sync, Constants.CLOCK_SYNC_INTERVAL);
+
+    // Peers
+    this.peers = require(path.join(__dirname, 'peers'))(this, log, Utils, Constants);
 
     // Messaging middleware
-    app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Utils, Constants));
+    app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Constants));
 
     // APIs
     require(path.join(__dirname, 'api'))(this, log, Utils, Constants);
 
-    // Required for extending and testing server functionality;
     return this;
 };

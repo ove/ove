@@ -3,16 +3,17 @@ const request = require('request');
 const HttpStatus = require('http-status-codes');
 
 module.exports = function (server, log, Utils, Constants) {
+    const peers = server.peers;
+    const operation = {};
+
     // It is required that we are able to clean-up variables like these during testing.
     server.spaceGeometries = {};
 
-    const operation = {};
-
     // Internal utility method to forward a payload to a peer.
     const _messagePeers = function (op, req) {
-        server.sendToPeer({ appId: Constants.APP_NAME, message: { op: op, req: req } });
+        peers.send({ appId: Constants.APP_NAME, message: { op: op, req: req } });
     };
-    server.receiveFromPeer.push(function (m) {
+    peers.receive.push(function (m) {
         let fn = operation[m.op];
         if (fn) {
             if (Constants.Logging.TRACE_SERVER) {
