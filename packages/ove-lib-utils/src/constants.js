@@ -66,6 +66,7 @@ Constants.RegExp.Annotation = {
 
 Constants.Frame = {
     PEER: 'peer',
+    PARENT: 'parent',
     CHILD: 'child'
 };
 

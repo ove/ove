@@ -14,6 +14,7 @@
         {
             "files": [ "**/view/*.js" ],
             "globals": {
+                "cullSections": true,
                 "initView": true,
                 "updateSections": true
             }

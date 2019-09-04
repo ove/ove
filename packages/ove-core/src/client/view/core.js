@@ -11,7 +11,64 @@ $(function () {
     });
 });
 
+cullSections = function (id, hide) {
+    let f = $('iframe:zIndex(' + id + ')');
+    if (f.length && (!f.css('opacity') || +f.css('opacity') === 1)) {
+        let region = parseFloat(f.css('width')) + 'x' + parseFloat(f.css('height')) + '+' +
+            parseFloat(f.css('marginLeft')) + '+' + parseFloat(f.css('marginTop'));
+        if (hide) {
+            let s = $('iframe:inRegion(' + region + '):behind(' + id + ')');
+            if (s.length) {
+                log.debug('Hiding ' + s.length + ' sections covered by section:', id);
+                s.hide();
+                s.each(function () {
+                    let e = $(this);
+                    e.attr({ hiddenSrc: e.attr('src') }).removeAttr('src');
+                });
+                s.attr('culledBy', id);
+            }
+        } else {
+            let s = $('iframe:inRegion(' + region + '):behind(' + id + '):hidden')
+                .filter(function () { return $(this).attr('culledBy') === id.toString(); });
+            if (s.length) {
+                log.debug('Displaying ' + s.length + ' sections covered by section:', id);
+                s.removeAttr('culledBy');
+                s.each(function () {
+                    let e = $(this);
+                    e.attr({ src: e.attr('hiddenSrc') }).removeAttr('hiddenSrc');
+                });
+                s.show();
+            }
+        }
+    }
+};
+
 initView = function () {
+    // Sizzle expressions for occlusion culling
+    $.expr[':'].zIndex = function (e, _i, match) {
+        return +$(e).css('zIndex') === parseInt(match[3], 10);
+    };
+    $.expr[':'].behind = function (e, _i, match) {
+        return +$(e).css('zIndex') < parseInt(match[3], 10);
+    };
+    $.expr[':'].inRegion = function (e, _i, match) {
+        let g = match[3].split('+');
+        const bounds = {
+            x: parseFloat(g[1]),
+            y: parseFloat(g[2]),
+            w: parseFloat(g[0].split('x')[0]),
+            h: parseFloat(g[0].split('x')[1])
+        };
+        const actual = {
+            x: parseFloat($(e).css('marginLeft')),
+            y: parseFloat($(e).css('marginTop')),
+            w: parseFloat($(e).css('width')),
+            h: parseFloat($(e).css('height'))
+        };
+        return (actual.x >= bounds.x) && (actual.x + actual.w <= bounds.x + bounds.w) &&
+            (actual.y >= bounds.y) && (actual.y + actual.h <= bounds.y + bounds.h);
+    };
+
     // We will attempt to load content by restoring the existing state either after a period of time
     // or when the browser is resized.
     const loadFunction = function () {
@@ -35,6 +92,9 @@ initView = function () {
         }
         if (message.transparentBackground) {
             $('body').css('background', 'none');
+        }
+        if (message.cull) {
+            cullSections(message.cull.sectionId, true);
         }
     });
     window.addEventListener('resize', function () {
@@ -95,6 +155,7 @@ updateSections = function (m) {
             const frame = $(Constants.SECTION_FRAME_ID + m.id);
             if (frame.length) {
                 log.info('Updating section:', m.id, ', on client:', client, ', space:', space);
+                cullSections(m.id, false);
                 if (m.spaces) {
                     // If an iFrame exists, we may need to resize or remove it.
                     let geometry = (m.spaces[space] || [])[client] || {};
@@ -152,6 +213,7 @@ updateSections = function (m) {
             if (m.id !== undefined) {
                 const frame = $(Constants.SECTION_FRAME_ID + m.id);
                 if (frame.length) {
+                    cullSections(m.id, false);
                     log.info('Deleting section:', m.id);
                     log.debug('Removing iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
                     frame.remove();

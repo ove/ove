@@ -109,6 +109,10 @@ function OVE (appId, hostname, sectionId) {
                 frame.postMessage(data, '*');
             };
 
+            // BACKWARDS-COMPATIBILITY: For <= v0.4.1
+            if (!Constants.Frame.PARENT) {
+                Constants.Frame.PARENT = 'parent';
+            }
             switch (target) {
                 case Constants.Frame.PEER:
                     if (window.parent !== window) {
@@ -120,6 +124,11 @@ function OVE (appId, hostname, sectionId) {
                 case Constants.Frame.CHILD:
                     for (let i = 0; i < window.frames.length; i++) {
                         postMessage(window.frames[i], message, appId);
+                    }
+                    break;
+                case Constants.Frame.PARENT:
+                    if (window.parent !== window) {
+                        postMessage(window.parent, message, targetAppId);
                     }
                     break;
                 default:
