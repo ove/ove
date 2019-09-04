@@ -12,8 +12,19 @@ $(function () {
 });
 
 cullSections = function (id, hide) {
+    // There is no use in displaying content that is completely covered by other content
+    // that is in front of it. The only exception is if the content on top is not fully
+    // opaque or does not entirely cover the object behind it on a given screen. We first
+    // determine the suitability to cull content. And, all content that is being culled
+    // will be labelled appropriately such that they can be displayed once again if the
+    // section that was originally covering it gets updated or deleted. If there are
+    // multiple sections above a given section, then it is important to understand which
+    // section was responsible for culling the given content. As culling happens in the
+    // order of sections being created the responsibility would generally be with the
+    // overlapping section that is the nearest.
     let f = $('iframe:zIndex(' + id + ')');
     if (f.length && (!f.css('opacity') || +f.css('opacity') === 1)) {
+        // The region has a format of {w}x{h}+{x}+{y}
         let region = parseFloat(f.css('width')) + 'x' + parseFloat(f.css('height')) + '+' +
             parseFloat(f.css('marginLeft')) + '+' + parseFloat(f.css('marginTop'));
         if (hide) {
