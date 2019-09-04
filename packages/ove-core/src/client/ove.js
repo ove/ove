@@ -109,7 +109,7 @@ function OVE (appId, hostname, sectionId) {
                 frame.postMessage(data, '*');
             };
 
-            // BACKWARDS-COMPATIBILITY: For <= v0.4.1
+            //-- BACKWARDS-COMPATIBILITY: For <= v0.4.1 --//
             if (!Constants.Frame.PARENT) {
                 Constants.Frame.PARENT = 'parent';
             }
