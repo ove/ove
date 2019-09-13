@@ -103,8 +103,9 @@
                 .enter()
                 .append('div');
 
-            divs.append('h3')
-                .text(d => d);
+            divs.append('h3').html(d => {
+                  return `${d} (<a target="_blank" href="/ui/preview?oveSpace=${d}">Preview</a>)`
+            });
 
             // Create an SVG for each space, setting width and height separately
             let svgs = divs.append('svg')
@@ -255,6 +256,7 @@
     <p>The Links below provide more information on OVE:</p>
     <ul>
         <li><a href='https://ove.readthedocs.io/en/stable/'>User Documentation</a></li>
+        <li><a href='ui/launcher'>Launch new OVE Application instances</a></li>
         <li><a href='api-docs/'>API Documentation for OVE Core</a>, which can also be used to make API requests. Documentation for other OVE services and applications can be accessed from the <code>/api-docs/</code> route of the appropriate hostname.</li>
         <li><a href='ui/status'>Status of OVE Components</a></li>
         <li><a href='https://github.com/ove/ove/issues'>Report Issues for OVE Core</a></li>
