@@ -718,6 +718,38 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
+    it('should fetch app state only when requested', async () => {
+        // We test with a state that is empty string, so that we do not rely on an application service running
+        const state = { 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section')
+            .send(state);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        res = await request(app).get('/sections/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text).app.states;
+        expect(appState).toBeUndefined();
+
+        res = await request(app).get('/sections/0?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        appState = JSON.parse(res.text).app.states;
+        expect(appState).toEqual({ 'load': '' });
+
+        res = await request(app).get('/sections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        appState = JSON.parse(res.text)[0].app.states;
+        expect(appState).toBeUndefined();
+
+        res = await request(app).get('/sections?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        appState = JSON.parse(res.text)[0].app.states;
+        expect(appState).toEqual({ 'load': '' });
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
     afterEach(async () => {
         // Additional 'delete /sections' is a safety net - one test failure should not lead to many.
         await request(app).delete('/sections');
