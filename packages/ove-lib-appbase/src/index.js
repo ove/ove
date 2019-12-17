@@ -54,8 +54,8 @@ module.exports = function (baseDir, appName) {
                 clock.syncResults = [];
             }
             if (clock.syncResults.length < Constants.CLOCK_SYNC_ATTEMPTS) {
+                /* istanbul ignore next */
                 const clockSyncRequest = function () {
-                    /* istanbul ignore next */
                     // Our tests do not wait for the timeout for this code to run
                     // The functionality of safeSend is tested elsewhere.
                     try {
@@ -275,9 +275,14 @@ module.exports = function (baseDir, appName) {
     };
 
     const updateStateOfSection = function (req, res) {
-        log.debug('Updating state of section:', req.params.id);
-        _updateStateOfSection(req.params.id, req.body);
-        Utils.sendEmptySuccess(res);
+        if (Utils.isNullOrEmpty(req.body) && !req.is('json')) {
+            log.warn('Invalid content type. Ignoring request');
+            Utils.sendMessage(res, HttpStatus.UNSUPPORTED_MEDIA_TYPE, JSON.stringify({ error: 'invalid content type' }));
+        } else {
+            log.debug('Updating state of section:', req.params.id);
+            _updateStateOfSection(req.params.id, req.body);
+            Utils.sendEmptySuccess(res);
+        }
     };
 
     // Internal utility function to transform a state
