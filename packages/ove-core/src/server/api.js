@@ -768,7 +768,7 @@ module.exports = function (server, log, Utils, Constants) {
         }
         log.debug('Successfully read configuration for section id:', sectionId);
 
-        if (!fetchAppStates) {
+        if (!fetchAppStates || !app) {
             sendResults();
         }
     };
