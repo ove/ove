@@ -15,10 +15,18 @@
             padding: 45px;
         }
 
+        .markdown-body table td, .markdown-body table th {
+            border: none;
+        }
+
         @media (max-width: 767px) {
             .markdown-body {
                 padding: 15px;
             }
+        }
+
+        .dataTables_paginate, .dataTables_info, .dataTables_length {
+            font-size: 12px;
         }
 
         .client {
@@ -223,6 +231,8 @@
             ];
 
             const tables = divs.append('table')
+                .attr('class', 'dataTable display cell-border no-footer')
+                .attr('style', 'display:table')
                 .attr('id', d => `section-table-${d}`);
 
             tables.append("thead")
