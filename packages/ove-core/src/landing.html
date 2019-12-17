@@ -15,10 +15,22 @@
             padding: 45px;
         }
 
+        .markdown-body table td, .markdown-body table th {
+            border: none;
+        }
+
         @media (max-width: 767px) {
             .markdown-body {
                 padding: 15px;
             }
+        }
+
+        .dataTables_paginate, .dataTables_info, .dataTables_length {
+            font-size: 12px;
+        }
+
+        .dataTables_length {
+            padding-top: 0.5em;
         }
 
         .client {
@@ -40,7 +52,10 @@
     </style>
     
     <script src='d3.min.js'></script>
-    
+    <script src='jquery.js'></script>
+    <script src='jquery.dataTables.js'></script>
+
+    <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.css">
     <script>
         function getScaleForSpace(geometry, width, height) {
             // Pick a scale which will scale the bounding-box of the screens in this space to fit
@@ -72,16 +87,6 @@
                     });
             }
         }
-
-        function setAppName(element, url) {
-            if (url) {
-                d3.json(url + '/name').then(name => {
-                    const nameInTitleCase = name.charAt(0).toUpperCase() + name.substring(1);
-                    element.innerHTML = nameInTitleCase + ' (<a target=\'_blank\' href=\'' + url + '/api-docs/\'>API</a>)';
-                });
-            }
-        }
-
 
         function drawSpaces(spaces, sections) {
             const margin = 50;
@@ -182,57 +187,76 @@
             });
         }
 
-        function tabulateSections(spaces, sections) {
+        function tabulateSections(spaces, sections){
+            const appURLs = [...new Set(sections.map(d => !d.app ? '' : d.app.url))];
+            let urlsToProcess = appURLs.length;
+            let appNames = {};
+
+            appURLs.map(url => {
+                d3.json(url + '/name')
+                    .then( name => {
+                        appNames[url] = name.charAt(0).toUpperCase() + name.substring(1);
+                        urlsToProcess--;
+
+                        if (urlsToProcess === 0){
+                            createSectionsTables(spaces, sections, appNames);
+                        }
+                    }, name => {
+                        appNames[url] = url;
+                        urlsToProcess--;
+
+                        if (urlsToProcess === 0){
+                            createSectionsTables(spaces, sections, appNames);
+                        }
+                    });
+            });
+        }
+
+        function createSectionsTables(spaces, sections, appNames) {
             let spaceNames = Object.keys(spaces)
                 .filter(space => sections.filter(section => (section.space === space)).length > 0);
 
             let divs = d3.select('#sections')
                 .selectAll('div')
                 .data(spaceNames)
-                .enter()
-                .append('div');
+                .enter();
 
-            divs.append('h3').text(d => d);
+            const blocks = divs.append('div');
 
-            const headers = [
-                {title: 'Id', field: d => !d.app ? '' : ('<a target=\'_blank\' href=\'' + d.app.url + '/control.html?oveSectionId=' + d.id + '\'>' + d.id + '</a>')},
-                {title: 'x', field: d => d.x},
-                {title: 'y', field: d => d.y},
-                {title: 'Width', field: d => d.w},
-                {title: 'Height', field: d => d.h},
-                {title: 'App', field: d => !d.app ? '' : d.app.url}
+            blocks.append('h3').text(d => d);
+
+            const columns = ['Id', 'x', 'y', 'Width', 'Height', 'App'];
+
+            const convert = d => [
+                !d.app ? '' : ('<a target=\'_blank\' href=\'' + d.app.url + '/control.html?oveSectionId=' + d.id + '\'>' + d.id + '</a>'),
+                d.x,
+                d.y,
+                d.w,
+                d.h,
+                !d.app ? '' : appNames[d.app.url] + ' (<a target=\'_blank\' href=\'' + d.app.url + '/api-docs/\'>API</a>)'
             ];
 
-            let tables = divs.append('table');
+            const tables = blocks.append('table')
+                .attr('class', 'dataTable display cell-border no-footer')
+                .attr('style', 'display:table')
+                .attr('id', d => `section-table-${d}`);
 
-            let headerRow = tables
-                .append('thead')
-                .append('tr')
-                .selectAll('th')
-                .data(headers)
-                .enter()
-                .append('th')
-                .text(d => d.title);
+            tables.append("thead")
+                .selectAll("th")
+                .data(columns)
+                .enter("th")
+                .text(d => d);
+            tables.append("tbody");
 
-            let rows = tables
-                .append('tbody')
-                .selectAll('tr')
-                .data(space => (sections.filter(s => (s.space === space))))
-                .enter()
-                .append('tr');
+            spaceNames.map(spaceName => {
+                const values = sections.filter(s => (s.space === spaceName)).map(convert);
 
-            let funcs = headers.map(c => c.field);
-
-            rows.selectAll('td')
-                .data(d => funcs.map(f => f(d, this)))
-                .enter()
-                .append('td')
-                .html(d => d)
-                .filter( (d,i) => (i === 5) )
-                // IMPORTANT: Do not replace following line as arrow functions do not have 'this'.
-                .each( function(d){ setAppName(this, d); });
+                $(`#section-table-${spaceName}`).DataTable({
+                    data: values,
+                    columns: columns.map(d => ({title: d}))
+                });
+            });
         }
-
     </script>
 
 </head>

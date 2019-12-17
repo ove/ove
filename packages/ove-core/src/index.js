@@ -28,6 +28,12 @@ app.use('/', express.static(path.join(dirs.nodeModules, 'github-markdown-css')))
 log.debug('Using module:', 'd3');
 app.use('/', express.static(path.join(dirs.nodeModules, 'd3', 'dist')));
 
+log.debug('Using module:', 'datatables');
+app.use('/', express.static(path.join(dirs.nodeModules, 'datatables.net', 'js')));
+app.use('/', express.static(path.join(dirs.nodeModules, 'datatables.net-dt'))); // for images and css
+
+app.use('/', express.static(path.join(dirs.nodeModules, 'jquery', 'dist')));
+
 // The spaces configuration can be loaded either from a URL specified by an environment
 // variable or through a local file.
 /* jshint ignore:start */
