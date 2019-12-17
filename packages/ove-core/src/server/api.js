@@ -1,6 +1,7 @@
 const path = require('path');
 const request = require('request');
 const HttpStatus = require('http-status-codes');
+const axios = require('axios');
 
 module.exports = function (server, log, Utils, Constants) {
     const peers = server.peers;
@@ -332,6 +333,8 @@ module.exports = function (server, log, Utils, Constants) {
         const groupId = req.query.groupId;
         const geometry = req.query.geometry;
         const sections = server.state.get('sections');
+        const fetchAppStates = ((req.query.includeAppStates + '').toLowerCase() === 'true');
+
         let sectionsToFetch = [];
         if (groupId) {
             if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
@@ -374,7 +377,13 @@ module.exports = function (server, log, Utils, Constants) {
                 });
             }
         }
+
+        const sendResults = () => { Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result)); };
+
         let result = [];
+
+        let numSectionsToFetchState = sectionsToFetch.length;
+
         sectionsToFetch.forEach(function (i) {
             let s = sections[i];
             let section = { id: i, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0] };
@@ -383,9 +392,27 @@ module.exports = function (server, log, Utils, Constants) {
                 section.app = { url: app.url, state: app.state, opacity: app.opacity };
             }
             result.push(section);
+            const ind = result.length - 1;
+
+            if (app && fetchAppStates) {
+                axios.get(s.app.url + '/instances/' + i + '/state').then(r => {
+                    result[ind].app.states = { load: r.data };
+                    numSectionsToFetchState--;
+                    if (numSectionsToFetchState === 0) { sendResults(); }
+                }).catch((err) => {
+                    log.warn(err);
+                    numSectionsToFetchState--;
+                    if (numSectionsToFetchState === 0) { sendResults(); }
+                });
+            } else if (fetchAppStates) {
+                numSectionsToFetchState--;
+            }
         });
         log.debug('Successfully read configuration for sections:', sectionsToFetch);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+
+        if (!fetchAppStates || numSectionsToFetchState === 0) { // also catches case where there are no sections to fetch
+            sendResults();
+        }
     };
 
     // Internal utility function to update section by a given id. This function is used
@@ -711,21 +738,39 @@ module.exports = function (server, log, Utils, Constants) {
     operation.readSectionById = function (req, res) {
         let sectionId = req.params.id;
         let s = server.state.get('sections[' + sectionId + ']');
+        const fetchAppStates = ((req.query.includeAppStates + '').toLowerCase() === 'true');
+
+        const sendResults = () => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
+
         if (Utils.isNullOrEmpty(s)) {
             log.debug('Unable to read configuration for section id:', sectionId);
             Utils.sendEmptySuccess(res);
             return;
         }
 
+        const id = parseInt(sectionId, 10);
         let section = {
-            id: parseInt(sectionId, 10), x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0]
+            id, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0]
         };
         const app = s.app;
         if (app) {
             section.app = { url: app.url, state: app.state, opacity: app.opacity };
+
+            if (fetchAppStates) {
+                axios.get(s.app.url + '/instances/' + id + '/state').then(r => {
+                    section.app.states = { load: r.data };
+                    sendResults();
+                }).catch((err) => {
+                    log.warn(err);
+                    sendResults();
+                });
+            }
         }
         log.debug('Successfully read configuration for section id:', sectionId);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
+
+        if (!fetchAppStates || !app) {
+            sendResults();
+        }
     };
 
     // Updates an app associated with a section

@@ -157,6 +157,12 @@ paths:
         example: "x,y,w,h"
         description: "Geometry used to filter result"
         required: false
+      - name: "includeAppStates"
+        in: "query"
+        type: "boolean"
+        example: "true"
+        description: "If true, includes that state of each application instance (fetched from the corresponding app server). Defaults to false."
+        required: false
       responses:
         200:
           description: "successful operation"
@@ -239,6 +245,12 @@ paths:
         format: "int32"
         description: "Section ID"
         required: true
+      - name: "includeAppStates"
+        in: "query"
+        type: "boolean"
+        example: "true"
+        description: "If true, includes that state of each application instance (fetched from the corresponding app server). Defaults to false."
+        required: false
       responses:
         200:
           description: "successful operation"

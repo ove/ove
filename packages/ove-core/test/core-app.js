@@ -718,6 +718,165 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
+    it('should not fetch app state if it is not requested', async () => {
+        const state = { 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section').send(state);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        let scope = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.OK, JSON.stringify({ 'foo': 'bar' }));
+        res = await request(app).get('/sections/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text).app.states;
+        expect(appState).toBeUndefined();
+        expect(scope.isDone()).not.toBeTruthy();
+
+        res = await request(app).get('/sections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        appState = JSON.parse(res.text)[0].app.states;
+        expect(appState).toBeUndefined();
+        expect(scope.isDone()).not.toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should fetch app state if it is requested when fetching a single section', async () => {
+        const state1 = { 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+        const state2 = { 'h': 10, 'app': { 'url': 'http://localhost:8082', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section').send(state1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/section').send(state2);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        let appStatePayload = { 'foo': 'bar' };
+        let scope = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.OK, JSON.stringify(appStatePayload));
+        res = await request(app).get('/sections/0?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text).app.states.load;
+        expect(appState).toEqual(appStatePayload);
+        expect(scope.isDone()).toBeTruthy();
+
+        appStatePayload = { 'bar': 'foo' };
+        scope = nock('http://localhost:8082').get('/instances/1/state').reply(HttpStatus.OK, JSON.stringify(appStatePayload));
+        res = await request(app).get('/sections/1?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        appState = JSON.parse(res.text).app.states.load;
+        expect(appState).toEqual(appStatePayload);
+        expect(scope.isDone()).toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should fetch app state if it is requested when fetching all sections', async () => {
+        const state1 = { 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+        const state2 = { 'h': 10, 'app': { 'url': 'http://localhost:8082', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section').send(state1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/section').send(state2);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        const appStatePayload1 = { 'foo': 'bar' };
+        const appStatePayload2 = { 'bar': 'foo' };
+        let scope1 = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.OK, JSON.stringify(appStatePayload1));
+        let scope2 = nock('http://localhost:8082').get('/instances/1/state').reply(HttpStatus.OK, JSON.stringify(appStatePayload2));
+        res = await request(app).get('/sections?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text)[0].app.states.load;
+        expect(appState).toEqual(appStatePayload1);
+        appState = JSON.parse(res.text)[1].app.states.load;
+        expect(appState).toEqual(appStatePayload2);
+        expect(scope1.isDone()).toBeTruthy();
+        expect(scope2.isDone()).toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should not return app state if there was an error when fetching it, if it is requested when fetching a single section', async () => {
+        const state = { 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section').send(state);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        let scope = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.NOT_FOUND);
+        res = await request(app).get('/sections/0?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text).app.states;
+        expect(appState).toBeUndefined();
+        expect(scope.isDone()).toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should not return app state if there was an error when fetching it, if it is requested when fetching all sections', async () => {
+        const state1 = { 'h': 10, 'app': { 'url': 'http://localhost:8081', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+        const state2 = { 'h': 10, 'app': { 'url': 'http://localhost:8082', 'states': { 'load': '' } }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section').send(state1);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/section').send(state2);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        let scope1 = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.NOT_FOUND);
+        let scope2 = nock('http://localhost:8082').get('/instances/1/state').reply(HttpStatus.NOT_FOUND);
+        res = await request(app).get('/sections?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text)[0].app.states;
+        expect(appState).toBeUndefined();
+        expect(scope1.isDone()).toBeTruthy();
+        expect(scope2.isDone()).toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should not return app state if the section had no app, if it is requested when fetching a single section', async () => {
+        const state = { 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section')
+            .send(state);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        let scope = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.NOT_FOUND);
+        res = await request(app).get('/sections/0?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text).app;
+        expect(appState).toBeUndefined();
+        expect(scope.isDone()).not.toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should not return app state if the section had no app, if it is requested when fetching all sections', async () => {
+        const state = { 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 };
+
+        let res = await request(app).post('/section')
+            .send(state);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+
+        let scope = nock('http://localhost:8081').get('/instances/0/state').reply(HttpStatus.NOT_FOUND);
+        res = await request(app).get('/sections?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        let appState = JSON.parse(res.text)[0].app;
+        expect(appState).toBeUndefined();
+        expect(scope.isDone()).not.toBeTruthy();
+
+        await request(app).delete('/sections')
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should do nothing new if app state was requested but no apps existed when fetching all sections', async () => {
+        let res = await request(app).get('/sections?includeAppStates=true');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY_ARRAY);
+    });
+
     afterEach(async () => {
         // Additional 'delete /sections' is a safety net - one test failure should not lead to many.
         await request(app).delete('/sections');
