@@ -29,6 +29,10 @@
             font-size: 12px;
         }
 
+        .dataTables_length {
+            padding-top: 0.5em;
+        }
+
         .client {
             fill: lightgrey;
             stroke: black;
@@ -217,7 +221,9 @@
                 .data(spaceNames)
                 .enter();
 
-            divs.append('h3').text(d => d);
+            const blocks = divs.append('div');
+
+            blocks.append('h3').text(d => d);
 
             const columns = ['Id', 'x', 'y', 'Width', 'Height', 'App'];
 
@@ -230,7 +236,7 @@
                 !d.app ? '' : appNames[d.app.url] + ' (<a target=\'_blank\' href=\'' + d.app.url + '/api-docs/\'>API</a>)'
             ];
 
-            const tables = divs.append('table')
+            const tables = blocks.append('table')
                 .attr('class', 'dataTable display cell-border no-footer')
                 .attr('style', 'display:table')
                 .attr('id', d => `section-table-${d}`);
