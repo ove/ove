@@ -436,6 +436,8 @@ paths:
       responses:
         200:
           description: "successful operation"
+        415:
+          description: "invalid content type"
 definitions:
   Transformation:
     description: "A transformation from one state to another"

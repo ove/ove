@@ -284,9 +284,18 @@ describe('The OVE App Base library', () => {
             path.join(srcDir, '..', 'test', 'resources', 'src', 'config.json'))));
     });
 
-    it('should be able to store state of a section until it has been flushed', async () => {
+    it('it should fail if the content type was not JSON', async () => {
         const payload = '{"url": "http://dummy.com"}';
-        await request(app).post('/instances/0/state', payload);
+        let res = await request(app).post('/instances/0/state', payload);
+        expect(res.statusCode).toEqual(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+
+        res = await request(app).get('/instances/0/state');
+        expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
+    });
+
+    it('should be able to store state of a section until it has been flushed', async () => {
+        const payload = { url: 'http://dummy.com' };
+        await request(app).post('/instances/0/state').send(payload);
 
         let res = await request(app).get('/instances/0/state');
         expect(res.statusCode).not.toEqual(HttpStatus.NO_CONTENT);
