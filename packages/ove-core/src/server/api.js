@@ -373,7 +373,9 @@ module.exports = function (server, log, Utils, Constants) {
                 sectionsToFetch = sectionsToFetch.filter(function (i) {
                     const e = sections[i];
                     // Top-Left and Bottom-Right of section should be within the given range.
-                    return (e.x >= r.x && e.y >= r.y && (e.x + e.w) <= (r.x + r.w) && (e.y + e.h) <= (r.y + r.h));
+                    // We make sure that we are using numbers and not strings in our math.
+                    return (+e.x >= +r.x && +e.y >= +r.y && (+e.x + (+e.w)) <= (+r.x + (+r.w)) &&
+                        (+e.y + (+e.h)) <= (+r.y + (+r.h)));
                 });
             }
         }
