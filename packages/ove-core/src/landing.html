@@ -123,22 +123,22 @@
                 .append('rect')
                 .attr('x', d => x(d.x))
                 .attr('y', d => y(d.y))
-                .attr('width', d => (x(d.x + d.w) - x(d.x)))
-                .attr('height', d => (y(d.y + d.h) - y(d.y)))
+                .attr('width', d => x(d.w))
+                .attr('height', d => x(d.h))
                 .classed('client', true)
                 .append('title')
                 .text((d, i) => 'Client Id: ' + i);
 
-            const minClientHeight = d3.min(Object.values(spaces).map(s => d3.min(s.map( d => (x(d.y + d.h) - x(d.y))))));
-            const minClientWidth = d3.min(Object.values(spaces).map(s => d3.min(s.map( d => (x(d.x + d.w) - x(d.x))))));
+            const minClientHeight = d3.min(Object.values(spaces).map(s => d3.min(s.map( d => x(d.h)))));
+            const minClientWidth = d3.min(Object.values(spaces).map(s => d3.min(s.map( d => x(d.w)))));
             const clientTextSize = Math.min(minClientHeight, minClientWidth) / 4;
             svgs.selectAll('.space-label')
                 .data(d => spaces[d])
                 .enter()
                 .append('text')
                 .text((d,i) => i)
-                .attr('x', d => (x(d.x + d.w/2) - clientTextSize*0.25))
-                .attr('y', d => (y(d.y + d.h/2) + clientTextSize*0.5))
+                .attr('x', d => (x((+d.x) + (+d.w)/2) - clientTextSize*0.25))
+                .attr('y', d => (y((+d.y) + (+d.h)/2) + clientTextSize*0.5))
                 .style('font-size', clientTextSize + 'px')
                 .classed('space-label', true);
 
@@ -149,23 +149,23 @@
                 .append('rect')
                 .attr('x', d => x(d.x))
                 .attr('y', d => y(d.y))
-                .attr('width', d => (x(d.x + d.w) - x(d.x)))
-                .attr('height', d => (y(d.y + d.h) - y(d.y)))
+                .attr('width', d => x(d.w))
+                .attr('height', d => y(d.h))
                 .style('fill', (d,i) => colors[i % colors.length])
                 .classed('section', true)
                 .append('title')
                 .text(d => 'Section Id: ' + d.id);
 
-            const minSectionHeight = d3.min(sections.map( d => (x(d.y + d.h) - x(d.y))));
-            const minSectionWidth = d3.min(sections.map( d => (x(d.x + d.w) - x(d.x))));
+            const minSectionHeight = d3.min(sections.map( d => x(d.h)));
+            const minSectionWidth = d3.min(sections.map( d => x(d.w)));
             const sectionTextSize = Math.min(minSectionHeight, minSectionWidth) / 4;
             svgs.selectAll('.section-label')
                 .data(d => sections.filter(s => (s.space === d)))
                 .enter()
                 .append('text')
                 .text(d => d.id)
-                .attr('x', d => (x(d.x + d.w/2) - sectionTextSize*0.25))
-                .attr('y', d => (y(d.y + d.h/2) + sectionTextSize*0.5))
+                .attr('x', d => (x((+d.x) + (+d.w)/2) - sectionTextSize*0.25))
+                .attr('y', d => (y((+d.y) + (+d.h)/2) + sectionTextSize*0.5))
                 .style('font-size', sectionTextSize + 'px')
                 .classed('section-label', true);
 
