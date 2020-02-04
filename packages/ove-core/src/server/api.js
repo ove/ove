@@ -397,7 +397,9 @@ module.exports = function (server, log, Utils, Constants) {
             const ind = result.length - 1;
 
             if (app && fetchAppStates) {
-                axios.get(s.app.url + '/instances/' + i + '/state').then(r => {
+                axios.get(s.app.url + '/instances/' + i + '/state', {
+                    adapter: require('axios/lib/adapters/http')
+                }).then(r => {
                     result[ind].app.states = { load: r.data };
                     numSectionsToFetchState--;
                     if (numSectionsToFetchState === 0) { sendResults(); }
@@ -759,7 +761,9 @@ module.exports = function (server, log, Utils, Constants) {
             section.app = { url: app.url, state: app.state, opacity: app.opacity };
 
             if (fetchAppStates) {
-                axios.get(s.app.url + '/instances/' + id + '/state').then(r => {
+                axios.get(s.app.url + '/instances/' + id + '/state', {
+                    adapter: require('axios/lib/adapters/http')
+                }).then(r => {
                     section.app.states = { load: r.data };
                     sendResults();
                 }).catch((err) => {
