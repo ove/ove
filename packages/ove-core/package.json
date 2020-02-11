@@ -26,7 +26,7 @@
     "github-markdown-css": "3.0.1",
     "http-status-codes": "1.4.0",
     "jquery": "3.4.1",
-    "request": "2.88.0",
+    "request": "2.88.2",
     "uglify-js": "3.5.10"
   },
   "devDependencies": {

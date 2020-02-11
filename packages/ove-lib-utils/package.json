@@ -31,7 +31,7 @@
     "http-status-codes": "1.4.0",
     "jquery": "3.4.1",
     "js-yaml": "3.13.1",
-    "request": "2.88.0",
+    "request": "2.88.2",
     "swagger-ui-express": "4.0.2"
   },
   "jest": {
