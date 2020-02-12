@@ -21,7 +21,7 @@
     "cors": "2.8.5",
     "d3": "5.9.2",
     "datatables.net-dt": "1.10.20",
-    "express": "4.16.4",
+    "express": "4.17.1",
     "express-ws": "4.0.0",
     "github-markdown-css": "3.0.1",
     "http-status-codes": "1.4.0",
