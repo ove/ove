@@ -30,7 +30,7 @@
     "uglify-js": "3.5.10"
   },
   "devDependencies": {
-    "mock-socket": "8.1.1",
+    "mock-socket": "9.0.3",
     "nock": "11.8.2"
   },
   "jest": {
