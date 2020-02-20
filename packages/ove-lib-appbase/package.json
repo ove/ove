@@ -1,6 +1,6 @@
 {
   "name": "@ove-lib/appbase",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "main": "lib/index.js",
   "scripts": {
     "clean": "npx rimraf lib",
@@ -25,7 +25,7 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "@ove-lib/utils": "^0.4.1",
+    "@ove-lib/utils": "^0.5.0",
     "cors": "2.8.5",
     "express": "4.17.1",
     "http-status-codes": "1.4.0",

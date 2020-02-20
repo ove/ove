@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+<a name="0.5.0"></a>
+# [0.5.0](https://github.com/ove/ove/compare/v0.4.1...v5.0.0) (2019-02-20)
+
+### Features
+
+**feat:** Ability to fetch state of an application within a section.
+**feat:** Ability to refresh sections.
+**feat:** Clock synchronisation.
+**feat:** Filtered message broadcast.
+**feat:** Visibility and occlusion culling.
+
+### Fixes
+
+**fix:** Fixes related to issues arising from incorrect numeric precision.
+**fix:** Version upgrades to all dependencies.
+
 <a name="0.4.1"></a>
 # [0.4.1](https://github.com/ove/ove/compare/v0.4.0...v0.4.1) (2019-05-02)
 
