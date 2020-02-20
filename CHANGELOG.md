@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
 <a name="0.5.0"></a>
-# [0.5.0](https://github.com/ove/ove/compare/v0.4.1...v5.0.0) (2019-02-20)
+# [0.5.0](https://github.com/ove/ove/compare/v0.4.1...v5.0.0) (2020-02-20)
 
 ### Features
 
