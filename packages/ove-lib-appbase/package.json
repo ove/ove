@@ -4,7 +4,7 @@
   "main": "lib/index.js",
   "scripts": {
     "clean": "npx rimraf lib",
-    "build": "npx babel-cli src --out-dir lib --copy-files",
+    "build": "npx babel src --out-dir lib --copy-files",
     "test": "jest --runInBand --coverage --colors",
     "lint": "eslint src/. --ext .js"
   },
@@ -29,7 +29,7 @@
     "cors": "2.8.5",
     "express": "4.17.1",
     "http-status-codes": "1.4.0",
-    "jquery": "3.4.1"
+    "jquery": "3.5.0"
   },
   "jest": {
     "collectCoverageFrom": [
