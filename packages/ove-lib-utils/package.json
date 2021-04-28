@@ -4,7 +4,8 @@
   "main": "lib/index.js",
   "scripts": {
     "clean": "npx rimraf lib",
-    "build": "npx babel src --out-dir lib --copy-files",
+    "build": "npx babel-cli src --out-dir lib --copy-files",
+    "build:new": "npx babel src --out-dir lib --copy-files",
     "test": "jest --runInBand --coverage --colors",
     "lint": "eslint src/. --ext .js"
   },
