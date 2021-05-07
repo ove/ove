@@ -17,21 +17,21 @@
   "license": "MIT",
   "dependencies": {
     "@ove-lib/utils": "^0.5.0",
-    "axios": "0.19.2",
+    "axios": "0.21.1",
     "cors": "2.8.5",
-    "d3": "5.15.0",
-    "datatables.net-dt": "1.10.20",
+    "d3": "5.16.0",
+    "datatables.net-dt": "1.10.24",
     "express": "4.17.1",
     "express-ws": "4.0.0",
-    "github-markdown-css": "3.0.1",
+    "github-markdown-css": "4.0.0",
     "http-status-codes": "1.4.0",
-    "jquery": "3.4.1",
+    "jquery": "3.5.0",
     "request": "2.88.2",
-    "uglify-js": "3.7.7"
+    "uglify-js": "3.13.4"
   },
   "devDependencies": {
     "mock-socket": "9.0.3",
-    "nock": "11.8.2"
+    "nock": "11.9.1"
   },
   "jest": {
     "collectCoverageFrom": [
