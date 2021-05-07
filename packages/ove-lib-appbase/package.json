@@ -29,7 +29,7 @@
     "cors": "2.8.5",
     "express": "4.17.1",
     "http-status-codes": "1.4.0",
-    "jquery": "3.5.0"
+    "jquery": "3.6.0"
   },
   "jest": {
     "collectCoverageFrom": [
