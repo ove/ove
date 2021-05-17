@@ -206,13 +206,13 @@ function Utils (appName, app, dirs) {
             swagger.info.contact.email = swagger.info.contact.email.replace(Constants.RegExp.Annotation.AUTHOR,
                 pjson.author.substring(pjson.author.indexOf('<') + 1, pjson.author.indexOf('>')));
             return swagger;
-        })(yamljs.safeLoad(fs.readFileSync(swaggerPath)), require(packagePath));
+        })(yamljs.load(fs.readFileSync(swaggerPath)), require(packagePath));
 
         // App-specific swagger extensions
         if (arguments.length > 2 && swaggerExtPath) {
             (function (swaggerDoc, swaggerExt) {
                 if (fs.existsSync(swaggerExt)) {
-                    let swagger = yamljs.safeLoad(fs.readFileSync(swaggerExt));
+                    let swagger = yamljs.load(fs.readFileSync(swaggerExt));
                     // Copying tags (which is an array)
                     swagger.tags.forEach(function (e) {
                         swaggerDoc.tags.push(e);
