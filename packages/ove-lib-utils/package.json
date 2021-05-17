@@ -26,7 +26,7 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "4.1.1",
-    "dateformat": "3.0.3",
+    "dateformat": "4.5.1",
     "express": "4.17.1",
     "http-status-codes": "1.4.0",
     "jquery": "3.5.0",
