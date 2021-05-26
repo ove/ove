@@ -383,7 +383,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
 
         request(__private.provider + '/' + appName, { json: true }, function (err, _res, remoteList) {
             if (err) {
-                log.error('Unable to get of keys from persistence service:',
+                log.error('Unable to get keys from persistence service:',
                     __private.provider, ', got:', err);
                 return;
             }

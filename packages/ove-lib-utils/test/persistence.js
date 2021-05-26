@@ -5,6 +5,8 @@ const HttpStatus = global.HttpStatus;
 const index = global.index;
 const dirs = global.dirs;
 const Utils = global.Utils;
+const axios = require('axios');
+axios.defaults.adapter = require('axios/lib/adapters/http');
 
 // Core functionality tests.
 describe('The OVE Utils library - Persistence', () => {
@@ -438,6 +440,7 @@ describe('The OVE Utils library - Persistence', () => {
     });
 
     it('should synchronise local and remote data', async () => {
+        jest.setTimeout(10000);
         const app = express();
         app.use(express.json());
         const { Utils } = index('core', app, dirs);
@@ -475,10 +478,18 @@ describe('The OVE Utils library - Persistence', () => {
         scopes.push(nock('http://localhost:8081').get('/core/xEntry/0/test/nbar').reply(HttpStatus.OK, {
             value: 0
         }));
+        scopes.push(nock('http://localhost:8081').get('/wait').delay(2000).reply(HttpStatus.OK, {}));
         state.sync();
 
         // Fake request to make things wait for a while before cleaning up.
-        await request(app).post('/').send({});
+        await (async () => {
+            try {
+                const response = await axios.get('http://localhost:8081/wait');
+                console.log(response);
+            } catch (err) {
+                console.log(err);
+            }
+        })();
 
         await request(app).delete('/persistence').send({ }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
         delete process.env.OVE_PERSISTENCE_SYNC_INTERVAL;
@@ -488,13 +499,15 @@ describe('The OVE Utils library - Persistence', () => {
 
         // Should be getting exactly two errors due to failed network calls.
         expect(mockCallback.mock.calls.length).toBe(2);
-        expect(mockCallback.mock.calls[0][5]).toBe('Unable to get of keys from persistence service:');
+        expect(mockCallback.mock.calls[0][5]).toBe('Unable to get keys from persistence service:');
         expect(mockCallback.mock.calls[1][5]).toBe('Unable to read key:');
 
         // Important: scopes must be tested at the end, or else they don't evaluate to anything
         scopes.forEach((e) => {
             expect(e.isDone()).toBeTruthy();
         });
+
+        jest.setTimeout(5000);
     });
 
     it('should schedule sync task according to environment variables', async () => {
