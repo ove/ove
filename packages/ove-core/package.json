@@ -22,7 +22,7 @@
     "d3": "6.7.0",
     "datatables.net-dt": "1.10.24",
     "express": "4.17.1",
-    "express-ws": "4.0.0",
+    "express-ws": "5.0.2",
     "github-markdown-css": "4.0.0",
     "http-status-codes": "2.1.4",
     "jquery": "3.6.0",
