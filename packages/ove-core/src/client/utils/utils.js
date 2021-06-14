@@ -114,7 +114,7 @@ function OVEUtils () {
     //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
         if (arguments.length > 0 && message) {
-            //-- Sometimes, state is not the only message that is broadcasted and will   --//
+            //-- Sometimes, state is not the only message that is broadcast and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
             __private.getOVEInstance().socket.send(message);
         } else {
