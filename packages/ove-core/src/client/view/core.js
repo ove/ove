@@ -140,7 +140,7 @@ updateSections = function (m) {
     }
     switch (m.action) {
         case Constants.Action.CREATE:
-            let geometry = (m.spaces && (m.spaces[space] || [])[client] || {}) || {};
+            let geometry = (m.spaces && ((m.spaces[space] || [])[client] || {})) || {};
             if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                 log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
                 log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
