@@ -39,8 +39,8 @@ module.exports = function (baseDir, appName) {
     module.exports.log = log;
     module.exports.operations = {};
 
-    const priorityQueue = function (runner) {
-        return new PriorityQueue((a, b) => a.uuid > b.uuid, runner);
+    const priorityQueue = function (comparator, runner) {
+        return new PriorityQueue(comparator, runner);
     };
 
     const top = 0;
@@ -49,10 +49,15 @@ module.exports = function (baseDir, appName) {
     const right = i => (i + 1) << 1;
 
     class PriorityQueue {
-        constructor(comparator = (a, b) => a > b, runner) {
+        constructor(comparator, runner) {
             this._heap = [];
             this._comparator = comparator;
-            this._runner = runner;
+            this._runner = function (m) {
+                runner(m);
+                if (!this.isEmpty()) {
+                    this._runner(this.pop());
+                }
+            };
         }
 
         size() {
@@ -69,7 +74,7 @@ module.exports = function (baseDir, appName) {
 
         push(...values) {
             values.forEach(value => {
-                if (this.size() === 0) {
+                if (this.isEmpty()) {
                     this._runner(value);
                 } else {
                     this._heap.push(value);
