@@ -49,7 +49,7 @@ module.exports = function (baseDir, appName) {
     const right = i => (i + 1) << 1;
 
     class PriorityQueue {
-        constructor(comparator, runner) {
+        constructor (comparator, runner) {
             this._heap = [];
             this._comparator = comparator;
             this._runner = function (m) {
@@ -60,19 +60,19 @@ module.exports = function (baseDir, appName) {
             };
         }
 
-        size() {
+        size () {
             return this._heap.length;
         }
 
-        isEmpty() {
+        isEmpty () {
             return this.size() === 0;
         }
 
-        peek() {
+        peek () {
             return this._heap[top];
         }
 
-        push(...values) {
+        push (...values) {
             values.forEach(value => {
                 if (this.isEmpty()) {
                     this._runner(value);
@@ -84,7 +84,7 @@ module.exports = function (baseDir, appName) {
             return this.size();
         }
 
-        pop() {
+        pop () {
             const poppedValue = this.peek();
             const bottom = this.size() - 1;
             if (bottom > top) {
@@ -95,22 +95,22 @@ module.exports = function (baseDir, appName) {
             return poppedValue;
         }
 
-        replace() {
+        replace (value) {
             const replacedValue = this.peek();
             this._heap[top] = value;
             this._siftDown();
             return replacedValue;
         }
 
-        _greater(i, j) {
+        _greater (i, j) {
             return this._comparator(this._heap[i], this._heap[j]);
         }
 
-        _swap(i, j) {
+        _swap (i, j) {
             [this._heap[i], this._heap[j]] = [this._heap[j], this._heap[i]];
         }
 
-        _siftUp() {
+        _siftUp () {
             let node = this.size() - 1;
             while (node > top && this._greater(node, parent(node))) {
                 this._swap(node, parent(node));
@@ -118,7 +118,7 @@ module.exports = function (baseDir, appName) {
             }
         }
 
-        _siftDown() {
+        _siftDown () {
             let node = top;
             while ((left(node) < this.size() && this._greater(left(node), node)) || (right(node) < this.size() && this._greater(right(node), node))) {
                 let maxChild = (right(node < this.size()) && this._greater(right(node), left(node))) ? right(node) : left(node);
