@@ -68,6 +68,82 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
+    const _filterClients = function (clients, sections) {
+        const arr = [];
+
+        clients.forEach(e => {
+            if (_contains(sections, Number(e.sectionId))) {
+                arr.push(e);
+            }
+        });
+
+        return arr;
+    }
+
+    const _contains = function (xs, y) {
+        let b = false;
+        xs.forEach(x => {
+            if (x === y) b = true;
+        });
+        return b;
+    }
+
+    const _getBaseUrl = function (url) {
+        return url.substring(0, url.indexOf('app'));
+    }
+
+    const _getSectionData = function (section, space, title) {
+        log.debug('space: ', space);
+        const data = {"space": title, "x": section.x, "y": section.y, "w": space.w, "h": space.h, "app": { "url": section.app.url, "states": { "load": section.app.state } }};
+        log.debug(data);
+        return data;
+    }
+
+    const _connectSpaces = async function (primary, secondary) {
+        _deleteSections(secondary, undefined, _ => {}, () => {});
+        const primarySections = _readSections(primary, undefined, undefined, false, _ => {}).result;
+
+        log.debug('HOST: ', _getBaseUrl(primarySections[0].app.url));
+        Promise.all(primarySections.map(section => {
+            log.debug(section);
+            return new Promise((resolve, reject) => {
+                request({
+                    headers: { 'Content-Type': 'application/json'},
+                    url: _getBaseUrl(section.app.url) + 'section',
+                    body: _getSectionData(section, _getSpaceGeometries()[secondary], secondary),
+                    method: 'POST',
+                    json: true
+                }, (error, res, body) => {
+                    if (!error && res.statusCode === 200) {
+                        resolve(body);
+                    } else {
+                        reject(error);
+                    }
+                }).id;
+            });
+        })).then(sections => {
+            log.debug('sections: ', sections);
+
+            const primarySockets = _filterClients(server.wss.clients, primarySections.map(section => { return section.id }));
+            const secondarySockets = _filterClients(server.wss.clients, sections);
+            log.debug('Primary sockets: ', primarySockets.length);
+            log.debug('Secondary sockets: ', secondarySockets.length);
+            primarySockets.forEach(c => {
+                if (c.readyState === Constants.WEBSOCKET_READY) {
+                    log.debug('Socket section: ', c.sectionId);
+                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { sections: primarySections } }));
+                }
+            });
+        });
+    }
+
+    operation.connectSpaces = function (req, res) {
+        const primary = req.query.primary;
+        const secondary = req.query.secondary;
+        _connectSpaces(primary, secondary);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    }
+
     const _calculateSectionLayout = function (spaceName, geometry) {
         // Calculate the dimensions on a client-by-client basis
         let layout = [];
@@ -150,6 +226,7 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Creates an individual section
     operation.createSection = function (req, res) {
+        log.debug('Creating section');
         if (!req.body.space || !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
@@ -265,10 +342,7 @@ module.exports = function (server, log, Utils, Constants) {
         });
     };
 
-    // Deletes all sections
-    operation.deleteSections = function (req, res) {
-        const space = req.query.space;
-        const groupId = req.query.groupId;
+    const _deleteSections = function (space, groupId, send, empty) {
         _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
         let sections = server.state.get('sections');
         if (groupId) {
@@ -282,7 +356,7 @@ module.exports = function (server, log, Utils, Constants) {
                 });
             }
             log.info('Successfully deleted sections:', deletedSections);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
+            send(deletedSections);
         } else if (space) {
             let findSectionsBySpace = function (e) {
                 return !Utils.isNullOrEmpty(e) && !Utils.isNullOrEmpty(e.spaces[space]);
@@ -296,7 +370,7 @@ module.exports = function (server, log, Utils, Constants) {
                 i = server.state.get('sections').findIndex(findSectionsBySpace);
             }
             log.info('Successfully deleted sections:', deletedSections);
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections }));
+            send(deletedSections);
         } else {
             let appsToFlush = [];
             while (sections.length !== 0) {
@@ -321,19 +395,23 @@ module.exports = function (server, log, Utils, Constants) {
                 }
             });
             log.info('Successfully deleted all sections');
-            Utils.sendEmptySuccess(res);
+            //Utils.sendEmptySuccess(res);
+            empty();
         }
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
         log.debug('Existing groups (active/deleted):', server.state.get('groups').length);
-    };
+    }
 
-    // Returns details of sections
-    operation.readSections = function (req, res) {
+    // Deletes all sections
+    operation.deleteSections = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
-        const geometry = req.query.geometry;
+        const send = deletedSections => { Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections })); };
+        _deleteSections(space, groupId, send, () => { Utils.sendEmptySuccess(res); });
+    };
+
+    const _readSections = function (space, groupId, geometry, fetchAppStates, sendResults) {
         const sections = server.state.get('sections');
-        const fetchAppStates = ((req.query.includeAppStates + '').toLowerCase() === 'true');
 
         let sectionsToFetch = [];
         if (groupId) {
@@ -380,8 +458,6 @@ module.exports = function (server, log, Utils, Constants) {
             }
         }
 
-        const sendResults = () => { Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result)); };
-
         let result = [];
 
         let numSectionsToFetchState = sectionsToFetch.length;
@@ -402,21 +478,39 @@ module.exports = function (server, log, Utils, Constants) {
                 }).then(r => {
                     result[ind].app.states = { load: r.data };
                     numSectionsToFetchState--;
-                    if (numSectionsToFetchState === 0) { sendResults(); }
+                    if (numSectionsToFetchState === 0) { sendResults(result); }
                 }).catch((err) => {
                     log.warn(err);
                     numSectionsToFetchState--;
-                    if (numSectionsToFetchState === 0) { sendResults(); }
+                    if (numSectionsToFetchState === 0) { sendResults(result); }
                 });
             } else if (fetchAppStates) {
                 numSectionsToFetchState--;
             }
         });
         log.debug('Successfully read configuration for sections:', sectionsToFetch);
+        const r = {result: result, numSectionsToFetchState: numSectionsToFetchState};
 
-        if (!fetchAppStates || numSectionsToFetchState === 0) { // also catches case where there are no sections to fetch
-            sendResults();
+        if (!fetchAppStates || r.numSectionsToFetchState === 0) { // also catches case where there are no sections to fetch
+            sendResults(r.result);
         }
+
+        return r;
+    }
+
+    const _sendResults = function (res) {
+        return function (result) {
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
+        }
+    }
+
+    // Returns details of sections
+    operation.readSections = function (req, res) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        const geometry = req.query.geometry;
+        const fetchAppStates = ((req.query.includeAppStates + '').toLowerCase() === 'true');
+        _readSections(space, groupId, geometry, fetchAppStates, _sendResults(res));
     };
 
     // Internal utility function to update section by a given id. This function is used
@@ -918,6 +1012,7 @@ module.exports = function (server, log, Utils, Constants) {
 
     server.app.get('/spaces', operation.listSpaces);
     server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
+    server.app.post('/spaces/connect', operation.connectSpaces);
     server.app.get('/sections', operation.readSections);
     server.app.delete('/sections', operation.deleteSections);
     server.app.post('/section', operation.createSection);
