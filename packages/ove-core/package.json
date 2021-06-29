@@ -1,12 +1,12 @@
 {
   "name": "@ove/ove-core",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "The Core library of OVE",
   "main": "dist/index.js",
   "scripts": {
     "clean": "npx rimraf dist",
-    "build": "npx babel-cli src --out-dir dist --copy-files",
+    "build": "npx babel src --out-dir dist --copy-files",
     "test": "jest --runInBand --coverage --colors",
     "start": "node dist/index.js --color",
     "start:dev": "babel-node src/index.js",
