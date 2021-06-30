@@ -93,19 +93,29 @@ module.exports = function (server, log, Utils, Constants) {
     }
 
     const _getSectionData = function (section, space, title) {
-        log.debug('space: ', space);
-        const data = {"space": title, "x": section.x, "y": section.y, "w": space.w, "h": space.h, "app": { "url": section.app.url, "states": { "load": section.app.state } }};
-        log.debug(data);
-        return data;
+        return {
+            "space": title,
+            "x": section.x,
+            "y": section.y,
+            "w": space.w,
+            "h": space.h,
+            "app": {"url": section.app.url, "states": {"load": section.app.state}}
+        };
+    }
+
+    const _getClient = function (id, sections) {
+        const xs = sections.filter(section => Number(section.primary) === Number(id));
+        if (xs.length !== 1) return;
+        const clients = _filterClients(server.wss.clients, [Number(xs[0].secondary)]);
+        if (clients.length !== 1) return;
+        return clients[0];
     }
 
     const _connectSpaces = async function (primary, secondary) {
         _deleteSections(secondary, undefined, _ => {}, () => {});
         const primarySections = _readSections(primary, undefined, undefined, false, _ => {}).result;
 
-        log.debug('HOST: ', _getBaseUrl(primarySections[0].app.url));
         Promise.all(primarySections.map(section => {
-            log.debug(section);
             return new Promise((resolve, reject) => {
                 request({
                     headers: { 'Content-Type': 'application/json'},
@@ -115,23 +125,25 @@ module.exports = function (server, log, Utils, Constants) {
                     json: true
                 }, (error, res, body) => {
                     if (!error && res.statusCode === 200) {
-                        resolve(body);
+                        resolve({ primary: section.id, secondary: body.id });
                     } else {
                         reject(error);
                     }
-                }).id;
+                });
             });
         })).then(sections => {
-            log.debug('sections: ', sections);
-
             const primarySockets = _filterClients(server.wss.clients, primarySections.map(section => { return section.id }));
-            const secondarySockets = _filterClients(server.wss.clients, sections);
-            log.debug('Primary sockets: ', primarySockets.length);
-            log.debug('Secondary sockets: ', secondarySockets.length);
             primarySockets.forEach(c => {
                 if (c.readyState === Constants.WEBSOCKET_READY) {
-                    log.debug('Socket section: ', c.sectionId);
-                    c.safeSend(JSON.stringify({ appId: Constants.APP_NAME, message: { sections: primarySections } }));
+                    c.addEventListener('message', event => {
+                        const m = JSON.parse(event.data);
+                        if (m.appId === Constants.APP_NAME) return;
+                        if (!m.message) return;
+                        const client = _getClient(c.sectionId, sections);
+                        m.message.secondary = true;
+                        const newMessage = { appId: m.appId, sectionId: client.sectionId, message: m.message };
+                        client.safeSend(JSON.stringify(newMessage));
+                    });
                 }
             });
         });
