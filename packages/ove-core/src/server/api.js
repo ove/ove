@@ -6,6 +6,7 @@ const axios = require('axios');
 module.exports = function (server, log, Utils, Constants) {
     const peers = server.peers;
     const operation = {};
+    const context = { isConnected: false };
 
     // It is required that we are able to clean-up variables like these during testing.
     server.spaceGeometries = {};
@@ -68,93 +69,152 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
-    const _filterClients = function (clients, sections) {
-        const arr = [];
+    const _bridge = function (data) {
+        const _filterClient = (clients, socket) => {
+            let c = undefined;
+            clients.forEach(e => {
+                if (Number(e.id) === Number(socket.id)) {
+                    c = e;
+                }
+            });
 
-        clients.forEach(e => {
-            if (_contains(sections, Number(e.sectionId))) {
-                arr.push(e);
-            }
-        });
-
-        return arr;
-    }
-
-    const _contains = function (xs, y) {
-        let b = false;
-        xs.forEach(x => {
-            if (x === y) b = true;
-        });
-        return b;
-    }
-
-    const _getBaseUrl = function (url) {
-        return url.substring(0, url.indexOf('app'));
-    }
-
-    const _getSectionData = function (section, space, title) {
-        return {
-            "space": title,
-            "x": section.x,
-            "y": section.y,
-            "w": space.w,
-            "h": space.h,
-            "app": {"url": section.app.url, "states": {"load": section.app.state}}
+            return c;
         };
-    }
 
-    const _getClient = function (id, sections) {
-        const xs = sections.filter(section => Number(section.primary) === Number(id));
-        if (xs.length !== 1) return;
-        const clients = _filterClients(server.wss.clients, [Number(xs[0].secondary)]);
-        if (clients.length !== 1) return;
-        return clients[0];
-    }
+        if (!context.isConnected || data.client.readyState !== Constants.WEBSOCKET_READY) return;
+        const space = Object.keys(data.section.spaces)[0];
 
-    const _connectSpaces = async function (primary, secondary) {
-        _deleteSections(secondary, undefined, _ => {}, () => {});
-        const primarySections = _readSections(primary, undefined, undefined, false, _ => {}).result;
+        if (context.primary === space) {
+            const client = _filterClient(server.wss.clients, data.client);
 
-        Promise.all(primarySections.map(section => {
+            if (client !== undefined) {
+                _bridgeSockets(client, data.sectionId);
+            }
+        }
+    };
+
+    operation.bridge = (req, res) => {
+        _bridge(req.body);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    };
+
+    const _bridgeSockets = (client, sectionId) => {
+        const _getSecondarySectionId = (sectionId) => {
+            return context.map.filter(id => Number(sectionId) === Number(id.primary))[0].secondary;
+        };
+
+        const _getSecondaryClient = function (id) {
+            const arr = [];
+
+            server.wss.clients.forEach(e => {
+                if (e.sectionId === id) {
+                    arr.push(e);
+                }
+            });
+
+            return arr[0];
+        }
+
+        if (client.readyState === Constants.WEBSOCKET_READY) {
+            client.addEventListener('message', event => {
+                const m = JSON.parse(event.data);
+                if (m.appId === Constants.APP_NAME || !m.message) return;
+
+                m.message.secondary = true;
+                const secondaryId = _getSecondarySectionId(sectionId);
+                const newMessage = { appId: m.appId, sectionId: secondaryId, message: m.message };
+
+                _getSecondaryClient(secondaryId).safeSend(JSON.stringify(newMessage));
+            });
+        }
+    };
+
+    const _generateSections = async (sections) => {
+        const _getSectionData = function (section, primary, secondary, title) {
+            const resize = (primary, secondary, x, y, w, h) => {
+                const widthFactor = Math.floor(secondary.w / primary.w);
+                const heightFactor = Math.floor(secondary.h / primary.h);
+                return { x: x * widthFactor, y: y * heightFactor, w: w * widthFactor, h: h * heightFactor };
+            };
+
+            const coordinates = resize(primary, secondary, section.x, section.y, section.w, section.h);
+            return {
+                "space": title,
+                "x": coordinates.x,
+                "y": coordinates.y,
+                "w": coordinates.w,
+                "h": coordinates.h,
+                "app": {"url": section.app.url, "states": {"load": section.app.state}}
+            };
+        };
+
+        return Promise.all(sections.map(section => {
             return new Promise((resolve, reject) => {
                 request({
                     headers: { 'Content-Type': 'application/json'},
-                    url: _getBaseUrl(section.app.url) + 'section',
-                    body: _getSectionData(section, _getSpaceGeometries()[secondary], secondary),
+                    url: section.app.url.substring(0, section.app.url.indexOf('app')) + 'section',
+                    body: _getSectionData(section, _getSpaceGeometries()[primary], _getSpaceGeometries()[secondary], secondary),
                     method: 'POST',
                     json: true
                 }, (error, res, body) => {
                     if (!error && res.statusCode === 200) {
+                        if (!context.map) {
+                            context.map = [{ primary: section.id, secondary: body.id }];
+                        } else {
+                            context.map = [...context.map, { primary: section.id, secondary: body.id }];
+                        }
                         resolve({ primary: section.id, secondary: body.id });
                     } else {
                         reject(error);
                     }
                 });
             });
-        })).then(sections => {
-            const primarySockets = _filterClients(server.wss.clients, primarySections.map(section => { return section.id }));
-            primarySockets.forEach(c => {
-                if (c.readyState === Constants.WEBSOCKET_READY) {
-                    c.addEventListener('message', event => {
-                        const m = JSON.parse(event.data);
-                        if (m.appId === Constants.APP_NAME) return;
-                        if (!m.message) return;
-                        const client = _getClient(c.sectionId, sections);
-                        m.message.secondary = true;
-                        const newMessage = { appId: m.appId, sectionId: client.sectionId, message: m.message };
-                        client.safeSend(JSON.stringify(newMessage));
-                    });
+        }));
+    };
+
+    const _connectSpaces = async function (primary, secondary) {
+        const updateContext = (primary, secondary) => {
+            context.isConnected = true;
+            context.primary = primary;
+            context.secondary = context.secondary === undefined ? [secondary] : [...context.secondary, secondary];
+        };
+
+        const _filterClients = function (clients, sections) {
+            const _contains = function (xs, y) {
+                let b = false;
+                xs.forEach(x => {
+                    if (x === y) b = true;
+                });
+                return b;
+            };
+
+            const arr = [];
+
+            clients.forEach(e => {
+                if (_contains(sections, Number(e.sectionId))) {
+                    arr.push(e);
                 }
             });
+
+            return arr;
+        };
+
+        updateContext(primary, secondary);
+
+        _deleteSections(secondary, undefined, _ => {}, () => {});
+        const primarySections = _readSections(primary, undefined, undefined, false, _ => {}).result;
+
+        _generateSections(primarySections).then(_ => {
+            const primarySockets = _filterClients(server.wss.clients, primarySections.map(section => { return section.id }));
+            primarySockets.forEach(c => _bridgeSockets(c, c.sectionId));
         });
-    }
+    };
 
     operation.connectSpaces = function (req, res) {
         const primary = req.query.primary;
         const secondary = req.query.secondary;
-        _connectSpaces(primary, secondary);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
-    }
+        _connectSpaces(primary, secondary).then(Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({})));
+    };
 
     const _calculateSectionLayout = function (spaceName, geometry) {
         // Calculate the dimensions on a client-by-client basis
@@ -238,7 +298,6 @@ module.exports = function (server, log, Utils, Constants) {
 
     // Creates an individual section
     operation.createSection = function (req, res) {
-        log.debug('Creating section');
         if (!req.body.space || !server.spaces[req.body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid space' }));
@@ -320,6 +379,11 @@ module.exports = function (server, log, Utils, Constants) {
                 }
             }
         });
+
+        if (context.isConnected) {
+            _generateSections([section]).then(log.debug('Successfully created replica'));
+        }
+
         log.info('Successfully created new section:', sectionId);
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: sectionId }));
@@ -1040,6 +1104,7 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.get('/groups/:id([0-9]+)', operation.readGroupById);
     server.app.post('/groups/:id([0-9]+)', operation.updateGroupById);
     server.app.delete('/groups/:id([0-9]+)', operation.deleteGroupById);
+    server.app.post('/bridge', operation.bridge);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));

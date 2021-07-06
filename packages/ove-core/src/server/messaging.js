@@ -57,6 +57,21 @@ module.exports = function (server, log, Constants) {
                 if (m.registration.sectionId !== undefined) {
                     log.debug('Registering socket for section:', m.registration.sectionId);
                     s.sectionId = m.registration.sectionId;
+                    const sections = server.state.get('sections');
+
+                    sections.forEach(function (section, sectionId) {
+                        if (Number(sectionId) === Number(s.sectionId)) {
+                            const req = {
+                                headers: {'Content-Type': 'application/json'},
+                                url: section.app.url.substring(0, section.app.url.indexOf('app')) + 'bridge',
+                                body: { section: section, sectionId: sectionId, client: s },
+                                method: 'POST',
+                                json: true
+                            };
+                            require('request')(req);
+                        }
+                    });
+                    return;
                 }
                 if (m.registration.client !== undefined && m.registration.space !== undefined) {
                     log.debug('Registering socket for client:', m.registration.client, 'of space:', m.registration.space);
