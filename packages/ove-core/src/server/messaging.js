@@ -60,6 +60,7 @@ module.exports = function (server, log, Constants) {
                     const sections = server.state.get('sections');
 
                     sections.forEach(function (section, sectionId) {
+                        if (!section || !section.app || !section.app.url) return;
                         if (Number(sectionId) === Number(s.sectionId)) {
                             const req = {
                                 headers: {'Content-Type': 'application/json'},

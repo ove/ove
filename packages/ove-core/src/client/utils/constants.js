@@ -35,4 +35,11 @@ Constants.Operation = {
     REFRESH: 'refresh'
 };
 
+Constants.Events = {
+    UPDATE_MC: 'update_mc',
+    REQUEST_DETAILS: 'request_details',
+    RESPOND_DETAILS: 'respond_details',
+    REQUEST: 'request'
+};
+
 exports.Constants = Constants;
