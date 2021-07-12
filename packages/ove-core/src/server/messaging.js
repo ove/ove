@@ -64,8 +64,7 @@ module.exports = function (server, log, Constants) {
                         if (Number(sectionId) === Number(s.sectionId)) {
                             const req = {
                                 headers: {'Content-Type': 'application/json'},
-                                url: section.app.url.substring(0, section.app.url.indexOf('app')) + 'bridge',
-                                body: { section: section, sectionId: sectionId, client: s },
+                                url: `${section.app.url.substring(0, section.app.url.indexOf('app'))}sections/bridge/${sectionId}`,
                                 method: 'POST',
                                 json: true
                             };
