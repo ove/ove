@@ -42,6 +42,20 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
+    operation.listConnections = (req, res) => {
+        let space = req.query.space;
+        if (space) {
+            const context = _getContext(space);
+            if (context) {
+                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(context));
+            } else {
+                Utils.sendMessage(res, HttpStatus.OK, `No connections for space: ${space}`);
+            }
+        } else {
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(contexts));
+        }
+    };
+
     // Internal utility function to calculate space geometries.
     const _getSpaceGeometries = function () {
         if (Utils.isNullOrEmpty(server.spaceGeometries) && !Utils.isNullOrEmpty(server.spaces)) {
@@ -77,12 +91,12 @@ module.exports = function (server, log, Utils, Constants) {
     const _getDetailsForId = (id, onError) => {
         const context = _getContextForSection(id);
         if (!context) return;
-        if (_sectionIsPrimaryForContext(context, id)) { onError(`Section ${id} is a primary space`); return; }
+        if (_sectionIsPrimaryForContext(context, id)) { onError(`Section ${id} is in a primary space`); return; }
         return { primary: _getMapping(context, id), secondary: id };
     }
 
     // handler for details api call, including errors
-    operation.getDetailsForId = (req, res) => {
+    operation.getSectionConnection = (req, res) => {
         const mapping = _getDetailsForId(Number(req.params.id), msg => _sendError(res, msg));
         if (mapping) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ section: mapping }));
     };
@@ -97,15 +111,17 @@ module.exports = function (server, log, Utils, Constants) {
         }
     };
 
-    operation.bridge = (req, res) => {
+    operation.createBridge = (req, res) => {
         _bridge(Number(req.params.id));
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
-    const _bridgeSockets = (context) => {
+    const _bridgeSockets = (ctx) => {
         server.wss.clients.forEach(c => {
             if (c.hasListener || c.readyState !== Constants.WEBSOCKET_READY) return;
             c.addEventListener('message', message => {
+                const context = _getContext(ctx.primary);
+                if (!context) return;
                 const m = JSON.parse(message.data);
                 if (!m.sectionId || !_sectionIsPrimaryForContext(context, m.sectionId) || !m.message.name) return;
                 if (m.message.name === Constants.Events.RESPOND_DETAILS) {
@@ -148,8 +164,6 @@ module.exports = function (server, log, Utils, Constants) {
     const _sendError = (res, msg) => Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: msg }));
     // whether the space is currently connected, either as primary or secondary
     const _isConnected = (space) => _isPrimary(space) || _isSecondary(space);
-    // reduce list of booleans through the or operator
-    const _orReduce = (xs, initial) => xs.reduce((acc, x) => acc || x, initial);
     // returns the context corresponding to the space or undefined if not connected
     const _getContext = (space) => {
         const primary = contexts.find(context => context.primary === space);
@@ -158,7 +172,7 @@ module.exports = function (server, log, Utils, Constants) {
     const _removeContext = (space) => {
         const _remove = (index) => contexts.splice(index, 1);
         const primary = contexts.findIndex(context => context.primary === space);
-        _remove(primary ? primary : contexts.findIndex(context => context.secondary === space));
+        _remove(primary !== -1 ? primary : contexts.findIndex(context => context.secondary === space));
     };
     // returns the context corresponding to the space the section with id: sectionId is contained in
     const _getContextForSection = (sectionId) => _getContext(_getSpaceForSection(_getSectionForId(sectionId)));
@@ -187,9 +201,10 @@ module.exports = function (server, log, Utils, Constants) {
     // returns the mappings for the section in the given context
     const _getMapping = (context, sectionId) => _sectionIsPrimaryForContext(context, sectionId) ? _getReplicas(context, sectionId) : _getPrimary(context, sectionId);
     const _getClientById = (id) => Array.from(server.wss.clients).find(c => Number(c.id) === Number(id));
+    const _getSpaceBySectionId = (id) => _getSpaceForSection(_getSectionForId(id));
 
-    const _deleteSecondarySection = (context, section) => context.map.splice(context.map.findIndex(s => Number(s.secondary) === Number(section)));
-    const _deletePrimarySection = (context, section) => context.map.splice(context.map.findIndex(s => Number(s.primary) === Number(section)));
+    const _deleteSecondarySection = (context, sectionId) => context.map.splice(context.map.findIndex(s => Number(s.secondary) === Number(sectionId)), 1);
+    const _deletePrimarySection = (context, sectionId) => context.map.splice(context.map.findIndex(s => Number(s.primary) === Number(sectionId)), 1);
     const _deleteSpace = (context, space) => context.secondary.splice(context.secondary.indexOf(space), 1);
     const _deleteAllForSpace = (space) => _getSectionsForSpace(space).forEach(s => _deleteSecondarySection(s));
     const _getSectionsForSpace = (space) => _readSections(space, undefined, undefined, false, _ => {}).result;
@@ -202,14 +217,23 @@ module.exports = function (server, log, Utils, Constants) {
         _addSection(context, mapping);
         return mapping;
     };
-    const _replicateAll = (context, section) => _forEachSpace(s => _replicate(context, section, s));
+    const _replicateAll = (context, section) => _forEachSpace(context, s => _replicate(context, section, s));
     const f0 = () => {};
     const f1 = (_) => {};
 
-    operation.resetConnection = function (req, res) {
-        _removeContext(req.params.name);
+    operation.deleteConnection = function (req, res) {
+        if (req.params.secondary) {
+            _disconnectSpace(req.params.secondary);
+        } else {
+            _removeContext(req.params.primary);
+        }
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
-    }
+    };
+
+    operation.deleteConnections = (req, res) => {
+        contexts.splice(0, contexts.length);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    };
 
     const _disconnectSpace = function (space) {
         const context = _getContext(space);
@@ -223,12 +247,12 @@ module.exports = function (server, log, Utils, Constants) {
 
     const _getSectionData = function (section, primary, secondary, title) {
         const resize = (primary, secondary, x, y, w, h) => {
-            const widthFactor = Math.floor(secondary.w / primary.w);
-            const heightFactor = Math.floor(secondary.h / primary.h);
+            const widthFactor = Number(secondary.w) / Number(primary.w);
+            const heightFactor = Number(secondary.h) / Number(primary.h);
             return { x: x * widthFactor, y: y * heightFactor, w: w * widthFactor, h: h * heightFactor };
         };
 
-        const coordinates = resize(primary, secondary, section.x, section.y, section.w, section.h);
+        const coordinates = resize(primary, secondary, Number(section.x), Number(section.y), Number(section.w), Number(section.h));
         return {
             "space": title,
             "x": coordinates.x,
@@ -259,10 +283,8 @@ module.exports = function (server, log, Utils, Constants) {
 
     // http request handler, calling backing method. Includes error handling.
     // expecting primary and secondary as url query parameters.
-    operation.connectSpaces = function (req, res) {
-        const primary = req.query.primary;
-        const secondary = req.query.secondary;
-        const sections = _connectSpaces(primary, secondary, msg => { log.error(msg); _sendError(res, msg); });
+    operation.createConnection = function (req, res) {
+        const sections = _connectSpaces(req.params.primary, req.params.secondary, msg => { log.error(msg); _sendError(res, msg); });
         if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ids: sections}));
     };
 
@@ -433,7 +455,8 @@ module.exports = function (server, log, Utils, Constants) {
         const space = _getSpaceForSection(section);
         const context = _getContext(space);
         if (context && context.isInitialized && _isPrimaryForContext(context, space)) {
-            _replicateAll(context, [section]).then(log.debug('Successfully created replica'));
+            _replicateAll(context, section);
+            log.debug('Successfully created replica');
         }
 
         log.info('Successfully created new section:', sectionId);
@@ -554,8 +577,12 @@ module.exports = function (server, log, Utils, Constants) {
         const context = _getContext(space);
         _deleteSections(space, groupId, send, () => { Utils.sendEmptySuccess(res); });
         if (!context) return;
-        if (space === context.primary) {
-            _deleteSections(space, groupId, send, () => {});
+        if (_isPrimaryForContext(context, space)) {
+            _forEachSpace(context, s => {
+                const sections = _getSectionsForSpace(s);
+                _deleteSections(s, groupId, f1, f0); // delete all sections in space
+                sections.forEach(section => _deleteSecondarySection(context, section.id)); // remove mappings
+            });
         } else {
             _disconnectSpace(space);
         }
@@ -649,19 +676,13 @@ module.exports = function (server, log, Utils, Constants) {
         return r;
     }
 
-    const _sendResults = function (res) {
-        return function (result) {
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
-        }
-    }
-
     // Returns details of sections
     operation.readSections = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
         const geometry = req.query.geometry;
         const fetchAppStates = ((req.query.includeAppStates + '').toLowerCase() === 'true');
-        _readSections(space, groupId, geometry, fetchAppStates, _sendResults(res));
+        _readSections(space, groupId, geometry, fetchAppStates, result => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result)));
     };
 
     // Internal utility function to update section by a given id. This function is used
@@ -1052,7 +1073,18 @@ module.exports = function (server, log, Utils, Constants) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
         } else {
             _messagePeers('updateSectionById', { body: req.body, params: { id: sectionId } });
-            _updateSectionById(sectionId, req.body.space, { x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h }, req.body.app);
+            const geometry = { x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h };
+            _updateSectionById(sectionId, req.body.space, geometry, req.body.app);
+
+            const context = _getContext(req.body.space);
+            if (context) {
+                if (_sectionIsPrimaryForContext(context, sectionId)) {
+                    _getReplicas(context, sectionId).forEach(r => _updateSectionById(r, _getSpaceBySectionId(r), geometry, req.body.app));
+                } else {
+                    _disconnectSpace(req.body.space);
+                }
+            }
+
             log.info('Successfully updated section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
         }
@@ -1066,7 +1098,18 @@ module.exports = function (server, log, Utils, Constants) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
             _messagePeers('deleteSectionById', { params: { id: sectionId } });
+            const space = _getSpaceBySectionId(sectionId);
+            const context = _getContext(space);
+
+            if (context) {
+                if (_sectionIsPrimaryForContext(context, sectionId)) {
+                    _getReplicas(context, sectionId).forEach(id => _deleteSectionById(id));
+                } else {
+                    _disconnectSpace(space);
+                }
+            }
             _deleteSectionById(sectionId);
+
             log.info('Successfully deleted section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
         }
@@ -1163,13 +1206,9 @@ module.exports = function (server, log, Utils, Constants) {
 
     server.app.get('/spaces', operation.listSpaces);
     server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
-    server.app.post('/spaces/connect', operation.connectSpaces);
-    server.app.post('/spaces/reset/:name', operation.resetConnection);
     server.app.get('/sections', operation.readSections);
     server.app.delete('/sections', operation.deleteSections);
     server.app.post('/section', operation.createSection);
-    server.app.post('/sections/bridge/:id([0-9]+)', operation.bridge);
-    server.app.get('/sections/connected/:id([0-9]+)', operation.getDetailsForId);
     server.app.get('/sections/:id([0-9]+)', operation.readSectionById);
     server.app.post('/sections/:id([0-9]+)', operation.updateSectionById);
     server.app.delete('/sections/:id([0-9]+)', operation.deleteSectionById);
@@ -1182,6 +1221,15 @@ module.exports = function (server, log, Utils, Constants) {
     server.app.get('/groups/:id([0-9]+)', operation.readGroupById);
     server.app.post('/groups/:id([0-9]+)', operation.updateGroupById);
     server.app.delete('/groups/:id([0-9]+)', operation.deleteGroupById);
+
+    server.app.get('/connections', operation.listConnections);
+    server.app.delete('/connections', operation.deleteConnections);
+    server.app.post('/connection/:primary/:secondary', operation.createConnection);
+    server.app.post('/connections/section/:id([0-9]+)', operation.createBridge);
+    server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
+    server.app.delete('/connection/:primary', operation.deleteConnection);
+    server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
+
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
