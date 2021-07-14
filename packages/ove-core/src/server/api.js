@@ -272,6 +272,7 @@ module.exports = function (server, log, Utils, Constants) {
         // clear sections in secondary space
         _deleteSections(secondary, undefined, f1, f0);
         const primarySections = _getSectionsForSpace(primary);
+        if (primarySections.length === 0) return [];
         // replicate all sections from primary space to secondary
         const replicas = primarySections.map(section => _replicate(context, section, secondary)).filter(({ _, secondary }) => secondary !== -1);
         // add bridge between sockets
@@ -476,7 +477,7 @@ module.exports = function (server, log, Utils, Constants) {
         };
 
         const id = _createSection(req.body, sendError, sendMessage);
-        if (id === undefined) return;
+        if (!id) return;
         _messagePeers('createSection', { body: req.body });
     };
 

@@ -1,3 +1,5 @@
+// noinspection DuplicatedCode,JSUnresolvedVariable
+
 const path = global.path;
 const request = global.request;
 const HttpStatus = global.HttpStatus;
@@ -477,7 +479,7 @@ describe('The OVE Core server', () => {
         spy.mockRestore();
     });
 
-    it('should trigger an event to its sockets when a section is created and deleted', async () => {
+    it('should trigger an event to its sockets when a section is created and deleted', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -500,11 +502,12 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
             ));
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should trigger an event to its sockets when a section is created and deleted without an app', async () => {
+    it('should trigger an event to its sockets when a section is created and deleted without an app', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -523,11 +526,12 @@ describe('The OVE Core server', () => {
             // Update request should not be generated after a timeout, unlike in the previous test.
             expect(sockets.messages.length).toEqual(0);
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should trigger an event to its sockets when trying to read information about a section that has been created', async () => {
+    it('should trigger an event to its sockets when trying to read information about a section that has been created', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -553,11 +557,12 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
             ));
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should not trigger an event to its sockets when trying to read information about a section when the server-side socket is not ready', async () => {
+    it('should not trigger an event to its sockets when trying to read information about a section when the server-side socket is not ready', async (done) => {
         sockets.serverSocket.readyState = 0;
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
@@ -579,11 +584,12 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
             ));
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should trigger an event to its sockets when trying to read information about a section that has been created without an app', async () => {
+    it('should trigger an event to its sockets when trying to read information about a section that has been created without an app', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -603,11 +609,12 @@ describe('The OVE Core server', () => {
             // Update request should not be generated after a timeout, unlike in the previous tests.
             expect(sockets.messages.length).toEqual(0);
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should trigger limited events to its sockets when a section had a dimension change', async () => {
+    it('should trigger limited events to its sockets when a section had a dimension change', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -641,11 +648,12 @@ describe('The OVE Core server', () => {
             ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should trigger an event to its sockets when a section is updated in quick succession', async () => {
+    it('should trigger an event to its sockets when a section is updated in quick succession', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -677,11 +685,12 @@ describe('The OVE Core server', () => {
             ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
 
-    it('should trigger additional events to its sockets when a section is updated along with a dimension change', async () => {
+    it('should trigger additional events to its sockets when a section is updated along with a dimension change', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -717,6 +726,7 @@ describe('The OVE Core server', () => {
             ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
@@ -724,7 +734,7 @@ describe('The OVE Core server', () => {
     // This test is very similar to the test above, but without back to back calls. This test deletes sections
     // inside a setTimeout, which could mean that call does not happen before further tests are executed.
     // Therefore, make this the last test case to avoid unexpected failures.
-    it('should trigger an event to its sockets when a section is updated', async () => {
+    it('should trigger an event to its sockets when a section is updated', async (done) => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
@@ -757,6 +767,7 @@ describe('The OVE Core server', () => {
             ))).toBeTruthy();
             nock.cleanAll();
             global.console = OLD_CONSOLE;
+            done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
     });
@@ -768,8 +779,9 @@ describe('The OVE Core server', () => {
     });
     /* jshint ignore:end */
 
-    afterAll(() => {
+    afterAll((done) => {
         sockets.server.stop();
         sockets.peerServer.stop();
+        app.close(done);
     });
 });

@@ -494,6 +494,20 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
     });
+
+    it('should be able to successfully create and delete connections between two spaces', async () => {
+        let res = await request(app).post('/connection/TestingNine/TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ ids: [] }));
+
+        res = await request(app).get('/connections?space=TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).not.toEqual(Utils.JSON.EMPTY);
+
+        res = await request(app).delete('/connection/TestingNine/TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(Utils.JSON.EMPTY);
+    });
     /* jshint ignore:end */
 
     afterAll(() => {
