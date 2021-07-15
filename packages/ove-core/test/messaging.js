@@ -1,5 +1,3 @@
-// noinspection DuplicatedCode,JSUnresolvedVariable
-
 const path = global.path;
 const request = global.request;
 const HttpStatus = global.HttpStatus;

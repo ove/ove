@@ -508,7 +508,194 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
     });
+
+    it('should return special message if no connections present', async () => {
+        let res = await request(app).get('/connections?space=TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ msg: 'No connections for space: TestingNine' }));
+    });
+
+    it('lists all connections if no space specified', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingFour/TestingFourClone');
+        let res = await request(app).get('/connections');
+        const connections = JSON.parse(res.text);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(connections.length).toBe(2);
+    });
+
+    it('returns empty list if no connections', async () => {
+        let res = await request(app).get('/connections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        const connections = JSON.parse(res.text);
+        expect(connections.length).toBe(0);
+    });
+
+    it('fetching section connection details errors if section is not connected', async () => {
+        let res = await request(app).get('/connections/section/2');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'Section 2 is not connected' }));
+    });
+
+    it('fetches correct mapping of section connection details for primary sections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        let res = await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let sectionId = JSON.parse(res.text).id;
+        res = await request(app).get(`/connections/section/${sectionId}`);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ section: { primary: 0, secondary: [1] } }));
+    });
+
+    it('fetches correct mapping of section connection details for secondary sections', async () => {
+        let res = await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        const primaryId = JSON.parse(res.text).id;
+        res = await request(app).post('/connection/TestingNine/TestingNineClone');
+        const secondaryId = JSON.parse(res.text).ids[0].secondary;
+        res = await request(app).get(`/connections/section/${secondaryId}`);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ section: { primary: primaryId, secondary: secondaryId } }));
+    });
+
+    it('allows multiple replica spaces to be connected', async () => {
+        let res = await request(app).post('/connection/TestingNine/TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).post('/connection/TestingNine/TestingFour');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+    });
+
+    it('can create multiple sections in a connected space', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        let res = await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 0 }));
+        res = await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ id: 2 }));
+    });
+
+    it('deleting connection by secondary space only deletes that connection', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingNine/TestingFour');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+
+        let res = await request(app).delete('/connection/TestingNine/TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/connections/section/2');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({ section: { primary: 0, secondary: 2 } }));
+    });
+
+    it('deleting connection by primary deletes all connections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingNine/TestingFour');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+
+        let res = await request(app).delete('/connection/TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/connections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([]));
+    });
+
+    it('can create connection for a space with a section with an app', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        let res = await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8080/app/maps', states: { 'load': 'London' } } });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+    });
+
+    it('deletes all sections in replicas if deleting all in primary', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingNine/TestingFour');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).delete('/sections?space=TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/sections?space=TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(JSON.parse(res.text).length).toBe(0);
+        res = await request(app).get('/sections?space=TestingFour');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(JSON.parse(res.text).length).toBe(0);
+    });
+
+    it('should disconnect if deleting all sections in secondary space', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).delete('/sections?space=TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/connections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(JSON.parse(res.text).length).toBe(0);
+    });
+
+    it('should update all replicas if updating a primary section', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 20, 'y': 0, 'x': 20 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/sections/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(JSON.parse(res.text).w).toEqual(20);
+    });
+
+    it('should disconnect if updating a secondary section', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).post('/sections/1').send({ 'h': 10, 'space': 'TestingNineClone', 'w': 20, 'y': 0, 'x': 20 });
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/connections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(JSON.parse(res.text).length).toBe(0);
+    });
+
+    it('should delete all replica sections if deleting a primary section', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).delete('/sections/0');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/sections?space=TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([]));
+    });
+
+    it('should disconnect if deleting a secondary section', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).delete('/sections/1');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await request(app).get('/connections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify([]));
+    });
+
+    it('should error when connecting a space to itself', async () => {
+        let res = await request(app).post('/connection/TestingNine/TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'Primary and secondary space are the same' }));
+    });
+
+    it('should error when connecting a primary space as a secondary', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        let res = await request(app).post('/connection/TestingFour/TestingNine');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'Could not connect TestingFour and TestingNine as there is an existing connection' }));
+    });
+
+    it('should error when connecting a secondary space', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        let res = await request(app).post('/connection/TestingNineClone/TestingFour');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'Could not connect TestingNineClone and TestingFour as there is an existing connection' }));
+        res = await request(app).post('/connection/TestingFour/TestingNineClone');
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
+        expect(res.text).toEqual(JSON.stringify({ error: 'Could not connect TestingFour and TestingNineClone as there is an existing connection' }));
+    });
     /* jshint ignore:end */
+
+    afterEach(async () => {
+        await request(app).delete('/connections');
+        await request(app).delete('/sections');
+    });
 
     afterAll(() => {
         global.console = OLD_CONSOLE;
