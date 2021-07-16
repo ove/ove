@@ -15,7 +15,8 @@ const OLD_CONSOLE = global.console;
 global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
 
 const { WebSocket, Server } = require('mock-socket');
-const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants);
+const ApiUtils = require(path.join(srcDir, 'server', 'api-utils'))(server, log, Utils);
+const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants, ApiUtils);
 const PORT = 5555;
 const PEER_PORT = 5545;
 const TIMEOUT = 500;
@@ -768,6 +769,15 @@ describe('The OVE Core server', () => {
             done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
+    });
+
+    it('should trigger an event to its sockets when a section is updated', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section')
+            .send({'h': 10, 'app': {'url': 'http://localhost:8081'}, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10})
+            .expect(HttpStatus.OK, JSON.stringify({id: 0}));
+        sockets.server.emit('message', JSON.stringify({ appId: 'foo', sectionId: '0', message: { name: 'update_mc' } }));
+        expect(sockets.messages.find(message => JSON.parse(message).sectionId === '1')).toBeDefined();
     });
 
     afterEach(async () => {

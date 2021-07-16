@@ -1,44 +1,21 @@
-const _bridge = (m, server, Constants) => {
-    // returns the section information for a given id
-    const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
-    // returns the context corresponding to the space or undefined if not connected
-    const _getContext = (space) => {
-        const primary = server.contexts.find(context => context.primary === space);
-        return !primary ? server.contexts.find(context => context.secondary.includes(space)) : primary;
-    };
-    // whether a space is primary within the given context
-    const _isPrimaryForContext = (context, space) => space === context.primary;
-    // whether a section is primary within the given context
-    const _sectionIsPrimaryForContext = (context, sectionId) => _isPrimaryForContext(context, _getSpaceForSection(_getSectionForId(sectionId)));
-    // returns the replicated sections for the sectionId
-    const _getReplicas = (context, sectionId) => context.map.filter(s => Number(s.primary) === Number(sectionId)).map(s => s.secondary);
-    // returns the space for a section
-    const _getSpaceForSection = (section) => Object.keys(section.spaces)[0];
-    // returns the context corresponding to the space the section with id: sectionId is contained in
-    const _getContextForSection = (sectionId) => {
-        const section = _getSectionForId(sectionId);
-        if (!section) return undefined;
-        return _getContext(_getSpaceForSection(section));
-    };
-
-    const context = _getContextForSection(m.sectionId);
-    if (!context || !_sectionIsPrimaryForContext(context, m.sectionId) || !m.message.name || m.message.name !== Constants.Events.UPDATE_MC || m.message.uuid <= context.uuid) return;
-    m.message.secondary = true;
-    context.uuid = m.message.uuid;
-    const secondaryIds = _getReplicas(context, m.sectionId);
-    server.wss.clients.forEach(c => {
-        if (c.readyState !== Constants.WEBSOCKET_READY) return;
-        secondaryIds.forEach(id => {
-            const newMessage = { appId: m.appId, sectionId: id.toString(), message: m.message };
-            c.safeSend(JSON.stringify(newMessage));
-        });
-    });
-}
-
-module.exports = function (server, log, Constants) {
+module.exports = function (server, log, Constants, ApiUtils) {
     const peers = server.peers;
 
-
+    const _bridge = (m) => {
+        const connection = ApiUtils.getConnectionForSection(m.sectionId);
+        if (!connection || !ApiUtils.sectionIsPrimaryForConnection(connection, m.sectionId) || !m.message.name ||
+            m.message.name !== Constants.Events.UPDATE_MC || m.message.uuid <= connection.uuid) return;
+        m.message.secondary = true;
+        connection.uuid = m.message.uuid;
+        const secondaryIds = ApiUtils.getReplicas(connection, m.sectionId);
+        server.wss.clients.forEach(c => {
+            if (c.readyState !== Constants.WEBSOCKET_READY) return;
+            secondaryIds.forEach(id => {
+                const newMessage = { appId: m.appId, sectionId: id.toString(), message: m.message };
+                c.safeSend(JSON.stringify(newMessage));
+            });
+        });
+    };
 
     /**************************************************************
                         Messaging Functionality
@@ -96,7 +73,6 @@ module.exports = function (server, log, Constants) {
                 if (m.registration.sectionId !== undefined) {
                     log.debug('Registering socket for section:', m.registration.sectionId);
                     s.sectionId = m.registration.sectionId;
-                    return;
                 }
                 if (m.registration.client !== undefined && m.registration.space !== undefined) {
                     log.debug('Registering socket for client:', m.registration.client, 'of space:', m.registration.space);

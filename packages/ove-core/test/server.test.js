@@ -23,11 +23,11 @@ const dirs = {
 };
 const { Constants, Utils } = require('@ove-lib/utils')('core', app, dirs);
 const log = Utils.Logger('OVE');
-
 app.use(cors());
-app.use(express.json());
 
+app.use(express.json());
 const spaces = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
+
 const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, log, Utils, Constants);
 
 // All variables are set in the global scope so that they can then be used appropriately in the test files.

@@ -5,10 +5,9 @@ const request = require('request');
 const HttpStatus = require('http-status-codes');
 const axios = require('axios');
 
-module.exports = function (server, log, Utils, Constants) {
+module.exports = function (server, log, Utils, Constants, ApiUtils) {
     const peers = server.peers;
     const operation = {};
-    server.contexts = [];
 
     // It is required that we are able to clean-up variables like these during testing.
     server.spaceGeometries = {};
@@ -45,14 +44,14 @@ module.exports = function (server, log, Utils, Constants) {
     operation.listConnections = (req, res) => {
         let space = req.query.space;
         if (space) {
-            const context = _getContext(space);
-            if (context) {
-                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(context));
+            const connection = ApiUtils.getConnection(space);
+            if (connection) {
+                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(connection));
             } else {
                 Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ msg: `No connections for space: ${space}` }));
             }
         } else {
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.contexts));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(ApiUtils.getConnections()));
         }
     };
 
@@ -88,153 +87,63 @@ module.exports = function (server, log, Utils, Constants) {
     // backing method for details api call.
     // returns the replicas if the id is primary
     // returns the primary if the id is secondary
-    const _getDetailsForId = (id, onError) => {
-        const context = _getContextForSection(id);
-        if (!context) { onError(`Section ${id} is not connected`); return; }
-        if (_sectionIsPrimaryForContext(context, id)) {
-            return { primary: id, secondary: _getReplicas(context, id) };
+    const _getSectionConnection = (id, onError) => {
+        const connection = ApiUtils.getConnectionForSection(id);
+        if (!connection) { onError(`Section ${id} is not connected`); return; }
+        if (ApiUtils.sectionIsPrimaryForConnection(connection, id)) {
+            return { primary: id, secondary: ApiUtils.getReplicas(connection, id) };
         } else {
-            return { primary: _getPrimary(context, id), secondary: id };
+            return { primary: ApiUtils.getPrimary(connection, id), secondary: id };
         }
     }
 
     // handler for details api call, including errors
     operation.getSectionConnection = (req, res) => {
-        const mapping = _getDetailsForId(Number(req.params.id), msg => _sendError(res, msg));
+        const mapping = _getSectionConnection(Number(req.params.id), msg => _sendError(res, msg));
         if (mapping) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ section: mapping }));
     };
 
-    // updates/creates context for connection
-    const _updateContext = (primary, secondary) => {
-        let context;
-        if (_isConnected(primary)) {
-            context = _getContext(primary);
-            context.secondary = [...context.secondary, secondary];
-        } else {
-            context = { isInitialized: false, isConnected: true, primary: primary, secondary: [secondary], uuid: -1 };
-            server.contexts.push(context);
-        }
-        return context;
-    };
     // send error message with a http bad request
     const _sendError = (res, msg) => Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: msg }));
-    // whether the space is currently connected, either as primary or secondary
-    const _isConnected = (space) => _isPrimary(space) || _isSecondary(space);
-    // returns the context corresponding to the space or undefined if not connected
-    const _getContext = (space) => {
-        const primary = server.contexts.find(context => context.primary === space);
-        return !primary ? server.contexts.find(context => context.secondary.includes(space)) : primary;
-    };
-    const _removeContext = (space) => {
-        const _remove = (index) => server.contexts.splice(index, 1);
-        const primary = server.contexts.findIndex(context => context.primary === space);
-        _remove(primary !== -1 ? primary : server.contexts.findIndex(context => context.secondary === space));
-    };
-    // returns the context corresponding to the space the section with id: sectionId is contained in
-    const _getContextForSection = (sectionId) => {
-        const section = _getSectionForId(sectionId);
-        if (!section) return undefined;
-        return _getContext(_getSpaceForSection(section));
-    };
-    // returns the space for a section
-    const _getSpaceForSection = (section) => Object.keys(section.spaces)[0];
-    // whether the space is connected as a primary
-    const _isPrimary = (space) => server.contexts.find(context => context.primary === space) !== undefined;
-    // whether the space is connected as a secondary
-    const _isSecondary = (space) => server.contexts.find(context => context.secondary.includes(space)) !== undefined;
-    // returns all web socket clients for a section
-    const _getClientsForSection = (section) => Array.from(server.wss.clients).filter(client => Number(client.sectionId) === Number(section.id));
-    // returns the section information for a given id
-    const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
-    // whether a space is primary within the given context
-    const _isPrimaryForContext = (context, space) => space === context.primary;
-    // whether a space is secondary within the given context
-    const _isSecondaryForContext = (context, space) => context.secondary.includes(space);
-    // whether a section is primary within the given context
-    const _sectionIsPrimaryForContext = (context, sectionId) => _isPrimaryForContext(context, _getSpaceForSection(_getSectionForId(sectionId)));
-    // whether a section is secondary within the given context
-    const _sectionIsSecondaryForContext = (context, sectionId) => _isSecondaryForContext(context, _getSpaceForSection(_getSectionForId(sectionId)));
-    // returns the replicated sections for the sectionId
-    const _getReplicas = (context, sectionId) => context.map.filter(s => Number(s.primary) === Number(sectionId)).map(s => s.secondary);
-    // returns the primary section for the sectionId
-    const _getPrimary = (context, sectionId) => context.map.find(s => Number(s.secondary) === Number(sectionId)).primary;
-    const _getSpaceBySectionId = (id) => _getSpaceForSection(_getSectionForId(id));
-
-    const _deleteSecondarySection = (context, sectionId) => context.map.splice(context.map.findIndex(s => Number(s.secondary) === Number(sectionId)), 1);
-    const _deleteSpace = (context, space) => context.secondary.splice(context.secondary.indexOf(space), 1);
-    const _deleteAllForSpace = (context, space) => _getSectionsForSpace(space).forEach(s => _deleteSecondarySection(context, s.id));
-    const _getSectionsForSpace = (space) => _readSections(space, undefined, undefined, false, _ => {}).result;
-    const _forEachSpace = (context, f) => context.secondary.forEach(s => f(s));
-    const _addSection = (context, mapping) => context.map = !context.map ? [mapping] : [...context.map, mapping];
-    const _replicate = (context, section, space) => {
-        const id = _createSection(_getSectionData(section, _getSpaceGeometries()[context.primary], _getSpaceGeometries()[space], space), f1, f1);
-        const mapping = { primary: section.id, secondary: id };
-        _addSection(context, mapping);
-        return mapping;
-    };
-    const _replicateAll = (context, section) => _forEachSpace(context, s => _replicate(context, section, s));
-    const f0 = () => {};
-    const f1 = (_) => {};
 
     operation.deleteConnection = function (req, res) {
         if (req.params.secondary) {
-            _disconnectSpace(req.params.secondary);
+            ApiUtils.disconnectSpace(req.params.secondary);
         } else {
-            _removeContext(req.params.primary);
+            ApiUtils.removeConnection(req.params.primary);
         }
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    };
+
+    const _replicate = (connection, section, space) => {
+        const id = _createSection(ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space));
+        return ApiUtils.replicate(connection, section, id);
     };
 
     operation.deleteConnections = (req, res) => {
-        server.contexts.splice(0, server.contexts.length);
+        ApiUtils.clearConnections();
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
-    const _disconnectSpace = function (space) {
-        const context = _getContext(space);
-        if (context.secondary.length > 1) {
-            _deleteSpace(context, space);
-            _deleteAllForSpace(context, space);
-        } else {
-            _removeContext(space);
-        }
-    };
-
-    const _getSectionData = function (section, primary, secondary, title) {
-        const resize = (primary, secondary, x, y, w, h) => {
-            const widthFactor = Number(secondary.w) / Number(primary.w);
-            const heightFactor = Number(secondary.h) / Number(primary.h);
-            return { x: x * widthFactor, y: y * heightFactor, w: w * widthFactor, h: h * heightFactor };
-        };
-
-        const coordinates = resize(primary, secondary, Number(section.x), Number(section.y), Number(section.w), Number(section.h));
-        const data = {
-            "space": title,
-            "x": coordinates.x,
-            "y": coordinates.y,
-            "w": coordinates.w,
-            "h": coordinates.h
-        };
-        if (section.app) {
-            data["app"] = {"url": section.app.url, "states": {"load": section.app.state}};
-        }
-        return data;
-    };
-
-    const _connectSpaces = function (primary, secondary, error) {
+    const _createConnection = function (primary, secondary, error) {
         if (primary === secondary) { error(`Primary and secondary space are the same`); return; }
         // check if primary is a secondary anywhere else and if the secondary has any connections, if so, error
-        if (_isSecondary(primary) || _isConnected(secondary)) { error(`Could not connect ${primary} and ${secondary} as there is an existing connection`); return; }
-        // update contexts to include new connection
-        const context = _updateContext(primary, secondary);
+        if (ApiUtils.isSecondary(primary) || ApiUtils.isConnected(secondary)) { error(`Could not connect ${primary} and ${secondary} as there is an existing connection`); return; }
+        // update connections to include new connection
+        const connection = ApiUtils.updateConnection(primary, secondary);
 
         // clear sections in secondary space
-        _deleteSections(secondary, undefined, f1, f0);
-        const primarySections = _getSectionsForSpace(primary);
-        if (primarySections.length === 0) { context.isInitialized = true; return []; }
+        _deleteSections(secondary, undefined);
+        const primarySections = ApiUtils.getSectionsForSpace(primary);
+        if (primarySections.length === 0) {
+            connection.isInitialized = true;
+            ApiUtils.updateConnectionState(connection);
+            return [];
+        }
         // replicate all sections from primary space to secondary
-        const replicas = primarySections.map(section => _replicate(context, section, secondary)).filter(({ _, secondary }) => secondary !== -1);
-        context.isInitialized = true;
+        const replicas = primarySections.map(section => _replicate(connection, section, secondary)).filter(({ _, secondary }) => secondary !== -1);
+        connection.isInitialized = true;
+        ApiUtils.updateConnectionState(connection);
 
         return replicas;
     };
@@ -242,7 +151,7 @@ module.exports = function (server, log, Utils, Constants) {
     // http request handler, calling backing method. Includes error handling.
     // expecting primary and secondary as url query parameters.
     operation.createConnection = function (req, res) {
-        const sections = _connectSpaces(req.params.primary, req.params.secondary, msg => { log.error(msg); _sendError(res, msg); });
+        const sections = _createConnection(req.params.primary, req.params.secondary, msg => { log.error(msg); _sendError(res, msg); });
         if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ids: sections}));
     };
 
@@ -328,6 +237,7 @@ module.exports = function (server, log, Utils, Constants) {
 
     // body: space, w, h, x, y, app
     const _createSection = (body, sendError, sendMessage) => {
+        if (!sendMessage) { sendMessage = () => {}; }
         if (!body.space || !server.spaces[body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(body));
             sendError('invalid space');
@@ -410,12 +320,10 @@ module.exports = function (server, log, Utils, Constants) {
             }
         });
 
-        const space = _getSpaceForSection(section);
-        const context = _getContext(space);
-        if (context && context.isInitialized && _isPrimaryForContext(context, space)) {
-            _replicateAll(context, section);
+        ApiUtils.applyPrimary(ApiUtils.getSpaceForSection(section), (connection) => {
+            ApiUtils.forEachSpace(connection, s => _replicate(connection, section, s));
             log.debug('Successfully created replica');
-        }
+        });
 
         log.info('Successfully created new section:', sectionId);
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
@@ -468,6 +376,7 @@ module.exports = function (server, log, Utils, Constants) {
     };
 
     const _deleteSections = function (space, groupId, send, empty) {
+        if (!send) { send = () => {}; }
         _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
         let sections = server.state.get('sections');
         if (groupId) {
@@ -520,7 +429,6 @@ module.exports = function (server, log, Utils, Constants) {
                 }
             });
             log.info('Successfully deleted all sections');
-            //Utils.sendEmptySuccess(res);
             empty();
         }
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
@@ -532,17 +440,14 @@ module.exports = function (server, log, Utils, Constants) {
         const space = req.query.space;
         const groupId = req.query.groupId;
         const send = deletedSections => { Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections })); };
-        const context = _getContext(space);
-        if (context) {
-            if (_isPrimaryForContext(context, space)) {
-                _forEachSpace(context, s => {
-                    const sections = _getSectionsForSpace(s);
-                    _deleteSections(s, groupId, f1, f0); // delete all sections in space
-                    sections.forEach(section => _deleteSecondarySection(context, section.id)); // remove mappings
+        if (space) {
+            ApiUtils.applyPrimary(space, (connection) => {
+                ApiUtils.forEachSpace(connection, s => {
+                    const sections = ApiUtils.getSectionsForSpace(s);
+                    _deleteSections(s, groupId); // delete all sections in space
+                    sections.forEach(section => ApiUtils.deleteSecondarySection(connection, section.id)); // remove mappings
                 });
-            } else {
-                _disconnectSpace(space);
-            }
+            }, true);
         }
         _deleteSections(space, groupId, send, () => { Utils.sendEmptySuccess(res); });
     };
@@ -1035,14 +940,9 @@ module.exports = function (server, log, Utils, Constants) {
             const geometry = { x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h };
             _updateSectionById(sectionId, req.body.space, geometry, req.body.app);
 
-            const context = _getContext(req.body.space);
-            if (context) {
-                if (_sectionIsPrimaryForContext(context, sectionId)) {
-                    _getReplicas(context, sectionId).forEach(r => _updateSectionById(r, _getSpaceBySectionId(r), geometry, req.body.app));
-                } else {
-                    _disconnectSpace(req.body.space);
-                }
-            }
+            ApiUtils.applyPrimary(req.body.space, (connection) => {
+                ApiUtils.getReplicas(connection, sectionId).forEach(r => _updateSectionById(r, ApiUtils.getSpaceBySectionId(r), geometry, req.body.app))
+            }, true);
 
             log.info('Successfully updated section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
@@ -1057,16 +957,10 @@ module.exports = function (server, log, Utils, Constants) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
         } else {
             _messagePeers('deleteSectionById', { params: { id: sectionId } });
-            const space = _getSpaceBySectionId(sectionId);
-            const context = _getContext(space);
 
-            if (context) {
-                if (_sectionIsPrimaryForContext(context, sectionId)) {
-                    _getReplicas(context, sectionId).forEach(id => _deleteSectionById(id));
-                } else {
-                    _disconnectSpace(space);
-                }
-            }
+            ApiUtils.applyPrimary(ApiUtils.getSpaceBySectionId(sectionId), (connection) => {
+                ApiUtils.getReplicas(connection, sectionId).forEach(id => _deleteSectionById(id));
+            }, true);
             _deleteSectionById(sectionId);
 
             log.info('Successfully deleted section:', sectionId);

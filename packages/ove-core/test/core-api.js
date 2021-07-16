@@ -681,6 +681,22 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify({ error: 'Could not connect TestingFour and TestingNine as there is an existing connection' }));
     });
 
+    it('can delete all connections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingFour/TestingFourClone');
+        let res = await request(app).delete('/connections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({}));
+    });
+
+    it('can delete all sections when no space is or group is specified', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await request(app).delete('/sections');
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.text).toEqual(JSON.stringify({}));
+    })
+
     it('should error when connecting a secondary space', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         let res = await request(app).post('/connection/TestingNineClone/TestingFour');
