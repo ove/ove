@@ -19,6 +19,7 @@ const ApiUtils = require(path.join(srcDir, 'server', 'api-utils'))(server, log, 
 const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants, ApiUtils);
 const PORT = 5555;
 const PEER_PORT = 5545;
+const SECONDARY_PORT = 5565;
 const TIMEOUT = 500;
 
 // Restore console before run.
@@ -273,15 +274,15 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(Object.keys(server.peers.clients).length).toEqual(1);
         expect(Object.keys(server.peers.clients)[0]).toEqual('localhost:' + PEER_PORT);
-        await request(app).post('/peers').send([{ url: 'http://localhost:' + PEER_PORT }, { url: 'somehost:' + PEER_PORT }, {}])
+        await request(app).post('/peers').send([{ url: 'http://localhost:' + PEER_PORT }, { url: `localhost:${SECONDARY_PORT}/` }, {}])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(Object.keys(server.peers.clients).length).toEqual(2);
         expect(Object.keys(server.peers.clients)[0]).toEqual('localhost:' + PEER_PORT);
-        expect(Object.keys(server.peers.clients)[1]).toEqual('somehost:' + PEER_PORT);
-        await request(app).post('/peers').send([{ url: 'somehost:' + PEER_PORT + '/' }])
+        expect(Object.keys(server.peers.clients)[1]).toEqual('localhost:' + SECONDARY_PORT);
+        await request(app).post('/peers').send([{ url: 'localhost:' + SECONDARY_PORT }])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(Object.keys(server.peers.clients).length).toEqual(1);
-        expect(Object.keys(server.peers.clients)[0]).toEqual('somehost:' + PEER_PORT);
+        expect(Object.keys(server.peers.clients)[0]).toEqual('localhost:' + SECONDARY_PORT);
         await request(app).post('/peers').send([])
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
         expect(Object.keys(server.peers.clients).length).toEqual(0);
@@ -755,8 +756,7 @@ describe('The OVE Core server', () => {
             nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
             await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
             expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'core', message: { action: Constants.Action.DELETE } }));
-            expect(sockets.messages.length).toEqual(2);
-
+            expect(sockets.messages.map(message => JSON.parse(message)).filter(message => !message.clockReSync).length).toEqual(3);
             // The order of these messages are not important.
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
@@ -765,7 +765,6 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
             ))).toBeTruthy();
             nock.cleanAll();
-            global.console = OLD_CONSOLE;
             done();
         }, TIMEOUT);
         jest.runOnlyPendingTimers();
@@ -778,18 +777,17 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, JSON.stringify({id: 0}));
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', sectionId: '0', message: { name: 'update_mc' } }));
         expect(sockets.messages.find(message => JSON.parse(message).sectionId === '1')).toBeDefined();
+        await request(app).delete('/sections');
     });
 
-    afterEach(async () => {
-        while (sockets.messages.length > 0) {
-            sockets.messages.pop();
-        }
+    afterEach(() => {
+        sockets.messages.splice(0, sockets.messages.length);
     });
     /* jshint ignore:end */
 
-    afterAll((done) => {
+    afterAll(() => {
+        global.console = OLD_CONSOLE;
         sockets.server.stop();
         sockets.peerServer.stop();
-        app.close(done);
     });
 });

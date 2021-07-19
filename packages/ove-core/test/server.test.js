@@ -83,6 +83,7 @@ require(path.join(srcDir, '..', 'test', 'spaces-json.js'));
 require(path.join(srcDir, '..', 'test', 'core-functionality.js'));
 require(path.join(srcDir, '..', 'test', 'core-api.js'));
 require(path.join(srcDir, '..', 'test', 'core-app.js'));
+require(path.join(srcDir, '..', 'test', 'messaging.js'));
 
 // The server should be able to start on a random port.
 describe('The OVE Core server', () => {
@@ -112,6 +113,3 @@ describe('The OVE Core server', () => {
         global.console = OLD_CONSOLE;
     });
 });
-
-// Any tests involving setTimeout needs to happen at the end - limitation of Jest.
-require(path.join(srcDir, '..', 'test', 'messaging.js'));

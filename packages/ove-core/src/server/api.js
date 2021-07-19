@@ -1,5 +1,3 @@
-// noinspection DuplicatedCode
-
 const path = require('path');
 const request = require('request');
 const HttpStatus = require('http-status-codes');
