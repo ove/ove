@@ -93,7 +93,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         } else {
             return { primary: ApiUtils.getPrimary(connection, id), secondary: id };
         }
-    }
+    };
 
     // handler for details api call, including errors
     operation.getSectionConnection = (req, res) => {
@@ -114,7 +114,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     const _replicate = (connection, section, space) => {
-        const id = _createSection(ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space));
+        const id = _createSection(ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space), undefined, undefined, section.id);
         return ApiUtils.replicate(connection, section, id);
     };
 
@@ -234,7 +234,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     // body: space, w, h, x, y, app
-    const _createSection = (body, sendError, sendMessage) => {
+    const _createSection = (body, sendError, sendMessage, primaryId) => {
         if (!sendMessage) { sendMessage = () => {}; }
         if (!body.space || !server.spaces[body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(body));
@@ -282,7 +282,23 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 }
                 if (body.app.states.load) {
                     // Either a named state or an in-line state configuration can be loaded.
-                    if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
+                    if (primaryId !== undefined) {
+                        const url = `${section.app.url}/instances/${primaryId}/state`;
+                        log.debug('url: ', url);
+                        request.get({
+                            url: url,
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
+                        }, (error, response, b) => {
+                            if (!error && response.statusCode === HttpStatus.OK) {
+                                const x = JSON.parse(b);
+                                log.debug('Body: ', x.enabledLayers);
+                                request.post(section.app.url + '/instances/' + sectionId + '/state', {
+                                    headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                                    json: x
+                                }, _handleRequestError);
+                            }
+                        })
+                    } else if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
                         section.app.state = body.app.states.load;
                         log.debug('Loading existing named state:', section.app.state);
                     } else {

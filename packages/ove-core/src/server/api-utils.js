@@ -3,8 +3,13 @@ module.exports = (server, log, Utils) => {
     const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
     // returns the connection corresponding to the space or undefined if not connected
     const _getConnection = (space) => {
-        const primary = server.state.get('connections').find(connection => connection.primary === space);
-        return !primary ? server.state.get('connections').find(connection => connection.secondary.includes(space)) : primary;
+        if (server.state.get('connections').length === 0) return
+        const primary = server.state.get('connections')
+            .filter(connection => !Utils.isNullOrEmpty(connection))
+            .find(connection => connection.primary === space);
+        return !primary ? server.state.get('connections')
+            .filter(connection => !Utils.isNullOrEmpty(connection))
+            .find(connection => connection.secondary.includes(space)) : primary;
     };
     // whether a space is primary within the given connection
     const _isPrimaryForConnection = (connection, space) => space === connection.primary;

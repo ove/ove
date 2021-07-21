@@ -71,7 +71,6 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     this.peers = require(path.join(__dirname, 'peers'))(this, log, Utils, Constants);
 
     const ApiUtils = require(path.join(__dirname, 'api-utils'))(this, log, Utils);
-    log.debug('api utils exists: ', ApiUtils !== undefined);
 
     // Messaging middleware
     app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Constants, ApiUtils));
