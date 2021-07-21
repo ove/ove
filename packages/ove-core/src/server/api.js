@@ -842,16 +842,15 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         } else {
             _messagePeers('refreshSectionById', { params: { id: sectionId } });
             _refreshSectionById(sectionId);
+            if (ApiUtils.isPrimary(ApiUtils.getSpaceBySectionId(sectionId))) {
+                ApiUtils.getReplicas(ApiUtils.getConnectionForSection(sectionId), sectionId).forEach(s => _refreshSectionById(s));
+            }
             log.info('Successfully refreshed section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [ parseInt(sectionId, 10) ] }));
         }
     };
 
-    // Refreshes all sections
-    operation.refreshSections = function (req, res) {
-        const space = req.query.space;
-        const groupId = req.query.groupId;
-        _messagePeers('refreshSections', { query: { space: space, groupId: groupId } });
+    const _refreshSections = (space, groupId, sendMessage, sendEmpty) => {
         let sectionsToRefresh = [];
         if (groupId) {
             if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
@@ -880,12 +879,27 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 }
             });
             log.info('Successfully refreshed all sections');
-            Utils.sendEmptySuccess(res);
+            sendEmpty();
             return;
         }
         sectionsToRefresh.forEach(_refreshSectionById);
+        sendMessage(sectionsToRefresh);
+    };
+
+    // Refreshes all sections
+    operation.refreshSections = function (req, res) {
+        const space = req.query.space;
+        const groupId = req.query.groupId;
+        _messagePeers('refreshSections', { query: { space: space, groupId: groupId } });
+        const sendMessage = (sectionsToRefresh) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToRefresh }));
+        const sendError = () => Utils.sendEmptySuccess(res);
+        _refreshSections(space, groupId, sendMessage, sendError);
+
+        if (space) {
+            ApiUtils.applyPrimary(space, (connection) => ApiUtils.forEachSpace(connection, s => _refreshSections(s, groupId)));
+        }
+
         log.info('Successfully refreshed sections:', sectionsToRefresh);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToRefresh }));
     };
 
     // Fetches details of an individual section
