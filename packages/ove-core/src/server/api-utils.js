@@ -104,14 +104,10 @@ module.exports = (server, log, Utils) => {
         _addSection(connection, mapping);
         return mapping;
     };
-    const _applyPrimary = (space, f, def) => {
+    const _applyPrimary = (space, f) => {
         const connection = _getConnection(space);
-        if (connection && connection.isInitialized){
-            if (_isPrimaryForConnection(connection, space)) {
-                f(connection);
-            } else if (def) {
-                _disconnectSpace(space);
-            }
+        if (connection && connection.isInitialized && _isPrimaryForConnection(connection, space)){
+            f(connection);
         }
     };
     const _clearConnections = () => server.state.set('connections', []);

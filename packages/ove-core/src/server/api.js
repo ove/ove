@@ -283,18 +283,15 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 if (body.app.states.load) {
                     // Either a named state or an in-line state configuration can be loaded.
                     if (primaryId !== undefined) {
-                        const url = `${section.app.url}/instances/${primaryId}/state`;
-                        log.debug('url: ', url);
+                        log.debug('Loading state from primary section: ', primaryId);
                         request.get({
-                            url: url,
+                            url: `${section.app.url}/instances/${primaryId}/state`,
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
                         }, (error, response, b) => {
                             if (!error && response.statusCode === HttpStatus.OK) {
-                                const x = JSON.parse(b);
-                                log.debug('Body: ', x.enabledLayers);
                                 request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                     headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                    json: x
+                                    json: JSON.parse(b)
                                 }, _handleRequestError);
                             }
                         })
@@ -354,6 +351,11 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         const sendMessage = msg => {
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(msg));
         };
+
+        if (ApiUtils.isSecondary(req.body.space)) {
+            sendError('Operation unavailable as space is connected as a replica');
+            return;
+        }
 
         const id = _createSection(req.body, sendError, sendMessage);
         if (!id) return;
@@ -452,6 +454,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     // Deletes all sections
     operation.deleteSections = function (req, res) {
         const space = req.query.space;
+        if (ApiUtils.isSecondary(space)) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica' }));
+            return;
+        }
         const groupId = req.query.groupId;
         const send = deletedSections => { Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: deletedSections })); };
         if (space) {
@@ -461,7 +467,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                     _deleteSections(s, groupId); // delete all sections in space
                     sections.forEach(section => ApiUtils.deleteSecondarySection(connection, section.id)); // remove mappings
                 });
-            }, true);
+            });
         }
         _deleteSections(space, groupId, send, () => { Utils.sendEmptySuccess(res); });
     };
@@ -949,6 +955,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             // x and y positions must be provided together
             log.error('Both x and y positions are required for a resize operation', 'request:', JSON.stringify(req.body));
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+        } else if (ApiUtils.isSecondary(req.body.space)) {
+            log.error('Operation unavailable as space is connected as a replica');
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica' }));
         } else {
             _messagePeers('updateSectionById', { body: req.body, params: { id: sectionId } });
             const geometry = { x: req.body.x, y: req.body.y, w: req.body.w, h: req.body.h };
@@ -956,7 +965,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
             ApiUtils.applyPrimary(req.body.space, (connection) => {
                 ApiUtils.getReplicas(connection, sectionId).forEach(r => _updateSectionById(r, ApiUtils.getSpaceBySectionId(r), geometry, req.body.app))
-            }, true);
+            });
 
             log.info('Successfully updated section:', sectionId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
@@ -969,12 +978,15 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
             log.error('Invalid Section Id:', sectionId);
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+        } else if (ApiUtils.isSecondary(ApiUtils.getSpaceBySectionId(sectionId))) {
+            log.error('Operation unavailable as space is connected as a replica');
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica' }));
         } else {
             _messagePeers('deleteSectionById', { params: { id: sectionId } });
 
             ApiUtils.applyPrimary(ApiUtils.getSpaceBySectionId(sectionId), (connection) => {
                 ApiUtils.getReplicas(connection, sectionId).forEach(id => _deleteSectionById(id));
-            }, true);
+            });
             _deleteSectionById(sectionId);
 
             log.info('Successfully deleted section:', sectionId);

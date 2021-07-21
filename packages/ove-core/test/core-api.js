@@ -618,14 +618,14 @@ describe('The OVE Core server', () => {
         expect(JSON.parse(res.text).length).toBe(0);
     });
 
-    it('should disconnect if deleting all sections in secondary space', async () => {
+    it('should not be able to delete sections in secondary space', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         let res = await request(app).delete('/sections?space=TestingNineClone');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         res = await request(app).get('/connections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(JSON.parse(res.text).length).toBe(0);
+        expect(JSON.parse(res.text).length).toBe(1);
     });
 
     it('should update all replicas if updating a primary section', async () => {
@@ -638,14 +638,14 @@ describe('The OVE Core server', () => {
         expect(JSON.parse(res.text).w).toEqual(20);
     });
 
-    it('should disconnect if updating a secondary section', async () => {
+    it('should not be able to update a secondary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         let res = await request(app).post('/sections/1').send({ 'h': 10, 'space': 'TestingNineClone', 'w': 20, 'y': 0, 'x': 20 });
-        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         res = await request(app).get('/connections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(JSON.parse(res.text).length).toBe(0);
+        expect(JSON.parse(res.text).length).toBe(1);
     });
 
     it('should delete all replica sections if deleting a primary section', async () => {
@@ -658,14 +658,14 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify([]));
     });
 
-    it('should disconnect if deleting a secondary section', async () => {
+    it('should not be able to delete a secondary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         let res = await request(app).delete('/sections/1');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
+        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         res = await request(app).get('/connections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(JSON.stringify([]));
+        expect(JSON.parse(res.text).length).toBe(1);
     });
 
     it('should error when connecting a space to itself', async () => {
