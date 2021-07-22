@@ -153,6 +153,32 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ids: sections}));
     };
 
+    operation.onEvent = (req, res) => {
+        const id = req.params.id;
+        const space = ApiUtils.getSpaceBySectionId(id);
+        if (!ApiUtils.isConnected(space)) {
+            Utils.sendEmptySuccess(res);
+            return;
+        }
+        const connection = ApiUtils.getConnection(space);
+        let ids;
+        if (ApiUtils.isPrimaryForConnection(connection, space)) {
+            ids = ApiUtils.getReplicas(connection, id);
+        } else {
+            ids = [ApiUtils.getPrimary(connection, id)];
+        }
+
+        server.wss.clients.forEach(c => {
+            if (c.readyState !== Constants.WEBSOCKET_READY) return;
+            ids.forEach(id => {
+                const newMessage = { appId: req.body.appId, sectionId: id, message: req.body.message };
+                c.safeSend(JSON.stringify(newMessage));
+            });
+        });
+
+        Utils.sendEmptySuccess(res);
+    }
+
     const _calculateSectionLayout = function (spaceName, geometry) {
         // Calculate the dimensions on a client-by-client basis
         let layout = [];
@@ -1121,6 +1147,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
+    server.app.post('/connections/event/:id([0-9]+)', operation.onEvent);
 
 
     // Swagger API documentation

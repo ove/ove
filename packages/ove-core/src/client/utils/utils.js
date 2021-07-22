@@ -116,17 +116,40 @@ function OVEUtils () {
         if (arguments.length > 0 && message) {
             //-- Sometimes, state is not the only message that is broadcast and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
+            fetch(__private.getOVEInstance().context.hostname + '/connections/event/' + __self.getSectionId(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appId: __private.getOVEInstance().app, sectionId: __self.getSectionId(), message: message })
+            }).then(res => log.debug('Sent connection event and received status: ', res.status));
+            message.controllerId = __private.getOVEInstance().context.uuid;
             __private.getOVEInstance().socket.send(message);
         } else {
-            __private.getOVEInstance().socket.send(__private.getOVEInstance().state.current);
+            const m = __private.getOVEInstance().state.current;
+            fetch(__private.getOVEInstance().context.hostname + '/connections/event/' + __self.getSectionId(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appId: __private.getOVEInstance().app, sectionId: __self.getSectionId(), message: m })
+            }).then(res => log.debug('Sent connection event and received status: ', res.status));
+            m.controllerId = __private.getOVEInstance().context.uuid;
+            __private.getOVEInstance().socket.send(m);
         }
         __private.getOVEInstance().state.cache();
     };
 
     this.setOnStateUpdate = function (callback) {
         __private.getOVEInstance().socket.on(function (message) {
-            __private.getOVEInstance().state.current = message;
-            callback();
+            let m = message;
+            if (m.sectionId) {
+                if (m.sectionId !== __self.getSectionId()) return;
+                m = m.message;
+            }
+            if (m.operation) return;
+            if (m.controllerId !== __private.getOVEInstance().context.uuid) {
+                const copy = {};
+                Object.keys(m).filter(key => key !== 'controllerId').forEach(key => copy[key] = m[key]);
+                __private.getOVEInstance().state.current = copy;
+                callback();
+            }
         });
     };
 

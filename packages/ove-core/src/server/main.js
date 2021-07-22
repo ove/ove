@@ -73,7 +73,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     const ApiUtils = require(path.join(__dirname, 'api-utils'))(this, log, Utils);
 
     // Messaging middleware
-    app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Constants, ApiUtils));
+    app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Constants));
 
     // APIs
     require(path.join(__dirname, 'api'))(this, log, Utils, Constants, ApiUtils);

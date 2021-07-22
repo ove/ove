@@ -1,21 +1,5 @@
-module.exports = function (server, log, Constants, ApiUtils) {
+module.exports = function (server, log, Constants) {
     const peers = server.peers;
-
-    const _bridge = (m) => {
-        const connection = ApiUtils.getConnectionForSection(m.sectionId);
-        if (!connection || !ApiUtils.sectionIsPrimaryForConnection(connection, m.sectionId) || !m.message.name ||
-            m.message.name !== Constants.Events.UPDATE_MC || m.message.uuid <= connection.uuid) return;
-        m.message.secondary = true;
-        connection.uuid = m.message.uuid;
-        const secondaryIds = ApiUtils.getReplicas(connection, m.sectionId);
-        server.wss.clients.forEach(c => {
-            if (c.readyState !== Constants.WEBSOCKET_READY) return;
-            secondaryIds.forEach(id => {
-                const newMessage = { appId: m.appId, sectionId: id.toString(), message: m.message };
-                c.safeSend(JSON.stringify(newMessage));
-            });
-        });
-    };
 
     /**************************************************************
                         Messaging Functionality
@@ -103,10 +87,6 @@ module.exports = function (server, log, Constants, ApiUtils) {
                 });
                 // We forward the same message to all peers
                 peers.send(m);
-
-                if (m.sectionId) {
-                    _bridge(m, server, Constants);
-                }
                 return;
             }
 

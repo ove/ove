@@ -29,7 +29,6 @@ app.use(express.json());
 
 const spaces = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
 const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, log, Utils, Constants);
-const ApiUtils = require(path.join(srcDir, 'server', 'api-utils'))(server, log, Utils);
 
 // Restore console before run.
 global.console = OLD_CONSOLE;
@@ -77,7 +76,7 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
     });
 
     it('should be logging all events received from a peer', () => {
-        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants, ApiUtils);
+        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants);
         middleware(sockets.serverSocket);
 
         sockets.messages = [];
@@ -99,7 +98,7 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
     });
 
     it('should be logging all received events', () => {
-        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants, ApiUtils);
+        const middleware = require(path.join(srcDir, 'server', 'messaging'))(server, log, Constants);
         middleware(sockets.serverSocket);
 
         sockets.messages = [];

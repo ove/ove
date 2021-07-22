@@ -10,6 +10,7 @@ function OVE (appId, hostname, sectionId) {
     // @CONSTANTS
 
     const log = OVE.Utils.Logger('OVE');
+    this.app = appId;
 
     //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
     //-- with or without the scheme (useful for opening WebSockets).                             --//
@@ -284,7 +285,7 @@ function OVE (appId, hostname, sectionId) {
 
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
-                if (!data.sectionId || data.sectionId === __private.sectionId) {
+                if (!data.sectionId || Number(data.sectionId) === Number(__private.sectionId)) {
                     if (Constants.Logging.TRACE) {
                         log.trace('Reading message:', JSON.stringify(data));
                     }
@@ -312,6 +313,11 @@ function OVE (appId, hostname, sectionId) {
         this.on = function (func) {
             onMessage = func;
         };
+
+        this.addEventListener = (key, func) => {
+            __private.ws.addEventListener(key, func);
+        };
+
         this.send = function (message, appId) {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
             const targetAppId = (arguments.length > 1 && appId) ? appId : __private.appId;
