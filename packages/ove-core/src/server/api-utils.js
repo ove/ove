@@ -1,6 +1,10 @@
 module.exports = (server, log, Utils) => {
     // returns the section information for a given id
     const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
+    const _isValidSectionId = (sectionId) => {
+        const section = server.state.get(`sections[${sectionId}]`);
+         return section !== undefined && !Utils.isNullOrEmpty(section);
+    }
     // returns the connection corresponding to the space or undefined if not connected
     const _getConnection = (space) => {
         if (server.state.get('connections').length === 0) return
@@ -124,6 +128,7 @@ module.exports = (server, log, Utils) => {
 
     return {
         getSectionForId: _getSectionForId,
+        isValidSectionId: _isValidSectionId,
         getConnection: _getConnection,
         isPrimaryForConnection: _isPrimaryForConnection,
         sectionIsPrimaryForConnection: _sectionIsPrimaryForConnection,

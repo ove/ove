@@ -706,6 +706,45 @@ describe('The OVE Core server', () => {
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'Could not connect TestingFour and TestingNineClone as there is an existing connection' }));
     });
+
+    it('should return empty when sending event without connection', async () => {
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/connections/event/0')
+            .expect(HttpStatus.OK, JSON.stringify({}));
+    });
+
+    it('should fail if no section for id', async () => {
+        await request(app).post('/connections/event/0')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 0' }));
+    });
+
+    it('should send events from secondary to primary sections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/connections/event/1').send({ appId: 'test', sectionId: '1', message: {} })
+            .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+    });
+
+    it('should send events from primary to secondary sections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingNine/TestingFour');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/connections/event/0').send({ appId: 'test', sectionId: '0', message: {} })
+            .expect(HttpStatus.OK, JSON.stringify({ ids: [1, 2] }));
+    });
+
+    it('should fail to create section in secondary space', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNineClone', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica' }));
+    });
+
+    it('should refresh replicated sections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/sections/0/refresh')
+            .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+    });
     /* jshint ignore:end */
 
     afterEach(async () => {

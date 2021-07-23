@@ -150,11 +150,17 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     // expecting primary and secondary as url query parameters.
     operation.createConnection = function (req, res) {
         const sections = _createConnection(req.params.primary, req.params.secondary, msg => { log.error(msg); _sendError(res, msg); });
-        if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ids: sections}));
+        if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }));
     };
 
     operation.onEvent = (req, res) => {
         const id = req.params.id;
+
+        if (!ApiUtils.isValidSectionId(id)) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No section found for id: ${id}` }));
+            return;
+        }
+
         const space = ApiUtils.getSpaceBySectionId(id);
         if (!ApiUtils.isConnected(space)) {
             Utils.sendEmptySuccess(res);
@@ -169,14 +175,15 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
 
         server.wss.clients.forEach(c => {
+            log.debug('websocket');
             if (c.readyState !== Constants.WEBSOCKET_READY) return;
             ids.forEach(id => {
-                const newMessage = { appId: req.body.appId, sectionId: id, message: req.body.message };
+                const newMessage = { appId: req.body.appId, sectionId: id.toString(), message: req.body.message };
                 c.safeSend(JSON.stringify(newMessage));
             });
         });
 
-        Utils.sendEmptySuccess(res);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
     }
 
     const _calculateSectionLayout = function (spaceName, geometry) {
@@ -314,12 +321,11 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
                         }, (error, response, b) => {
-                            if (!error && response.statusCode === HttpStatus.OK) {
-                                request.post(section.app.url + '/instances/' + sectionId + '/state', {
-                                    headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                    json: JSON.parse(b)
-                                }, _handleRequestError);
-                            }
+                            const payload = b || JSON.stringify(body.app.states.load);
+                            request.post(section.app.url + '/instances/' + sectionId + '/state', {
+                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                                json: JSON.parse(payload)
+                            }, _handleRequestError);
                         })
                     } else if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
                         section.app.state = body.app.states.load;
