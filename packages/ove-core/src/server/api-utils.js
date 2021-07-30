@@ -3,11 +3,11 @@ module.exports = (server, log, Utils) => {
     const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
     const _isValidSectionId = (sectionId) => {
         const section = server.state.get(`sections[${sectionId}]`);
-         return section !== undefined && !Utils.isNullOrEmpty(section);
-    }
+        return section !== undefined && !Utils.isNullOrEmpty(section);
+    };
     // returns the connection corresponding to the space or undefined if not connected
     const _getConnection = (space) => {
-        if (server.state.get('connections').length === 0) return
+        if (server.state.get('connections').length === 0) return;
         const primary = server.state.get('connections')
             .filter(connection => !Utils.isNullOrEmpty(connection))
             .find(connection => connection.primary === space);
@@ -61,18 +61,18 @@ module.exports = (server, log, Utils) => {
     const _deleteSecondarySection = (connection, sectionId) => {
         connection.map.splice(connection.map.findIndex(s => Number(s.secondary) === Number(sectionId)), 1);
         _updateConnectionState(connection);
-    }
+    };
     const _deleteSpace = (connection, space) => {
         connection.secondary.splice(connection.secondary.indexOf(space), 1);
         _updateConnectionState(connection);
-    }
+    };
     const _deleteAllForSpace = (connection, space) => _getSectionsForSpace(space).forEach(s => _deleteSecondarySection(connection, s.id));
     const _getSectionsForSpace = (space) => server.state.get('sections').filter(section => !Utils.isNullOrEmpty(section) && _getSpaceForSection(section) === space);
     const _forEachSpace = (connection, f) => connection.secondary.forEach(s => f(s));
     const _addSection = (connection, mapping) => {
         connection.map = !connection.map ? [mapping] : [...connection.map, mapping];
         _updateConnectionState(connection);
-    }
+    };
 
     const _disconnectSpace = function (space) {
         const connection = _getConnection(space);
@@ -87,30 +87,30 @@ module.exports = (server, log, Utils) => {
         const resize = (primary, secondary, x, y, w, h) => {
             const widthFactor = Number(secondary.w) / Number(primary.w);
             const heightFactor = Number(secondary.h) / Number(primary.h);
-            return {x: x * widthFactor, y: y * heightFactor, w: w * widthFactor, h: h * heightFactor};
+            return { x: x * widthFactor, y: y * heightFactor, w: w * widthFactor, h: h * heightFactor };
         };
 
         const coordinates = resize(primary, secondary, Number(section.x), Number(section.y), Number(section.w), Number(section.h));
         const data = {
-            "space": title,
-            "x": coordinates.x,
-            "y": coordinates.y,
-            "w": coordinates.w,
-            "h": coordinates.h
+            'space': title,
+            'x': coordinates.x,
+            'y': coordinates.y,
+            'w': coordinates.w,
+            'h': coordinates.h
         };
         if (section.app) {
-            data["app"] = {"url": section.app.url, "states": {"load": section.app.state}};
+            data['app'] = { 'url': section.app.url, 'states': { 'load': section.app.state } };
         }
         return data;
     };
     const _replicate = (connection, section, id) => {
-        const mapping = {primary: section.id, secondary: id};
+        const mapping = { primary: section.id, secondary: id };
         _addSection(connection, mapping);
         return mapping;
     };
     const _applyPrimary = (space, f) => {
         const connection = _getConnection(space);
-        if (connection && connection.isInitialized && _isPrimaryForConnection(connection, space)){
+        if (connection && connection.isInitialized && _isPrimaryForConnection(connection, space)) {
             f(connection);
         }
     };
@@ -124,7 +124,7 @@ module.exports = (server, log, Utils) => {
             }
         }
         return connections;
-    }
+    };
 
     return {
         getSectionForId: _getSectionForId,
@@ -154,6 +154,6 @@ module.exports = (server, log, Utils) => {
         applyPrimary: _applyPrimary,
         clearConnections: _clearConnections,
         getConnections: _getConnections,
-        updateConnectionState: _updateConnectionState,
+        updateConnectionState: _updateConnectionState
     };
-}
+};

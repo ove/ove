@@ -695,7 +695,7 @@ describe('The OVE Core server', () => {
         let res = await request(app).delete('/sections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({}));
-    })
+    });
 
     it('should error when connecting a secondary space', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
@@ -744,6 +744,20 @@ describe('The OVE Core server', () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).post('/sections/0/refresh')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+    });
+
+    it('should refresh replicated spaces', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/sections/refresh?space=TestingNine')
+            .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+    });
+
+    it('cannot move connected sections', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/sections/moveTo?space=TestingNine').send({ space: 'TestingNineClone' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is currently connected' }));
     });
     /* jshint ignore:end */
 

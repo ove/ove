@@ -113,6 +113,7 @@ function OVEUtils () {
     //-- Debug logs related to State Updates are produced by OVE Core and therefore not  --//
     //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
+        if (__private.getOVEInstance().context.updateFlag) return;
         if (arguments.length > 0 && message) {
             //-- Sometimes, state is not the only message that is broadcast and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
@@ -146,7 +147,24 @@ function OVEUtils () {
             if (m.operation) return;
             if (m.controllerId !== __private.getOVEInstance().context.uuid) {
                 const copy = {};
-                Object.keys(m).filter(key => key !== 'controllerId').forEach(key => copy[key] = m[key]);
+                Object.keys(m).filter(key => key !== 'controllerId').forEach(key => { copy[key] = m[key]; });
+                __private.getOVEInstance().state.current = copy;
+                callback();
+            }
+        });
+    };
+
+    this.setOnStateUpdateController = function (callback) {
+        __private.getOVEInstance().socket.on(function (message) {
+            let m = message;
+            if (m.sectionId) {
+                if (m.sectionId !== __self.getSectionId()) return;
+                m = m.message;
+            }
+            if (m.operation) return;
+            if (m.controllerId !== __private.getOVEInstance().context.uuid) {
+                const copy = {};
+                Object.keys(m).filter(key => key !== 'controllerId').forEach(key => { copy[key] = m[key]; });
                 __private.getOVEInstance().state.current = copy;
                 callback();
             }

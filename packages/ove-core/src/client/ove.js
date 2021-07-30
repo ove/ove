@@ -314,8 +314,13 @@ function OVE (appId, hostname, sectionId) {
             onMessage = func;
         };
 
-        this.addEventListener = (key, func) => {
-            __private.ws.addEventListener(key, func);
+        this.addEventListener = (func) => {
+            __private.ws.addEventListener('message', message => {
+                if (!message || !message.data) return;
+                const data = JSON.parse(message.data);
+                if (data.appId !== appId || (data.sectionId && Number(data.sectionId) !== Number(OVE.Utils.getSectionId())) || !data.message) return;
+                func(data.message);
+            });
         };
 
         this.send = function (message, appId) {
@@ -392,7 +397,7 @@ function OVE (appId, hostname, sectionId) {
         if (!space) {
             log.warn('Name of space not provided');
         }
-        if (!client && client !== 0) {
+        if (!client && Number(client) !== 0) {
             log.warn('Client id not provided');
         }
         if (sectionId) {
@@ -467,7 +472,8 @@ function OVE (appId, hostname, sectionId) {
             let v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         }),
-        hostname: getHostName(true)
+        hostname: getHostName(true),
+        updateFlag: false
     };
 
     this.socket = new OVESocket(this, __private);

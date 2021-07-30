@@ -175,7 +175,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
 
         server.wss.clients.forEach(c => {
-            log.debug('websocket');
             if (c.readyState !== Constants.WEBSOCKET_READY) return;
             ids.forEach(id => {
                 const newMessage = { appId: req.body.appId, sectionId: id.toString(), message: req.body.message };
@@ -184,7 +183,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         });
 
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
-    }
+    };
 
     const _calculateSectionLayout = function (spaceName, geometry) {
         // Calculate the dimensions on a client-by-client basis
@@ -321,12 +320,12 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
                         }, (error, response, b) => {
-                            const payload = b || JSON.stringify(body.app.states.load);
+                            const payload = !b || error ? JSON.stringify(body.app.states.load) : b;
                             request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: JSON.parse(payload)
                             }, _handleRequestError);
-                        })
+                        });
                     } else if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
                         section.app.state = body.app.states.load;
                         log.debug('Loading existing named state:', section.app.state);
@@ -481,7 +480,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
         log.debug('Existing groups (active/deleted):', server.state.get('groups').length);
-    }
+    };
 
     // Deletes all sections
     operation.deleteSections = function (req, res) {
@@ -583,14 +582,14 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             }
         });
         log.debug('Successfully read configuration for sections:', sectionsToFetch);
-        const r = {result: result, numSectionsToFetchState: numSectionsToFetchState};
+        const r = { result: result, numSectionsToFetchState: numSectionsToFetchState };
 
         if (!fetchAppStates || r.numSectionsToFetchState === 0) { // also catches case where there are no sections to fetch
             sendResults(r.result);
         }
 
         return r;
-    }
+    };
 
     // Returns details of sections
     operation.readSections = function (req, res) {
@@ -852,6 +851,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     operation.moveSectionsTo = function (req, res) {
         const space = req.query.space;
         const groupId = req.query.groupId;
+        if (space && ApiUtils.isConnected(space)) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is currently connected' }));
+            return;
+        }
         _messagePeers('moveSectionsTo', { body: req.body, query: { space: space, groupId: groupId } });
         _updateSections({ moveTo: req.body }, space, groupId, res);
     };
@@ -882,7 +885,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
     };
 
-    const _refreshSections = (space, groupId, sendMessage, sendEmpty) => {
+    const _refreshSections = (space, groupId, sendEmpty) => {
         let sectionsToRefresh = [];
         if (groupId) {
             if (!Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
@@ -915,7 +918,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             return;
         }
         sectionsToRefresh.forEach(_refreshSectionById);
-        sendMessage(sectionsToRefresh);
+        return sectionsToRefresh;
     };
 
     // Refreshes all sections
@@ -923,15 +926,15 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         const space = req.query.space;
         const groupId = req.query.groupId;
         _messagePeers('refreshSections', { query: { space: space, groupId: groupId } });
-        const sendMessage = (sectionsToRefresh) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToRefresh }));
         const sendError = () => Utils.sendEmptySuccess(res);
-        _refreshSections(space, groupId, sendMessage, sendError);
+        const sectionsToRefresh = _refreshSections(space, groupId, sendError);
 
         if (space) {
             ApiUtils.applyPrimary(space, (connection) => ApiUtils.forEachSpace(connection, s => _refreshSections(s, groupId)));
         }
 
         log.info('Successfully refreshed sections:', sectionsToRefresh);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sectionsToRefresh }));
     };
 
     // Fetches details of an individual section
@@ -1010,7 +1013,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             _updateSectionById(sectionId, req.body.space, geometry, req.body.app);
 
             ApiUtils.applyPrimary(req.body.space, (connection) => {
-                ApiUtils.getReplicas(connection, sectionId).forEach(r => _updateSectionById(r, ApiUtils.getSpaceBySectionId(r), geometry, req.body.app))
+                ApiUtils.getReplicas(connection, sectionId).forEach(r => _updateSectionById(r, ApiUtils.getSpaceBySectionId(r), geometry, req.body.app));
             });
 
             log.info('Successfully updated section:', sectionId);
@@ -1057,7 +1060,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             let valid = true;
             const sections = server.state.get('sections');
             group.forEach(function (e) {
-                if (Utils.isNullOrEmpty(sections[e])) {
+                if (Utils.isNullOrEmpty(sections[e]) || ApiUtils.isSecondary(ApiUtils.getSpaceForSection(sections[e]))) {
                     valid = false;
                 }
             });
@@ -1154,7 +1157,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
     server.app.post('/connections/event/:id([0-9]+)', operation.onEvent);
-
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
