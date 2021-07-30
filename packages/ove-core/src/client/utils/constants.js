@@ -35,8 +35,4 @@ Constants.Operation = {
     REFRESH: 'refresh'
 };
 
-Constants.Events = {
-    UPDATE_MC: 'update_mc',
-};
-
 exports.Constants = Constants;
