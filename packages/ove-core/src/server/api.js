@@ -320,7 +320,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
                         }, (error, response, b) => {
-                            const payload = !b || error ? JSON.stringify(body.app.states.load) : b;
+                            const payload = !b || error ? JSON.stringify(body.app.states.load) : JSON.stringify(b);
                             request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: JSON.parse(payload)
