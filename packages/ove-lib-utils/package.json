@@ -25,7 +25,7 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "chalk": "4.1.1",
+    "chalk": "4.1.2",
     "dateformat": "4.5.1",
     "express": "4.17.1",
     "http-status-codes": "2.1.4",
