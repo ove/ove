@@ -326,6 +326,13 @@ function OVE (appId, hostname, sectionId) {
         this.send = function (message, appId) {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
             const targetAppId = (arguments.length > 1 && appId) ? appId : __private.appId;
+            message.controllerId = __self.context.uuid;
+
+            fetch(__self.context.hostname + '/connections/event/' + __private.sectionId, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message })
+            }).then(res => log.debug('Sent connection event and received status: ', res.status));
 
             sendWhenReady(function () {
                 //-- The same code works for the OVE Core viewer (which has no sectionId) and OVE Core Apps --//
