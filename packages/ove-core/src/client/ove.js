@@ -355,32 +355,28 @@ function OVE (appId, hostname, sectionId) {
     //-----------------------------------------------------------//
     const setGeometry = function (__self, __private) {
         __self.geometry = {};
-        const fetchSection = function (sectionId) {
-            if (sectionId) {
-                log.debug('Requesting details of section:', sectionId);
-                fetch(getHostName(true) + '/sections/' + sectionId)
-                    .then(function (r) { return r.text(); }).then(function (text) {
-                        const section = JSON.parse(text);
-                        __self.geometry.section = { w: section.w, h: section.h };
-                        __self.state.name = OVE.Utils.getQueryParam('state',
-                            (section.app && section.app.state) ? section.app.state : undefined);
-                        //-- Always store section id as a string to avoid if-checks      --//
-                        //-- failing on '0'                                              --//
-                        if (section.id !== undefined) {
-                            __private.sectionId = section.id.toString();
-                            sendWhenReady(function () {
-                                __private.ws.send(JSON.stringify({
-                                    appId: __private.appId,
-                                    registration: { sectionId: __private.sectionId }
-                                }));
-                            });
-                            log.debug('Got details from section:', __private.sectionId);
-                        }
-                        //-- We wait for section information to be available before      --//
-                        //-- announcing OVE loaded                                       --//
-                        $(document).trigger(OVE.Event.LOADED);
-                    });
+        const fetchSection = async function (sectionId) {
+            if (!sectionId) return;
+            log.debug('Requesting details of section:', sectionId);
+            const raw = await (await fetch(getHostName(true) + '/sections/' + sectionId)).text();
+            const section = JSON.parse(raw);
+            __self.geometry.section = { w: section.w, h: section.h };
+            __self.state.name = OVE.Utils.getQueryParam('state', (section.app && section.app.state) ? section.app.state : undefined);
+            //-- Always store section id as a string to avoid if-checks      --//
+            //-- failing on '0'                                              --//
+            if (section.id !== undefined) {
+                __private.sectionId = section.id.toString();
+                sendWhenReady(function () {
+                    __private.ws.send(JSON.stringify({
+                        appId: __private.appId,
+                        registration: { sectionId: __private.sectionId }
+                    }));
+                });
+                log.debug('Got details from section:', __private.sectionId);
             }
+            //-- We wait for section information to be available before      --//
+            //-- announcing OVE loaded                                       --//
+            $(document).trigger(OVE.Event.LOADED);
         };
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
