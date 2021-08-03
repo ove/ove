@@ -137,9 +137,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             ids = ApiUtils.getReplicas(connection, sectionId);
         } else {
             const primary = ApiUtils.getPrimary(connection, sectionId);
-            const replicas = ApiUtils.getReplicas(connection, sectionId).filter(id => id !== sectionId);
-            ids = replicas + [primary];
+            const replicas = ApiUtils.getReplicas(connection, primary).filter(id => id !== sectionId);
+            ids = replicas.concat([primary]);
         }
+        log.debug('ids: ', ids);
         ids.map(id => {
             const section = ApiUtils.getSectionForId(id);
             request.post(section.app.url + '/instances/' + id + '/state', {
