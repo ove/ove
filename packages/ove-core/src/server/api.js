@@ -105,6 +105,11 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     const _sendError = (res, msg) => Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: msg }));
 
     operation.deleteConnection = function (req, res) {
+        const connection = ApiUtils.getConnection(req.params.primary || req.params.secondary);
+        if (!connection) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No connection for space: ${req.params.primary || req.params.secondary}` }));
+            return;
+        }
         if (req.params.secondary) {
             ApiUtils.disconnectSpace(req.params.secondary);
         } else {
@@ -116,6 +121,32 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     const _replicate = (connection, section, space) => {
         const id = _createSection(ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space), undefined, undefined, section.id);
         return ApiUtils.replicate(connection, section, id);
+    };
+
+    operation.cache = (req, res) => {
+        log.debug('Caching application state across all replicas');
+        _cache(req.params.id, req.body);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    };
+
+    const _cache = (sectionId, body) => {
+        const connection = ApiUtils.getConnectionForSection(sectionId);
+        if (!connection) return;
+        let ids;
+        if (ApiUtils.sectionIsPrimaryForConnection(connection, sectionId)) {
+            ids = ApiUtils.getReplicas(connection, sectionId);
+        } else {
+            const primary = ApiUtils.getPrimary(connection, sectionId);
+            const replicas = ApiUtils.getReplicas(connection, sectionId).filter(id => id !== sectionId);
+            ids = replicas + [primary];
+        }
+        ids.map(id => {
+            const section = ApiUtils.getSectionForId(id);
+            request.post(section.app.url + '/instances/' + id + '/state', {
+                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                json: body
+            }, _handleRequestError);
+        });
     };
 
     operation.deleteConnections = (req, res) => {
@@ -320,7 +351,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
                         }, (error, response, b) => {
-                            const payload = !b || error ? JSON.stringify(body.app.states.load) : JSON.stringify(b);
+                            const payload = !b || (error !== undefined && error !== null) ? JSON.stringify(body.app.states.load) : JSON.stringify(b);
                             request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: JSON.parse(payload)
@@ -1157,6 +1188,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
     server.app.post('/connections/event/:id([0-9]+)', operation.onEvent);
+    server.app.post('/connections/cache/:id([0-9]+)', operation.cache);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));

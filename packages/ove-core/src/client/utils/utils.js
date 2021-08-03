@@ -114,6 +114,7 @@ function OVEUtils () {
     //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
         if (__private.getOVEInstance().context.updateFlag) return;
+        __private.getOVEInstance().state.cache();
         if (arguments.length > 0 && message) {
             //-- Sometimes, state is not the only message that is broadcast and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
@@ -121,7 +122,6 @@ function OVEUtils () {
         } else {
             __private.getOVEInstance().socket.send(__private.getOVEInstance().state.current);
         }
-        __private.getOVEInstance().state.cache();
     };
 
     this.setOnStateUpdate = function (callback) {

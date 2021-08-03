@@ -49,12 +49,17 @@ module.exports = (server, log, Utils) => {
     const _removeConnection = (space) => {
         const _remove = (index) => server.state.set(`connections[${index}]`, {});
         const primary = server.state.get('connections').findIndex(connection => connection.primary === space);
-        _remove(primary !== -1 ? primary : server.state.get('connections').findIndex(connection => connection.secondary.includes(space)));
+        _remove(primary !== -1 ? primary : server.state.get('connections')
+            .findIndex(connection => connection.secondary && connection.secondary.includes(space)));
     };
     // whether the space is connected as a primary
-    const _isPrimary = (space) => server.state.get('connections').filter(connection => !Utils.isNullOrEmpty(connection)).find(connection => connection.primary === space) !== undefined;
+    const _isPrimary = (space) => server.state.get('connections')
+        .filter(connection => !Utils.isNullOrEmpty(connection))
+        .find(connection => connection.primary === space) !== undefined;
     // whether the space is connected as a secondary
-    const _isSecondary = (space) => server.state.get('connections').filter(connection => !Utils.isNullOrEmpty(connection)).find(connection => connection.secondary.includes(space)) !== undefined;
+    const _isSecondary = (space) => server.state.get('connections')
+        .filter(connection => !Utils.isNullOrEmpty(connection))
+        .find(connection => connection.secondary && connection.secondary.includes(space)) !== undefined;
     // returns the primary section for the sectionId
     const _getPrimary = (connection, sectionId) => connection.map.find(s => Number(s.secondary) === Number(sectionId)).primary;
     const _getSpaceBySectionId = (id) => _getSpaceForSection(_getSectionForId(id));
@@ -76,6 +81,7 @@ module.exports = (server, log, Utils) => {
 
     const _disconnectSpace = function (space) {
         const connection = _getConnection(space);
+        if (!connection || !connection.secondary) return;
         if (connection.secondary.length > 1) {
             _deleteSpace(connection, space);
             _deleteAllForSpace(connection, space);
