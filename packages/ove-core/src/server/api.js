@@ -49,7 +49,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ msg: `No connections for space: ${space}` }));
             }
         } else {
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(ApiUtils.getConnections()));
+            const groupBy = (xs, key) => xs.reduce((rv, x) => { (rv[x[key]] = rv[x[key]] || []).push(x.secondary); return rv; }, {});
+            const connections = ApiUtils.getConnections()
+                .map(connection => ({ primary: connection.primary, secondary: connection.secondary, sections: groupBy(connection.map, 'primary') }));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(connections));
         }
     };
 
@@ -352,9 +355,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             json: true
                         }, (error, response, b) => {
-                            log.debug('error: ', error);
-                            log.debug('response code: ', response.statusCode);
-                            let payload = error || response.statusCode !== HttpStatus.OK ? body.app.states.load : b;
+                            let payload = error || !response || response.statusCode !== HttpStatus.OK ? body.app.states.load : b;
                             request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: payload
