@@ -422,7 +422,7 @@ function OVE (appId, hostname, sectionId) {
     //-----------------------------------------------------------//
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
-    const OVEState = function (__private, hostname) {
+    const OVEState = function (__self, __private) {
         //-- Default onRefresh handler does nothing --//
         __private.stateRefresh = function () { return 0; };
 
@@ -437,7 +437,7 @@ function OVE (appId, hostname, sectionId) {
             const currentState = JSON.stringify(this.current);
             log.debug('Sending request to URL:', endpoint, ', state:', currentState);
             $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
-            $.ajax({ url: hostname + '/connections/cache/' + __private.sectionId, type: 'POST', data: currentState, contentType: 'application/json' });
+            $.ajax({ url: __self.context.hostname + '/connections/cache/' + __private.sectionId, type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
             let __self = this;
@@ -484,7 +484,7 @@ function OVE (appId, hostname, sectionId) {
 
     this.socket = new OVESocket(this, __private);
     this.frame = new OVEFrame(this, __private);
-    this.state = new OVEState(__private, this.context.hostname);
+    this.state = new OVEState(this, __private);
     this.clock = new OVEClock(__private);
     setGeometry(this, __private);
 }

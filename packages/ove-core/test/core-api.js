@@ -8,7 +8,7 @@ const nock = global.nock;
 describe('The OVE Core server', () => {
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */

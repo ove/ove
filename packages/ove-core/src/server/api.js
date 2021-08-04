@@ -124,7 +124,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     operation.cache = (req, res) => {
-        log.debug('Caching application state across all replicas');
         _cache(req.params.id, req.body);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
@@ -140,6 +139,8 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             const replicas = ApiUtils.getReplicas(connection, primary).filter(id => id !== sectionId);
             ids = replicas.concat([primary]);
         }
+
+        log.debug('Caching application state across all replicas: ', ids);
         ids.map(id => {
             const section = ApiUtils.getSectionForId(id);
             request.post(section.app.url + '/instances/' + id + '/state', {
@@ -349,12 +350,14 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                         log.debug('Loading state from primary section: ', primaryId);
                         request.get({
                             url: `${section.app.url}/instances/${primaryId}/state`,
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
+                            json: true
                         }, (error, response, b) => {
-                            const payload = error !== undefined && error !== null ? JSON.stringify(body.app.states.load) : JSON.stringify(b);
+                            log.debug('error: ', error);
+                            log.debug('response code: ', response.statusCode);
+                            let payload = error || response.statusCode !== HttpStatus.OK ? body.app.states.load : b;
                             request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: JSON.parse(payload)
+                                json: payload
                             }, _handleRequestError);
                         });
                     } else if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
