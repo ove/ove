@@ -105,9 +105,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     const _sendError = (res, msg) => Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: msg }));
 
     operation.deleteConnection = function (req, res) {
-        const connection = ApiUtils.getConnection(req.params.primary || req.params.secondary);
+        const connection = ApiUtils.getConnection(req.params.secondary || req.params.primary);
         if (!connection) {
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No connection for space: ${req.params.primary || req.params.secondary}` }));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No connection for space: ${req.params.secondary || req.params.primary}` }));
             return;
         }
         if (req.params.secondary) {
@@ -140,7 +140,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             const replicas = ApiUtils.getReplicas(connection, primary).filter(id => id !== sectionId);
             ids = replicas.concat([primary]);
         }
-        log.debug('ids: ', ids);
         ids.map(id => {
             const section = ApiUtils.getSectionForId(id);
             request.post(section.app.url + '/instances/' + id + '/state', {
@@ -352,7 +351,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
                         }, (error, response, b) => {
-                            const payload = !b || (error !== undefined && error !== null) ? JSON.stringify(body.app.states.load) : JSON.stringify(b);
+                            const payload = error !== undefined && error !== null ? JSON.stringify(body.app.states.load) : JSON.stringify(b);
                             request.post(section.app.url + '/instances/' + sectionId + '/state', {
                                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                                 json: JSON.parse(payload)

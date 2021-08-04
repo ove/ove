@@ -81,7 +81,6 @@ module.exports = (server, log, Utils) => {
 
     const _disconnectSpace = function (space) {
         const connection = _getConnection(space);
-        if (!connection || !connection.secondary) return;
         if (connection.secondary.length > 1) {
             _deleteSpace(connection, space);
             _deleteAllForSpace(connection, space);
