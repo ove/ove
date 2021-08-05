@@ -289,7 +289,6 @@ function OVEUtils () {
         const hostname = __private.getOVEInstance().context.hostname;
         const spaces = await (await fetch(hostname + '/spaces')).text();
         const allClients = JSON.parse(spaces)[__self.getSpace()] || [];
-        log.debug('all clients: ', allClients);
         if (allClients.length <= 0) return;
         //-- The space dimensions are calculated in this utility to avoid  --//
         //-- duplication of code/effort in ove.js. The dimensions of the   --//

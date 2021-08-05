@@ -41,7 +41,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     operation.listConnections = (req, res) => {
         log.debug('Listing connections');
-        const groupBy = (xs, key) => xs.reduce((rv, x) => { (rv[x[key]] = rv[x[key]] || []).push(x.secondary); return rv; }, {});
+        const groupBy = (xs, key) => xs.reduce((rv, x) => { (rv[x[key]] = rv[x[key]] || []).push(x.secondary.toString()); return rv; }, {});
         const formatConnection = (connection) => ({
             primary: connection.primary,
             secondary: connection.secondary,
@@ -360,11 +360,12 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                             url: `${section.app.url}/instances/${primaryId}/state`,
                             json: true
                         }, (error, response, b) => {
-                            let payload = error || !response || response.statusCode !== HttpStatus.OK ? body.app.states.load : b;
-                            request.post(section.app.url + '/instances/' + sectionId + '/state', {
-                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: payload
-                            }, _handleRequestError);
+                            if (!error && response && response.statusCode === HttpStatus.OK) {
+                                request.post(section.app.url + '/instances/' + sectionId + '/state', {
+                                    headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                                    json: b
+                                }, _handleRequestError);
+                            }
                         });
                     } else if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
                         section.app.state = body.app.states.load;
