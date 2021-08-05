@@ -1,6 +1,6 @@
 {
   "name": "@ove-lib/appbase",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "main": "lib/index.js",
   "scripts": {
     "clean": "npx rimraf lib",
