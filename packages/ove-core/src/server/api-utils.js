@@ -37,7 +37,7 @@ module.exports = (server, log, Utils) => {
             connection = _getConnection(primary);
             connection.secondary = [...connection.secondary, secondary];
         } else {
-            connection = { isInitialized: false, isConnected: true, primary: primary, secondary: [secondary], uuid: -1, id: server.state.get('connections').length };
+            connection = { isInitialized: false, primary: primary, secondary: [secondary], id: server.state.get('connections').length };
         }
         _updateConnectionState(connection);
         return connection;
