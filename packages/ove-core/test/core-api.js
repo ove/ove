@@ -520,8 +520,8 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/connection/TestingFour/TestingFourClone');
         let res = await request(app).get('/connections');
-        const connections = JSON.parse(res.text);
         expect(res.statusCode).toEqual(HttpStatus.OK);
+        const connections = JSON.parse(res.text);
         expect(connections.length).toBe(2);
     });
 

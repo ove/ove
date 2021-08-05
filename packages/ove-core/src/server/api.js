@@ -40,19 +40,24 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     operation.listConnections = (req, res) => {
+        log.debug('Listing connections');
+        const groupBy = (xs, key) => xs.reduce((rv, x) => { (rv[x[key]] = rv[x[key]] || []).push(x.secondary); return rv; }, {});
+        const formatConnection = (connection) => ({
+            primary: connection.primary,
+            secondary: connection.secondary,
+            sections: groupBy(connection.map || [], 'primary')
+        });
+
         let space = req.query.space;
         if (space) {
             const connection = ApiUtils.getConnection(space);
             if (connection) {
-                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(connection));
+                Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(formatConnection(connection)));
             } else {
                 Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ msg: `No connections for space: ${space}` }));
             }
         } else {
-            const groupBy = (xs, key) => xs.reduce((rv, x) => { (rv[x[key]] = rv[x[key]] || []).push(x.secondary); return rv; }, {});
-            const connections = ApiUtils.getConnections()
-                .map(connection => ({ primary: connection.primary, secondary: connection.secondary, sections: groupBy(connection.map, 'primary') }));
-            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(connections));
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(ApiUtils.getConnections().map(formatConnection)));
         }
     };
 
