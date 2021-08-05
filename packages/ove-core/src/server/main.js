@@ -61,6 +61,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     this.state = Utils.Persistence;
     this.state.set('sections', []);
     this.state.set('groups', []);
+    this.state.set('connections', []);
 
     // Clock synchronisation
     this.clock = require(path.join(__dirname, 'clock'))(this, log, Constants);
@@ -69,11 +70,13 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     // Peers
     this.peers = require(path.join(__dirname, 'peers'))(this, log, Utils, Constants);
 
+    const ApiUtils = require(path.join(__dirname, 'api-utils'))(this, log, Utils);
+
     // Messaging middleware
     app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Constants));
 
     // APIs
-    require(path.join(__dirname, 'api'))(this, log, Utils, Constants);
+    require(path.join(__dirname, 'api'))(this, log, Utils, Constants, ApiUtils);
 
     return this;
 };

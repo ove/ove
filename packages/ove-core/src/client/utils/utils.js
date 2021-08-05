@@ -113,6 +113,8 @@ function OVEUtils () {
     //-- Debug logs related to State Updates are produced by OVE Core and therefore not  --//
     //-- produced in here.                                                               --//
     this.broadcastState = function (message) {
+        if (__private.getOVEInstance().context.updateFlag) return;
+        __private.getOVEInstance().state.cache();
         if (arguments.length > 0 && message) {
             //-- Sometimes, state is not the only message that is broadcast and will   --//
             //-- therefore the application may want to broadcast it in a specific format.--//
@@ -120,13 +122,39 @@ function OVEUtils () {
         } else {
             __private.getOVEInstance().socket.send(__private.getOVEInstance().state.current);
         }
-        __private.getOVEInstance().state.cache();
     };
 
     this.setOnStateUpdate = function (callback) {
         __private.getOVEInstance().socket.on(function (message) {
-            __private.getOVEInstance().state.current = message;
-            callback();
+            let m = message;
+            if (m.sectionId) {
+                if (m.sectionId !== __self.getSectionId()) return;
+                m = m.message;
+            }
+            if (m.operation) return;
+            if (m.controllerId !== __private.getOVEInstance().context.uuid) {
+                const copy = {};
+                Object.keys(m).filter(key => key !== 'controllerId').forEach(key => { copy[key] = m[key]; });
+                __private.getOVEInstance().state.current = copy;
+                callback();
+            }
+        });
+    };
+
+    this.setOnStateUpdateController = function (callback) {
+        __private.getOVEInstance().socket.on(function (message) {
+            let m = message;
+            if (m.sectionId) {
+                if (m.sectionId !== __self.getSectionId()) return;
+                m = m.message;
+            }
+            if (m.operation) return;
+            if (m.controllerId !== __private.getOVEInstance().context.uuid) {
+                const copy = {};
+                Object.keys(m).filter(key => key !== 'controllerId').forEach(key => { copy[key] = m[key]; });
+                __private.getOVEInstance().state.current = copy;
+                callback();
+            }
         });
     };
 
@@ -203,21 +231,16 @@ function OVEUtils () {
         return space;
     };
 
-    $(document).on(OVE.Event.LOADED, function () {
+    $(document).on(OVE.Event.LOADED, async function () {
         const sectionId = __self.getSectionId();
-        if (__private.getOVEInstance() && __private.getOVEInstance().geometry && !__self.getSpace() && sectionId !== undefined) {
-            fetch(__private.getOVEInstance().context.hostname + '/spaces?oveSectionId=' + sectionId)
-                .then(function (r) { return r.text(); }).then(function (text) {
-                    const spaces = Object.keys(JSON.parse(text));
-                    if (spaces.length > 0) {
-                        __private.space = spaces[0];
-                        //-- Try to load geometry if it was not loaded before --//
-                        if (!__private.getOVEInstance().geometry.space) {
-                            loadGeometry();
-                        }
-                    }
-                });
-        }
+        if (!__private.getOVEInstance() || !__private.getOVEInstance().geometry || __self.getSpace() || sectionId) return;
+        const raw = await (await fetch(__private.getOVEInstance().context.hostname + '/spaces?oveSectionId=' + sectionId)).text();
+        const spaces = Object.keys(JSON.parse(raw));
+        if (spaces.length <= 0) return;
+        __private.space = spaces[0];
+        if (__private.getOVEInstance().geometry.space) return;
+        //-- Try to load geometry if it was not loaded before --//
+        await loadGeometry();
     });
 
     this.getClient = function () {
@@ -260,46 +283,42 @@ function OVEUtils () {
         SPACE: 'SPACE'
     };
 
-    const loadGeometry = function () {
-        if (__private.getOVEInstance() && __private.getOVEInstance().geometry && __self.getSpace()) {
-            const sectionId = __self.getSectionId();
-            const hostname = __private.getOVEInstance().context.hostname;
-            fetch(hostname + '/spaces').then(function (r) { return r.text(); }).then(function (text) {
-                const allClients = JSON.parse(text)[__self.getSpace()] || [];
-                if (allClients.length > 0) {
-                    //-- The space dimensions are calculated in this utility to avoid  --//
-                    //-- duplication of code/effort in ove.js. The dimensions of the   --//
-                    //-- space is calculated using the clients that are furthest from  --//
-                    //-- the top-left of the space along the x and y axes.             --//
-                    __private.getOVEInstance().geometry.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
-                    allClients.forEach(function (e) {
-                        __private.getOVEInstance().geometry.space.w = Math.max(e.x + e.w, __private.getOVEInstance().geometry.space.w);
-                        __private.getOVEInstance().geometry.space.h = Math.max(e.y + e.h, __private.getOVEInstance().geometry.space.h);
-                    });
-                    if (sectionId !== undefined) {
-                        fetch(hostname + '/spaces?oveSectionId=' + sectionId)
-                            .then(function (r) { return r.text(); }).then(function (text) {
-                                const sectionClients = JSON.parse(text)[__self.getSpace()] || [];
-                                const section = { x: Number.MAX_VALUE, y: Number.MAX_VALUE };
-                                //-- The x and y of the section is obtained by picking --//
-                                //-- the clients within a section that is the nearest  --//
-                                //-- to the top-left of the space along the x and y    --//
-                                //-- axes.                                             --//
-                                sectionClients.forEach(function (e, i) {
-                                    if (!__self.JSON.equals(e, {}) && allClients[i]) {
-                                        section.x = Math.min(allClients[i].x - e.x + e.offset.x, section.x);
-                                        section.y = Math.min(allClients[i].y - e.y + e.offset.y, section.y);
-                                    }
-                                });
-                                if (section.x !== Number.MAX_VALUE && section.y !== Number.MAX_VALUE) {
-                                    __private.section = section;
-                                }
-                            });
-                    }
-                }
-            });
+    const loadGeometry = async function () {
+        if (!__private.getOVEInstance() || !__private.getOVEInstance().geometry || !__self.getSpace()) return;
+        const sectionId = __self.getSectionId();
+        const hostname = __private.getOVEInstance().context.hostname;
+        const spaces = await (await fetch(hostname + '/spaces')).text();
+        const allClients = JSON.parse(spaces)[__self.getSpace()] || [];
+        log.debug('all clients: ', allClients);
+        if (allClients.length <= 0) return;
+        //-- The space dimensions are calculated in this utility to avoid  --//
+        //-- duplication of code/effort in ove.js. The dimensions of the   --//
+        //-- space is calculated using the clients that are furthest from  --//
+        //-- the top-left of the space along the x and y axes.             --//
+        __private.getOVEInstance().geometry.space = { w: Number.MIN_VALUE, h: Number.MIN_VALUE };
+        allClients.forEach(function (e) {
+            __private.getOVEInstance().geometry.space.w = Math.max(e.x + e.w, __private.getOVEInstance().geometry.space.w);
+            __private.getOVEInstance().geometry.space.h = Math.max(e.y + e.h, __private.getOVEInstance().geometry.space.h);
+        });
+        if (!sectionId) return;
+        const sectionSpaces = await (await fetch(hostname + '/spaces?oveSectionId=' + sectionId)).text();
+        const sectionClients = JSON.parse(sectionSpaces)[__self.getSpace()] || [];
+        const section = { x: Number.MAX_VALUE, y: Number.MAX_VALUE };
+        //-- The x and y of the section is obtained by picking --//
+        //-- the clients within a section that is the nearest  --//
+        //-- to the top-left of the space along the x and y    --//
+        //-- axes.                                             --//
+        sectionClients.forEach(function (e, i) {
+            if (!__self.JSON.equals(e, {}) && allClients[i]) {
+                section.x = Math.min(allClients[i].x - e.x + e.offset.x, section.x);
+                section.y = Math.min(allClients[i].y - e.y + e.offset.y, section.y);
+            }
+        });
+        if (section.x !== Number.MAX_VALUE && section.y !== Number.MAX_VALUE) {
+            __private.section = section;
         }
     };
+
     $(document).on(OVE.Event.LOADED, loadGeometry);
 
     this.Coordinates.transform = function (vector, inputType, outputType) {

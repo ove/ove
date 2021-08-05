@@ -53,7 +53,8 @@ Constants.Action = {
     CREATE: 'create',
     READ: 'read',
     UPDATE: 'update',
-    DELETE: 'delete'
+    DELETE: 'delete',
+    CONNECT: 'connect'
 };
 
 Constants.RegExp.Annotation = {

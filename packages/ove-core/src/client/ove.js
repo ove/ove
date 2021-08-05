@@ -10,6 +10,7 @@ function OVE (appId, hostname, sectionId) {
     // @CONSTANTS
 
     const log = OVE.Utils.Logger('OVE');
+    this.app = appId;
 
     //-- Hostname is detected using the URL at which the OVE.js script is loaded. It can be read --//
     //-- with or without the scheme (useful for opening WebSockets).                             --//
@@ -284,7 +285,7 @@ function OVE (appId, hostname, sectionId) {
 
                 //-- Apps receive the message if either it was sent to all sections or the specific section --//
                 //-- of the app. Apps will not receive messages sent to other apps.                         --//
-                if (!data.sectionId || data.sectionId === __private.sectionId) {
+                if (!data.sectionId || Number(data.sectionId) === Number(__private.sectionId)) {
                     if (Constants.Logging.TRACE) {
                         log.trace('Reading message:', JSON.stringify(data));
                     }
@@ -312,9 +313,28 @@ function OVE (appId, hostname, sectionId) {
         this.on = function (func) {
             onMessage = func;
         };
+
+        this.addEventListener = (func) => {
+            __private.ws.addEventListener('message', message => {
+                if (!message || !message.data) return;
+                const data = JSON.parse(message.data);
+                if (data.appId !== appId || (data.sectionId && Number(data.sectionId) !== Number(OVE.Utils.getSectionId())) || !data.message) return;
+                func(data.message);
+            });
+        };
+
         this.send = function (message, appId) {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
             const targetAppId = (arguments.length > 1 && appId) ? appId : __private.appId;
+            message.controllerId = __self.context.uuid;
+
+            if (__private.sectionId) {
+                fetch(__self.context.hostname + '/connections/event/' + __private.sectionId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message })
+                }).then(res => log.debug('Sent connection event and received status: ', res.status));
+            }
 
             sendWhenReady(function () {
                 //-- The same code works for the OVE Core viewer (which has no sectionId) and OVE Core Apps --//
@@ -335,32 +355,28 @@ function OVE (appId, hostname, sectionId) {
     //-----------------------------------------------------------//
     const setGeometry = function (__self, __private) {
         __self.geometry = {};
-        const fetchSection = function (sectionId) {
-            if (sectionId) {
-                log.debug('Requesting details of section:', sectionId);
-                fetch(getHostName(true) + '/sections/' + sectionId)
-                    .then(function (r) { return r.text(); }).then(function (text) {
-                        const section = JSON.parse(text);
-                        __self.geometry.section = { w: section.w, h: section.h };
-                        __self.state.name = OVE.Utils.getQueryParam('state',
-                            (section.app && section.app.state) ? section.app.state : undefined);
-                        //-- Always store section id as a string to avoid if-checks      --//
-                        //-- failing on '0'                                              --//
-                        if (section.id !== undefined) {
-                            __private.sectionId = section.id.toString();
-                            sendWhenReady(function () {
-                                __private.ws.send(JSON.stringify({
-                                    appId: __private.appId,
-                                    registration: { sectionId: __private.sectionId }
-                                }));
-                            });
-                            log.debug('Got details from section:', __private.sectionId);
-                        }
-                        //-- We wait for section information to be available before      --//
-                        //-- announcing OVE loaded                                       --//
-                        $(document).trigger(OVE.Event.LOADED);
-                    });
+        const fetchSection = async function (sectionId) {
+            if (!sectionId) return;
+            log.debug('Requesting details of section:', sectionId);
+            const raw = await (await fetch(getHostName(true) + '/sections/' + sectionId)).text();
+            const section = JSON.parse(raw);
+            __self.geometry.section = { w: section.w, h: section.h };
+            __self.state.name = OVE.Utils.getQueryParam('state', (section.app && section.app.state) ? section.app.state : undefined);
+            //-- Always store section id as a string to avoid if-checks      --//
+            //-- failing on '0'                                              --//
+            if (section.id !== undefined) {
+                __private.sectionId = section.id.toString();
+                sendWhenReady(function () {
+                    __private.ws.send(JSON.stringify({
+                        appId: __private.appId,
+                        registration: { sectionId: __private.sectionId }
+                    }));
+                });
+                log.debug('Got details from section:', __private.sectionId);
             }
+            //-- We wait for section information to be available before      --//
+            //-- announcing OVE loaded                                       --//
+            $(document).trigger(OVE.Event.LOADED);
         };
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
@@ -386,7 +402,7 @@ function OVE (appId, hostname, sectionId) {
         if (!space) {
             log.warn('Name of space not provided');
         }
-        if (!client && client !== 0) {
+        if (!client && Number(client) !== 0) {
             log.warn('Client id not provided');
         }
         if (sectionId) {
@@ -406,7 +422,7 @@ function OVE (appId, hostname, sectionId) {
     //-----------------------------------------------------------//
     //--            Shared State and Local Context             --//
     //-----------------------------------------------------------//
-    const OVEState = function (__private) {
+    const OVEState = function (__self, __private) {
         //-- Default onRefresh handler does nothing --//
         __private.stateRefresh = function () { return 0; };
 
@@ -421,6 +437,7 @@ function OVE (appId, hostname, sectionId) {
             const currentState = JSON.stringify(this.current);
             log.debug('Sending request to URL:', endpoint, ', state:', currentState);
             $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
+            $.ajax({ url: __self.context.hostname + '/connections/cache/' + __private.sectionId, type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
             let __self = this;
@@ -461,12 +478,13 @@ function OVE (appId, hostname, sectionId) {
             let v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         }),
-        hostname: getHostName(true)
+        hostname: getHostName(true),
+        updateFlag: false
     };
 
     this.socket = new OVESocket(this, __private);
     this.frame = new OVEFrame(this, __private);
-    this.state = new OVEState(__private);
+    this.state = new OVEState(this, __private);
     this.clock = new OVEClock(__private);
     setGeometry(this, __private);
 }

@@ -48,7 +48,11 @@ module.exports = function (server, log, Utils, Constants) {
             log.warn('Lost websocket connection: closed with code:', code);
             log.warn('Attempting to reconnect in ' + Constants.SOCKET_REFRESH_DELAY + 'ms');
             // If the socket is closed, we try to refresh it.
-            setTimeout(getSocket, Constants.SOCKET_REFRESH_DELAY);
+            const refresh = () => {
+                log.debug('Refreshing websocket connection: ', peerHost);
+                peers.clients[peerHost] = getSocket(peerHost);
+            };
+            setTimeout(refresh, Constants.SOCKET_REFRESH_DELAY);
         });
         ws.on('error', log.error);
         return Utils.getSafeSocket(ws);

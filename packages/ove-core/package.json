@@ -7,6 +7,7 @@
   "scripts": {
     "clean": "npx rimraf dist",
     "build": "npx babel src --out-dir dist --copy-files",
+    "build:windows": "npx babel-cli src --out-dir dist --copy-files",
     "test": "jest --runInBand --coverage --colors",
     "start": "node dist/index.js --color",
     "start:dev": "babel-node src/index.js",
@@ -27,7 +28,8 @@
     "http-status-codes": "2.1.4",
     "jquery": "3.6.0",
     "request": "2.88.2",
-    "uglify-js": "3.13.7"
+    "uglify-js": "3.13.7",
+    "ws": "7.5.3"
   },
   "devDependencies": {
     "mock-socket": "9.0.3",
