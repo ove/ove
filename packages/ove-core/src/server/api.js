@@ -344,13 +344,27 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 }
                 // Cache or load states if they were provided as a part of the create request.
                 if (body.app.states.cache) {
-                    Object.keys(body.app.states.cache).forEach(function (name) {
-                        log.debug('Caching new named state for future use:', name);
-                        request.post(section.app.url + '/states/' + name, {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: body.app.states.cache[name]
-                        }, _handleRequestError);
-                    });
+                    if (primaryId !== undefined) {
+                        log.debug('Caching new named state for future use from primary section: ', primaryId);
+                        Object.keys(body.app.states.cache).forEach(name => {
+                            request.get({
+                                url: `${section.app.url}/states/${name}`,
+                                json: true
+                            }, (error, response, _) => {
+                                if (!error && response && response.statusCode === HttpStatus.OK) {
+                                    request.post(section.app.url + '/states/' + name);
+                                }
+                            });
+                        });
+                    } else {
+                        Object.keys(body.app.states.cache).forEach(function (name) {
+                            log.debug('Caching new named state for future use:', name);
+                            request.post(section.app.url + '/states/' + name, {
+                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                                json: body.app.states.cache[name]
+                            }, _handleRequestError);
+                        });
+                    }
                 }
                 if (body.app.states.load) {
                     // Either a named state or an in-line state configuration can be loaded.
