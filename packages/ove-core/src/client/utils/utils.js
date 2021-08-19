@@ -71,7 +71,7 @@ function OVEUtils () {
         //-- The logger name is stored for later use.           --//
         //-- The log level is either what is specified in the   --//
         //-- constructor or available as a constant.            --//
-        let __private = { name: name, logLevel: (logLevel !== undefined ? logLevel : Constants.LOG_LEVEL) };
+        let __loggerPrivate = { name: name, logLevel: (logLevel !== undefined ? logLevel : Constants.LOG_LEVEL) };
 
         //-- Internal Utility function to get log labels' CSS   --//
         const getLogLabel = function (logLevel) {
@@ -87,16 +87,25 @@ function OVEUtils () {
             }(new Date()));
             //-- Each logger can have its own name. If this is  --//
             //-- not provided, it will default to Unknown.      --//
-            const loggerName = __private.name || Constants.LOG_UNKNOWN_APP_ID;
-            return [('%c[' + logLevel.name + ']').padStart(LOG_PREFIX_WIDTH), getLogLabel(logLevel), time, '-',
+            const loggerName = __loggerPrivate.name || Constants.LOG_UNKNOWN_APP_ID;
+            const r = [('%c[' + logLevel.name + ']').padStart(LOG_PREFIX_WIDTH), getLogLabel(logLevel), time, '-',
                 loggerName.padEnd(Constants.LOG_APP_ID_WIDTH), ':'].concat(Object.values(args));
+            const ove = __private.getOVEInstance();
+            if (ove) {
+                fetch(__private.getOVEInstance().context.hostname + '/ui/logs/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: r })
+                }).then();
+            }
+            return r;
         };
 
         //-- Expose a function for each log-level               --//
         (function (__self) {
             Constants.LogLevel.forEach(function (level, i) {
                 __self[level.name.toLowerCase()] = function () {
-                    if (__private.logLevel >= i) {
+                    if (__loggerPrivate.logLevel >= i) {
                         //-- All log functions accept any number--//
                         //-- of arguments                       --//
                         console[level.consoleLogger].apply(console, buildLogMessage(level, arguments));
