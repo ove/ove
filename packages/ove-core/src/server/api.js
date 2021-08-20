@@ -1207,7 +1207,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 JSON.stringify({ error: 'No host specified so the server cannot be connected' }));
             return;
         }
-        if (ApiUtils.isServerConnected(req.query.host)) return;
+        if (ApiUtils.isServerConnected(req.query.host)) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Host is already connected' }));
+            return;
+        }
         if (req.query.isSecondary) {
             _deleteSections(null, null, () => {}, () => {});
             ApiUtils.clearConnections();
