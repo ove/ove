@@ -62,6 +62,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     this.state.set('sections', []);
     this.state.set('groups', []);
     this.state.set('connections', []);
+    this.state.set('servers', []);
 
     // Clock synchronisation
     this.clock = require(path.join(__dirname, 'clock'))(this, log, Constants);

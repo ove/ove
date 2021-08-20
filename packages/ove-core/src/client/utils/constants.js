@@ -19,6 +19,7 @@ const Constants = {
     SPACES_JSON_FILENAME: 'Spaces.json',
     WEBSOCKET_READY: 1,
     SECTION_UPDATE_DELAY: 150, //-- Unit: milliseconds --//
+    HTTP_PROTOCOL: 'http://',
 
     //-----------------------------------------------------------//
     //--                        Common                         --//

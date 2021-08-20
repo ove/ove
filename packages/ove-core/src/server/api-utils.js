@@ -43,6 +43,12 @@ module.exports = (server, log, Utils) => {
         return connection;
     };
 
+    const _updateServerConnection = (host, isPrimary) => {
+        const id = server.state.get('servers').length;
+        server.state.set(`servers[${id}]`, { id: id, host: host, isPrimary: isPrimary });
+        return id;
+    };
+
     const _updateConnectionState = (connection) => server.state.set(`connections[${connection.id}]`, connection);
     // whether the space is currently connected, either as primary or secondary
     const _isConnected = (space) => _isPrimary(space) || _isSecondary(space);
@@ -131,6 +137,17 @@ module.exports = (server, log, Utils) => {
         return connections;
     };
 
+    const _getServers = () => {
+        const servers = [];
+        for (let i = 0; i < server.state.get('servers').length; i++) {
+            const s = server.state.get(`servers[${i}]`);
+            if (!Utils.isNullOrEmpty(s)) {
+                servers.push(s);
+            }
+        }
+        return servers;
+    };
+
     return {
         getSectionForId: _getSectionForId,
         isValidSectionId: _isValidSectionId,
@@ -159,6 +176,8 @@ module.exports = (server, log, Utils) => {
         applyPrimary: _applyPrimary,
         clearConnections: _clearConnections,
         getConnections: _getConnections,
-        updateConnectionState: _updateConnectionState
+        updateConnectionState: _updateConnectionState,
+        updateServerConnection: _updateServerConnection,
+        getServers: _getServers
     };
 };

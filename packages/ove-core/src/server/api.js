@@ -24,6 +24,20 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
     });
 
+    const wrapper = (f, req, res) => {
+        if (req.method !== 'GET' && !req.query.host) {
+            const method = req.method === 'POST' ? request.post : request.delete;
+            const arg = req.url.includes('?') ? `&host=${req.get('host')}` : `?host=${req.get('host')}`;
+            ApiUtils.getServers().forEach(({ host }) => {
+                method(Constants.HTTP_PROTOCOL + host + req.url + arg, {
+                    headers: req.headers || [],
+                    json: req.body || {}
+                });
+            });
+        }
+        f(req, res);
+    };
+
     // Lists details of all spaces, and accepts filters as a part of its query string.
     operation.listSpaces = function (req, res) {
         let sectionId = req.query.oveSectionId;
@@ -1187,32 +1201,62 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
     };
 
-    server.app.get('/spaces', operation.listSpaces);
-    server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
-    server.app.get('/sections', operation.readSections);
-    server.app.delete('/sections', operation.deleteSections);
-    server.app.post('/section', operation.createSection);
-    server.app.get('/sections/:id([0-9]+)', operation.readSectionById);
-    server.app.post('/sections/:id([0-9]+)', operation.updateSectionById);
-    server.app.delete('/sections/:id([0-9]+)', operation.deleteSectionById);
-    server.app.post('/sections/refresh', operation.refreshSections);
-    server.app.post('/sections/:id([0-9]+)/refresh', operation.refreshSectionById);
-    server.app.post('/sections/transform', operation.transformSections);
-    server.app.post('/sections/moveTo', operation.moveSectionsTo);
-    server.app.get('/groups', operation.readGroups);
-    server.app.post('/group', operation.createGroup);
-    server.app.get('/groups/:id([0-9]+)', operation.readGroupById);
-    server.app.post('/groups/:id([0-9]+)', operation.updateGroupById);
-    server.app.delete('/groups/:id([0-9]+)', operation.deleteGroupById);
+    operation.connectServer = (req, res) => {
+        if (req.query.isSecondary) {
+            _deleteSections(null, null, () => {}, () => {});
+            ApiUtils.clearConnections();
+            ApiUtils.updateServerConnection(req.query.host, false);
+            res.sendStatus(HttpStatus.OK);
+            return;
+        }
 
-    server.app.get('/connections', operation.listConnections);
-    server.app.delete('/connections', operation.deleteConnections);
-    server.app.post('/connection/:primary/:secondary', operation.createConnection);
-    server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
-    server.app.delete('/connection/:primary', operation.deleteConnection);
-    server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
-    server.app.post('/connections/event/:id([0-9]+)', operation.onEvent);
-    server.app.post('/connections/cache/:id([0-9]+)', operation.cache);
+        _deleteSections(null, null, () => {}, () => {});
+        ApiUtils.clearConnections();
+        request.post(Constants.HTTP_PROTOCOL + req.query.host + `/server?host=${req.get('host')}&isSecondary=true`, {
+            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
+        }, (error) => {
+            if (error) {
+                res.sendStatus(HttpStatus.BAD_REQUEST);
+            } else {
+                ApiUtils.updateServerConnection(req.query.host, true);
+                res.sendStatus(HttpStatus.OK);
+            }
+        });
+    };
+
+    operation.listServers = (req, res) => {
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(ApiUtils.getServers().map(s => s.host)));
+    };
+
+    server.app.get('/spaces', wrapper.bind(null, operation.listSpaces));
+    server.app.get('/spaces/:name/geometry', wrapper.bind(null, operation.getSpaceGeometry));
+    server.app.get('/sections', wrapper.bind(null, operation.readSections));
+    server.app.delete('/sections', wrapper.bind(null, operation.deleteSections));
+    server.app.post('/section', wrapper.bind(null, operation.createSection));
+    server.app.get('/sections/:id([0-9]+)', wrapper.bind(null, operation.readSectionById));
+    server.app.post('/sections/:id([0-9]+)', wrapper.bind(null, operation.updateSectionById));
+    server.app.delete('/sections/:id([0-9]+)', wrapper.bind(null, operation.deleteSectionById));
+    server.app.post('/sections/refresh', wrapper.bind(null, operation.refreshSections));
+    server.app.post('/sections/:id([0-9]+)/refresh', wrapper.bind(null, operation.refreshSectionById));
+    server.app.post('/sections/transform', wrapper.bind(null, operation.transformSections));
+    server.app.post('/sections/moveTo', wrapper.bind(null, operation.moveSectionsTo));
+    server.app.get('/groups', wrapper.bind(null, operation.readGroups));
+    server.app.post('/group', wrapper.bind(null, operation.createGroup));
+    server.app.get('/groups/:id([0-9]+)', wrapper.bind(null, operation.readGroupById));
+    server.app.post('/groups/:id([0-9]+)', wrapper.bind(null, operation.updateGroupById));
+    server.app.delete('/groups/:id([0-9]+)', wrapper.bind(null, operation.deleteGroupById));
+
+    server.app.get('/connections', wrapper.bind(null, operation.listConnections));
+    server.app.delete('/connections', wrapper.bind(null, operation.deleteConnections));
+    server.app.post('/connection/:primary/:secondary', wrapper.bind(null, operation.createConnection));
+    server.app.get('/connections/section/:id([0-9]+)', wrapper.bind(null, operation.getSectionConnection));
+    server.app.delete('/connection/:primary', wrapper.bind(null, operation.deleteConnection));
+    server.app.delete('/connection/:primary/:secondary', wrapper.bind(null, operation.deleteConnection));
+    server.app.post('/connections/event/:id([0-9]+)', wrapper.bind(null, operation.onEvent));
+    server.app.post('/connections/cache/:id([0-9]+)', wrapper.bind(null, operation.cache));
+
+    server.app.post('/server', operation.connectServer);
+    server.app.get('/servers', operation.listServers);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
