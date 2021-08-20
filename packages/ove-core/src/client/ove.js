@@ -329,7 +329,7 @@ function OVE (appId, hostname, sectionId) {
             message.controllerId = __self.context.uuid;
 
             if (__private.sectionId) {
-                fetch(__self.context.hostname + '/connections/event/' + __private.sectionId, {
+                fetch(__self.context.hostname + '/event/' + __private.sectionId, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message })
@@ -437,7 +437,7 @@ function OVE (appId, hostname, sectionId) {
             const currentState = JSON.stringify(this.current);
             log.debug('Sending request to URL:', endpoint, ', state:', currentState);
             $.ajax({ url: endpoint, type: 'POST', data: currentState, contentType: 'application/json' });
-            $.ajax({ url: __self.context.hostname + '/connections/cache/' + __private.sectionId, type: 'POST', data: currentState, contentType: 'application/json' });
+            $.ajax({ url: __self.context.hostname + '/cache/' + __private.sectionId, type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
             let __self = this;

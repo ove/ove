@@ -146,22 +146,36 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     operation.cache = (req, res) => {
-        _cache(req.params.id, req.body);
+        if (!ApiUtils.isValidSectionId(req.params.id)) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No section found for id: ${req.params.id}` }));
+            return;
+        }
+        let ids;
+        if (req.query.host) {
+            ids = [req.params.id];
+        } else {
+            const connection = ApiUtils.getConnectionForSection(req.params.id);
+            if (!connection) {
+                Utils.sendEmptySuccess(res);
+                return;
+            }
+            ids = _cacheConnection(req.params.id, connection);
+        }
+        _cache(ids, req.body);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
-    const _cache = (sectionId, body) => {
-        const connection = ApiUtils.getConnectionForSection(sectionId);
-        if (!connection) return;
-        let ids;
+    const _cacheConnection = (sectionId, connection) => {
         if (ApiUtils.sectionIsPrimaryForConnection(connection, sectionId)) {
-            ids = ApiUtils.getReplicas(connection, sectionId);
+            return ApiUtils.getReplicas(connection, sectionId);
         } else {
             const primary = ApiUtils.getPrimary(connection, sectionId);
             const replicas = ApiUtils.getReplicas(connection, primary).filter(id => id !== sectionId);
-            ids = replicas.concat([primary]);
+            return replicas.concat([primary]);
         }
+    };
 
+    const _cache = (ids, body) => {
         log.debug('Caching application state across all replicas: ', ids);
         ids.map(id => {
             const section = ApiUtils.getSectionForId(id);
@@ -209,6 +223,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     operation.onEvent = (req, res) => {
         const id = req.params.id;
+        let ids;
 
         if (!ApiUtils.isValidSectionId(id)) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No section found for id: ${id}` }));
@@ -216,16 +231,16 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
 
         const space = ApiUtils.getSpaceBySectionId(id);
-        if (!ApiUtils.isConnected(space)) {
-            Utils.sendEmptySuccess(res);
-            return;
-        }
-        const connection = ApiUtils.getConnection(space);
-        let ids;
-        if (ApiUtils.isPrimaryForConnection(connection, space)) {
-            ids = ApiUtils.getReplicas(connection, id);
+
+        if (req.query.host) {
+            ids = [req.params.id];
         } else {
-            ids = [ApiUtils.getPrimary(connection, id)];
+            const connection = ApiUtils.getConnection(space);
+            if (!connection) {
+                Utils.sendEmptySuccess(res);
+                return;
+            }
+            ids = _onEventConnection(req.params.id, space, connection);
         }
 
         server.wss.clients.forEach(c => {
@@ -237,6 +252,14 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         });
 
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
+    };
+
+    const _onEventConnection = (id, space, connection) => {
+        if (ApiUtils.isPrimaryForConnection(connection, space)) {
+            return ApiUtils.getReplicas(connection, id);
+        } else {
+            return [ApiUtils.getPrimary(connection, id)];
+        }
     };
 
     const _calculateSectionLayout = function (spaceName, geometry) {
@@ -1239,6 +1262,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     server.app.get('/spaces', wrapper.bind(null, operation.listSpaces));
     server.app.get('/spaces/:name/geometry', wrapper.bind(null, operation.getSpaceGeometry));
+
     server.app.get('/sections', wrapper.bind(null, operation.readSections));
     server.app.delete('/sections', wrapper.bind(null, operation.deleteSections));
     server.app.post('/section', wrapper.bind(null, operation.createSection));
@@ -1249,6 +1273,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.post('/sections/:id([0-9]+)/refresh', wrapper.bind(null, operation.refreshSectionById));
     server.app.post('/sections/transform', wrapper.bind(null, operation.transformSections));
     server.app.post('/sections/moveTo', wrapper.bind(null, operation.moveSectionsTo));
+
     server.app.get('/groups', wrapper.bind(null, operation.readGroups));
     server.app.post('/group', wrapper.bind(null, operation.createGroup));
     server.app.get('/groups/:id([0-9]+)', wrapper.bind(null, operation.readGroupById));
@@ -1261,8 +1286,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/connections/section/:id([0-9]+)', wrapper.bind(null, operation.getSectionConnection));
     server.app.delete('/connection/:primary', wrapper.bind(null, operation.deleteConnection));
     server.app.delete('/connection/:primary/:secondary', wrapper.bind(null, operation.deleteConnection));
-    server.app.post('/connections/event/:id([0-9]+)', wrapper.bind(null, operation.onEvent));
-    server.app.post('/connections/cache/:id([0-9]+)', wrapper.bind(null, operation.cache));
+
+    server.app.post('/event/:id([0-9]+)', wrapper.bind(null, operation.onEvent));
+    server.app.post('/cache/:id([0-9]+)', wrapper.bind(null, operation.cache));
 
     server.app.post('/server', operation.connectServer);
     server.app.get('/servers', operation.listServers);
