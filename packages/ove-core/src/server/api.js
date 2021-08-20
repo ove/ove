@@ -1202,6 +1202,12 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     operation.connectServer = (req, res) => {
+        if (!req.query.host) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST,
+                JSON.stringify({ error: 'No host specified so the server cannot be connected' }));
+            return;
+        }
+        if (ApiUtils.isServerConnected(req.query.host)) return;
         if (req.query.isSecondary) {
             _deleteSections(null, null, () => {}, () => {});
             ApiUtils.clearConnections();
@@ -1216,7 +1222,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
         }, (error) => {
             if (error) {
-                res.sendStatus(HttpStatus.BAD_REQUEST);
+                Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Error connecting to host' }));
             } else {
                 ApiUtils.updateServerConnection(req.query.host, true);
                 res.sendStatus(HttpStatus.OK);

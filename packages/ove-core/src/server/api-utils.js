@@ -148,6 +148,10 @@ module.exports = (server, log, Utils) => {
         return servers;
     };
 
+    const _isServerConnected = (h) => {
+        return _getServers().find(({ host }) => host === h) !== undefined;
+    };
+
     return {
         getSectionForId: _getSectionForId,
         isValidSectionId: _isValidSectionId,
@@ -178,6 +182,7 @@ module.exports = (server, log, Utils) => {
         getConnections: _getConnections,
         updateConnectionState: _updateConnectionState,
         updateServerConnection: _updateServerConnection,
-        getServers: _getServers
+        getServers: _getServers,
+        isServerConnected: _isServerConnected
     };
 };
