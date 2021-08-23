@@ -710,19 +710,19 @@ describe('The OVE Core server', () => {
 
     it('should return empty when sending event without connection', async () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/connections/event/0')
+        await request(app).post('/event/0')
             .expect(HttpStatus.OK, JSON.stringify({}));
     });
 
     it('should fail if no section for id', async () => {
-        await request(app).post('/connections/event/0')
+        await request(app).post('/event/0')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 0' }));
     });
 
     it('should send events from secondary to primary sections', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/connections/event/1').send({ appId: 'test', sectionId: '1', message: {} })
+        await request(app).post('/event/1').send({ appId: 'test', sectionId: '1', message: {} })
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
@@ -730,7 +730,7 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingFour');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/connections/event/0').send({ appId: 'test', sectionId: '0', message: {} })
+        await request(app).post('/event/0').send({ appId: 'test', sectionId: '0', message: {} })
             .expect(HttpStatus.OK, JSON.stringify({ ids: [1, 2] }));
     });
 
@@ -771,20 +771,20 @@ describe('The OVE Core server', () => {
     it('should cache across all replicas if caching state of primary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        await request(app).post('/connections/cache/0').send({})
+        await request(app).post('/cache/0').send({})
             .expect(HttpStatus.OK, JSON.stringify({}));
     });
 
     it('should cache replica state to other replicas and primary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        await request(app).post('/connections/cache/1').send({})
+        await request(app).post('/cache/1').send({})
             .expect(HttpStatus.OK, JSON.stringify({}));
     });
 
     it('should not cache state for non-existent connection', async () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        await request(app).post('/connections/cache/0')
+        await request(app).post('/cache/0')
             .expect(HttpStatus.OK, JSON.stringify({}));
     });
 
@@ -796,12 +796,78 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        nock.cleanAll();
+    });
+
+    it('should replicate API calls to all servers via wrapper function on API handlers', async () => {
+        nock('http://localhost:8081').post('/server').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock.cleanAll();
+    });
+
+    it('should be able to delete server connections', async () => {
+        nock('http://localhost:8081').post('/server').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8082').post('/server').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, JSON.stringify({ message: 'Successfully disconnected server' }));
+        nock('http://localhost:8081').post('/server').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8082' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/server').expect(HttpStatus.OK, JSON.stringify({ message: 'Successfully disconnected server' }));
+        nock.cleanAll();
+    });
+
+    it('should fail caching for invalid section id', async () => {
+        await request(app).post('/cache/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 0' }));
+    });
+
+    it('should cache state across server connections', async () => {
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } });
+        await request(app).post('/cache/0').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should share events across server connections', async () => {
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } });
+        await request(app).post('/event/0').send({ appId: '', sectionId: '0', message: {}, host: 'localhost:8082' });
+    });
+
+    it('should fail deleting host that doesn\'t exist', async () => {
+        await request(app).delete('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Host is not connected, so cannot be disconnected' }));
+    });
+
+    it('should fail to connect without specified host', async () => {
+        await request(app).post('/server').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No host specified so the server cannot be connected' }));
+    });
+
+    it('should fail connecting an already connected server', async () => {
+        nock('http://localhost:8081').post('/server').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Host is already connected' }));
+        nock.cleanAll();
+    });
+
+    it('should fail when connecting to a secondary server', async () => {
+        await request(app).post('/server').send({ host: 'localhost:8081', isSecondary: true }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8082' }).expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Server is currently connected as a secondary server' }));
+        nock.cleanAll();
+    });
+
+    it('should fail when connecting to a server that doesn\'t respond', async () => {
+        await request(app).post('/server').send({ host: 'localhost:9999' }).expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Error connecting to host' }));
+    });
+
+    it('should list all server connections', async () => {
+        nock('http://localhost:8081').post('/server').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/server').send({ host: 'localhost:8081' }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).get('/servers').expect(HttpStatus.OK, JSON.stringify([ 'localhost:8081' ]));
+        nock.cleanAll();
     });
     /* jshint ignore:end */
 
     afterEach(async () => {
         await request(app).delete('/connections');
         await request(app).delete('/sections');
+        await request(app).delete('/server');
     });
 
     afterAll(() => {

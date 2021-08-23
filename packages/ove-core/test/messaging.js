@@ -773,7 +773,7 @@ describe('The OVE Core server', () => {
         const event = { appId: 'test', sectionId: '0', message: { test: 'test' } };
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/connections/event/0').send(event);
+        await request(app).post('/event/0').send(event);
         expect(sockets.messages.filter(message => JSON.parse(message).appId !== 'core').length).toBe(2);
         event.sectionId = '1';
         expect(sockets.messages.includes(JSON.stringify(event))).toBeTruthy();

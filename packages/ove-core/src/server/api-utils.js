@@ -148,9 +148,18 @@ module.exports = (server, log, Utils) => {
         return servers;
     };
 
-    const _isServerConnected = (h) => {
-        return _getServers().find(({ host }) => host === h) !== undefined;
+    const _disconnectServer = (host) => {
+        const remove = (index) => server.state.set(`servers[${index}]`, {});
+        if (host) {
+            remove(_getServers().findIndex(s => s.host === host));
+        } else {
+            server.state.set('servers', []);
+        }
     };
+
+    const _isServerConnected = (h) => _getServers().find(({ host }) => host === h) !== undefined;
+
+    const _serversEmpty = () => _getServers().length === 0;
 
     return {
         getSectionForId: _getSectionForId,
@@ -183,6 +192,8 @@ module.exports = (server, log, Utils) => {
         updateConnectionState: _updateConnectionState,
         updateServerConnection: _updateServerConnection,
         getServers: _getServers,
-        isServerConnected: _isServerConnected
+        isServerConnected: _isServerConnected,
+        disconnectServer: _disconnectServer,
+        serversEmpty: _serversEmpty
     };
 };

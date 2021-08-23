@@ -25,13 +25,14 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     });
 
     const wrapper = (f, req, res) => {
-        if (req.method !== 'GET' && !req.query.host) {
+        if (req.method !== 'GET' && !req.body.host) {
             const method = req.method === 'POST' ? request.post : request.delete;
-            const arg = req.url.includes('?') ? `&host=${req.get('host')}` : `?host=${req.get('host')}`;
+            const body = req.body;
             ApiUtils.getServers().forEach(({ host }) => {
-                method(Constants.HTTP_PROTOCOL + host + req.url + arg, {
-                    headers: req.headers || [],
-                    json: req.body || {}
+                body.host = req.url;
+                method(Constants.HTTP_PROTOCOL + host + req.url, {
+                    headers: req.headers,
+                    json: body
                 });
             });
         }
@@ -151,7 +152,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             return;
         }
         let ids;
-        if (req.query.host) {
+        if (req.body.host) {
             ids = [req.params.id];
         } else {
             const connection = ApiUtils.getConnectionForSection(req.params.id);
@@ -232,7 +233,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
         const space = ApiUtils.getSpaceBySectionId(id);
 
-        if (req.query.host) {
+        if (req.body.host) {
             ids = [req.params.id];
         } else {
             const connection = ApiUtils.getConnection(space);
@@ -381,27 +382,13 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
                 }
                 // Cache or load states if they were provided as a part of the create request.
                 if (body.app.states.cache) {
-                    if (primaryId !== undefined) {
-                        log.debug('Caching new named state for future use from primary section: ', primaryId);
-                        Object.keys(body.app.states.cache).forEach(name => {
-                            request.get({
-                                url: `${section.app.url}/states/${name}`,
-                                json: true
-                            }, (error, response, _) => {
-                                if (!error && response && response.statusCode === HttpStatus.OK) {
-                                    request.post(section.app.url + '/states/' + name);
-                                }
-                            });
-                        });
-                    } else {
-                        Object.keys(body.app.states.cache).forEach(function (name) {
-                            log.debug('Caching new named state for future use:', name);
-                            request.post(section.app.url + '/states/' + name, {
-                                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                json: body.app.states.cache[name]
-                            }, _handleRequestError);
-                        });
-                    }
+                    Object.keys(body.app.states.cache).forEach(function (name) {
+                        log.debug('Caching new named state for future use:', name);
+                        request.post(section.app.url + '/states/' + name, {
+                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                            json: body.app.states.cache[name]
+                        }, _handleRequestError);
+                    });
                 }
                 if (body.app.states.load) {
                     // Either a named state or an in-line state configuration can be loaded.
@@ -516,6 +503,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     const _deleteSections = function (space, groupId, send, empty) {
         if (!send) { send = () => {}; }
+        if (!empty) { empty = () => {}; }
         _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
         let sections = server.state.get('sections');
         if (groupId) {
@@ -1224,34 +1212,56 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
     };
 
+    operation.disconnectServer = (req, res) => {
+        if (req.body.host && !ApiUtils.isServerConnected(req.body.host)) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Host is not connected, so cannot be disconnected' }));
+            return;
+        } else if (ApiUtils.serversEmpty()) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Server has no connections, so cannot be disconnected' }));
+            return;
+        }
+
+        ApiUtils.disconnectServer(req.body.host);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ message: 'Successfully disconnected server' }));
+    };
+
     operation.connectServer = (req, res) => {
-        if (!req.query.host) {
+        if (!req.body.host) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST,
                 JSON.stringify({ error: 'No host specified so the server cannot be connected' }));
             return;
         }
-        if (ApiUtils.isServerConnected(req.query.host)) {
+
+        if (ApiUtils.isServerConnected(req.body.host)) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Host is already connected' }));
             return;
         }
-        if (req.query.isSecondary) {
-            _deleteSections(null, null, () => {}, () => {});
-            ApiUtils.clearConnections();
-            ApiUtils.updateServerConnection(req.query.host, false);
-            res.sendStatus(HttpStatus.OK);
+
+        const first = ApiUtils.getServers()[0];
+        if (first && !first.isPrimary) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Server is currently connected as a secondary server' }));
             return;
         }
 
-        _deleteSections(null, null, () => {}, () => {});
+        if (req.body.isSecondary) {
+            _deleteSections(null, null);
+            ApiUtils.clearConnections();
+            ApiUtils.updateServerConnection(req.body.host, false);
+            Utils.sendEmptySuccess(res);
+            return;
+        }
+
+        _deleteSections(null, null);
         ApiUtils.clearConnections();
-        request.post(Constants.HTTP_PROTOCOL + req.query.host + `/server?host=${req.get('host')}&isSecondary=true`, {
-            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
+        request.post(Constants.HTTP_PROTOCOL + req.body.host + `/server`, {
+            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+            json: { host: req.get('host'), isSecondary: true }
         }, (error) => {
             if (error) {
                 Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Error connecting to host' }));
             } else {
-                ApiUtils.updateServerConnection(req.query.host, true);
-                res.sendStatus(HttpStatus.OK);
+                ApiUtils.updateServerConnection(req.body.host, true);
+                Utils.sendEmptySuccess(res);
             }
         });
     };
@@ -1292,6 +1302,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     server.app.post('/server', operation.connectServer);
     server.app.get('/servers', operation.listServers);
+    server.app.delete('/server', operation.disconnectServer);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
