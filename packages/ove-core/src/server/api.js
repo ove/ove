@@ -126,8 +126,21 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
-    const _replicate = (connection, section, space) => {
-        const id = _createSection(ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space), undefined, undefined, section.id);
+    const _replicate = async (connection, section, space, body) => {
+        if (!body) {
+            request.get({
+                url: `${section.app.url}/instances/${section.id}/state`,
+                json: true
+            }, (error, response, b) => {
+                if (!error && response && response.statusCode === HttpStatus.OK) {
+                    body = b;
+                } else {
+                    log.error('No state saved');
+                    throw Error('No state saved');
+                }
+            });
+        }
+        const id = _createSection(ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space, body), undefined, undefined, section.id);
         return ApiUtils.replicate(connection, section, id);
     };
 
@@ -418,7 +431,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         });
 
         ApiUtils.applyPrimary(ApiUtils.getSpaceForSection(section), (connection) => {
-            ApiUtils.forEachSpace(connection, s => _replicate(connection, section, s));
+            ApiUtils.forEachSpace(connection, s => _replicate(connection, section, s, body));
             log.debug('Successfully created replica');
         });
 
