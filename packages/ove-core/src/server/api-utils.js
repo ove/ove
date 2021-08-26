@@ -37,17 +37,18 @@ module.exports = (server, log, Utils) => {
             connection = _getConnection(primary);
             connection.secondary = [...connection.secondary, secondary];
         } else {
-            connection = { isInitialized: false, primary: primary, secondary: [secondary], id: server.state.get('connections').length };
+            connection = {
+                isInitialized: false,
+                primary: primary,
+                secondary: [secondary],
+                id: server.state.get('connections').length
+            };
         }
         _updateConnectionState(connection);
         return connection;
     };
 
-    const _updateServerConnection = (host, isPrimary) => {
-        const id = server.state.get('servers').length;
-        server.state.set(`servers[${id}]`, { id: id, host: host, isPrimary: isPrimary });
-        return id;
-    };
+    const _isHostConnection = (space) => space.includes('?host=');
 
     const _updateConnectionState = (connection) => server.state.set(`connections[${connection.id}]`, connection);
     // whether the space is currently connected, either as primary or secondary
@@ -94,25 +95,21 @@ module.exports = (server, log, Utils) => {
             _removeConnection(space);
         }
     };
-    const _getSectionData = function (section, primary, secondary, title) {
+    const _getSectionData = function (section, primary, secondary, title, body) {
         const resize = (primary, secondary, x, y, w, h) => {
             const widthFactor = Number(secondary.w) / Number(primary.w);
             const heightFactor = Number(secondary.h) / Number(primary.h);
-            return { x: x * widthFactor, y: y * heightFactor, w: w * widthFactor, h: h * heightFactor };
+            return { x: Math.floor(x * widthFactor), y: Math.floor(y * heightFactor), w: Math.floor(w * widthFactor), h: Math.floor(h * heightFactor) };
         };
 
         const coordinates = resize(primary, secondary, Number(section.x), Number(section.y), Number(section.w), Number(section.h));
-        const data = {
-            'space': title,
-            'x': coordinates.x,
-            'y': coordinates.y,
-            'w': coordinates.w,
-            'h': coordinates.h
-        };
-        if (section.app) {
-            data['app'] = { 'url': section.app.url, 'states': { 'load': section.app.state } };
-        }
-        return data;
+        body.space = title;
+        body.x = coordinates.x;
+        body.y = coordinates.y;
+        body.w = coordinates.w;
+        body.h = coordinates.h;
+
+        return body;
     };
     const _replicate = (connection, section, id) => {
         const mapping = { primary: section.id, secondary: id };
@@ -137,29 +134,7 @@ module.exports = (server, log, Utils) => {
         return connections;
     };
 
-    const _getServers = () => {
-        const servers = [];
-        for (let i = 0; i < server.state.get('servers').length; i++) {
-            const s = server.state.get(`servers[${i}]`);
-            if (!Utils.isNullOrEmpty(s)) {
-                servers.push(s);
-            }
-        }
-        return servers;
-    };
-
-    const _disconnectServer = (host) => {
-        const remove = (index) => server.state.set(`servers[${index}]`, {});
-        if (host) {
-            remove(_getServers().findIndex(s => s.host === host));
-        } else {
-            server.state.set('servers', []);
-        }
-    };
-
-    const _isServerConnected = (h) => _getServers().find(({ host }) => host === h) !== undefined;
-
-    const _serversEmpty = () => _getServers().length === 0;
+    const _getHost = (space) => space.includes('?host=') ? space.substring(space.indexOf('?host=')) : undefined;
 
     return {
         getSectionForId: _getSectionForId,
@@ -190,10 +165,7 @@ module.exports = (server, log, Utils) => {
         clearConnections: _clearConnections,
         getConnections: _getConnections,
         updateConnectionState: _updateConnectionState,
-        updateServerConnection: _updateServerConnection,
-        getServers: _getServers,
-        isServerConnected: _isServerConnected,
-        disconnectServer: _disconnectServer,
-        serversEmpty: _serversEmpty
+        isHostConnection: _isHostConnection,
+        getHost: _getHost
     };
 };
