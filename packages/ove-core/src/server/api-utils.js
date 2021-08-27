@@ -1,4 +1,6 @@
-module.exports = (server, log, Utils) => {
+const request = require('request');
+
+module.exports = (server, log, Utils, Constants) => {
     // returns the section information for a given id
     const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
     const _isValidSectionId = (sectionId) => {
@@ -123,7 +125,16 @@ module.exports = (server, log, Utils) => {
             f(connection);
         }
     };
-    const _clearConnections = () => server.state.set('connections', []);
+    const _clearConnections = () => {
+        _getConnections().forEach(connection => {
+            connection.secondary.forEach(secondary => {
+                if (_isHostConnection(secondary)) {
+                    request.delete(Constants.HTTP_PROTOCOL + _getHost(secondary) + '/connections');
+                }
+            });
+        });
+        server.state.set('connections', []);
+    };
     const _getConnections = () => {
         const connections = [];
         for (let i = 0; i < server.state.get('connections').length; i++) {
@@ -135,7 +146,7 @@ module.exports = (server, log, Utils) => {
         return connections;
     };
 
-    const _getHost = (space) => space.includes('?host=') ? space.substring(space.indexOf('?host=')) : undefined;
+    const _getHost = (space) => space.includes('?host=') ? space.substring(space.indexOf('?host=') + 6) : undefined;
     const _getSpace = (space) => space.includes('?host=') ? space.substring(0, space.indexOf('?host=')) : undefined;
 
     return {

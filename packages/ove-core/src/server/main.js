@@ -71,7 +71,7 @@ module.exports = function (app, wss, spaces, log, Utils, Constants) {
     // Peers
     this.peers = require(path.join(__dirname, 'peers'))(this, log, Utils, Constants);
 
-    const ApiUtils = require(path.join(__dirname, 'api-utils'))(this, log, Utils);
+    const ApiUtils = require(path.join(__dirname, 'api-utils'))(this, log, Utils, Constants);
 
     // Messaging middleware
     app.ws('/', require(path.join(__dirname, 'messaging'))(this, log, Constants));
