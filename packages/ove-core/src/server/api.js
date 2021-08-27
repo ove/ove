@@ -207,7 +207,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         ApiUtils.updateConnectionState(connection);
     };
 
-    const _createConnection = async function (primary, secondary, host, error) {
+    const _createConnection = async function (primary, secondary, host, error, url) {
         secondary = host ? `${secondary}?host=${host}` : secondary;
         if (primary === secondary) { error(`Primary and secondary spaces are the same`); return; }
         // check if primary is a secondary anywhere else and if the secondary has any connections, if so, error
@@ -215,9 +215,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         // update connections to include new connection
         const connection = ApiUtils.updateConnection(primary, secondary);
         if (host) {
-            await request.post(Constants.HTTP_PROTOCOL + host + `/connection/hosted/${primary}/${secondary}`, {
+            await request.post(Constants.HTTP_PROTOCOL + host + `/connection/hosted/${primary}/${ApiUtils.getSpace(secondary)}`, {
                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                json: { host: host }
+                json: { host: url }
             });
         }
 
@@ -249,7 +249,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     // http request handler, calling backing method. Includes error handling.
     // expecting primary and secondary as url query parameters.
     operation.createConnection = async function (req, res) {
-        const sections = await _createConnection(req.params.primary, req.params.secondary, req.body.host, msg => { log.error(msg); _sendError(res, msg); });
+        const sendError = msg => { log.error(msg); _sendError(res, msg); };
+        const url = Constants.HTTP_PROTOCOL + req.get('host');
+        const sections = await _createConnection(req.params.primary, req.params.secondary, req.body.host, sendError, url);
         if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }));
     };
 

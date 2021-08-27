@@ -136,6 +136,7 @@ module.exports = (server, log, Utils) => {
     };
 
     const _getHost = (space) => space.includes('?host=') ? space.substring(space.indexOf('?host=')) : undefined;
+    const _getSpace = (space) => space.includes('?host=') ? space.substring(0, space.indexOf('?host=')) : undefined;
 
     return {
         getSectionForId: _getSectionForId,
@@ -167,6 +168,7 @@ module.exports = (server, log, Utils) => {
         getConnections: _getConnections,
         updateConnectionState: _updateConnectionState,
         isHostConnection: _isHostConnection,
-        getHost: _getHost
+        getHost: _getHost,
+        getSpace: _getSpace
     };
 };
