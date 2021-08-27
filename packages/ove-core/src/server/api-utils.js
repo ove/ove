@@ -88,7 +88,7 @@ module.exports = (server, log, Utils) => {
             _removeConnection(space);
         }
     };
-    const _getSectionData = function (section, primary, secondary, title, body) {
+    const _getSectionData = function (section, primary, secondary, title) {
         const resize = (primary, secondary, x, y, w, h) => {
             const widthFactor = Number(secondary.w) / Number(primary.w);
             const heightFactor = Number(secondary.h) / Number(primary.h);
@@ -96,13 +96,14 @@ module.exports = (server, log, Utils) => {
         };
 
         const coordinates = resize(primary, secondary, Number(section.x), Number(section.y), Number(section.w), Number(section.h));
-        body.space = title;
-        body.x = coordinates.x;
-        body.y = coordinates.y;
-        body.w = coordinates.w;
-        body.h = coordinates.h;
-
-        return body;
+        return {
+            space: title,
+            x: coordinates.x,
+            y: coordinates.y,
+            w: coordinates.w,
+            h: coordinates.h,
+            app: section.app
+        };
     };
     const _replicate = (connection, section, id) => {
         const mapping = { primary: section.id, secondary: id };
