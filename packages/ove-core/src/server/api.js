@@ -1291,8 +1291,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
-    server.app.post('/connections/event/:id([0-9]+)', operation.onEvent);
-    server.app.post('/connections/cache/:id([0-9]+)', operation.cache);
+
+    server.app.post('/event/:id([0-9]+)', operation.onEvent);
+    server.app.post('/cache/:id([0-9]+)', operation.cache);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
