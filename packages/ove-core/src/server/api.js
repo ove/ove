@@ -126,18 +126,17 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
-    const _replicate = async (connection, section, space, body) => {
+    const _replicate = async (connection, section, space) => {
         let id;
         if (ApiUtils.isHostConnection(space)) {
-            log.debug('is host connection: ', connection);
-            const data = ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space, body);
+            const data = ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space);
             data.primaryId = section.id;
             id = request.post(Constants.HTTP_PROTOCOL + ApiUtils.getHost(space) + '/section', {
                 headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
                 json: data
             });
         } else {
-            const data = ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space, body);
+            const data = ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space);
             data.primaryId = section.id;
             id = _createSection(data, undefined, undefined, section.id);
         }
@@ -377,6 +376,22 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     // body: space, w, h, x, y, app
     const _createSection = (body, sendError, sendMessage, primaryId) => {
+        const _loadReplicatedState = (body, primaryId, sectionId) => {
+            if (!body.app.url) return;
+            log.debug('Loading state from primary section: ', primaryId);
+            request.get({
+                url: `${body.app.url}/instances/${primaryId}/state`,
+                json: true
+            }, (error, response, b) => {
+                if (!error && response && response.statusCode === HttpStatus.OK) {
+                    request.post(body.app.url + '/instances/' + sectionId + '/state', {
+                        headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                        json: b
+                    }, _handleRequestError);
+                }
+            });
+        };
+
         if (!sendMessage) { sendMessage = () => {}; }
         if (!body.space || !server.spaces[body.space]) {
             log.error('Invalid Space', 'request:', JSON.stringify(body));
@@ -401,60 +416,24 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         // Deploy an App into a section
         let sectionId = server.state.get('sections').length;
         section.id = sectionId;
+
         if (body.app) {
             const url = body.app.url.replace(/\/$/, '');
             section.app = { 'url': url };
             log.debug('Got URL for app:', url);
-            if (body.app.states) {
-                /* istanbul ignore else */
-                // DEBUG logging is turned on by default, and only turned off in production deployments.
-                // The operation of the Constants.Logging.DEBUG flag has been tested elsewhere.
-                if (Constants.Logging.DEBUG) {
-                    log.debug('Got state configuration for app:', JSON.stringify(body.app.states));
-                }
-                // Cache or load states if they were provided as a part of the create request.
-                if (body.app.states.cache) {
-                    Object.keys(body.app.states.cache).forEach(function (name) {
-                        log.debug('Caching new named state for future use:', name);
-                        request.post(section.app.url + '/states/' + name, {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: body.app.states.cache[name]
-                        }, _handleRequestError);
-                    });
-                }
-                if (body.app.states.load) {
-                    // Either a named state or an in-line state configuration can be loaded.
-                    if (primaryId !== undefined) {
-                        log.debug('Loading state from primary section: ', primaryId);
-                        request.get({
-                            url: `${section.app.url}/instances/${primaryId}/state`,
-                            json: true
-                        }, (error, response, b) => {
-                            if (!error && response && response.statusCode === HttpStatus.OK) {
-                                request.post(section.app.url + '/instances/' + sectionId + '/state', {
-                                    headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                                    json: b
-                                }, _handleRequestError);
-                            }
-                        });
-                    } else if (typeof body.app.states.load === 'string' || body.app.states.load instanceof String) {
-                        section.app.state = body.app.states.load;
-                        log.debug('Loading existing named state:', section.app.state);
-                    } else {
-                        log.debug('Loading state configuration');
-                        request.post(section.app.url + '/instances/' + sectionId + '/state', {
-                            headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                            json: body.app.states.load
-                        }, _handleRequestError);
-                    }
-                }
+
+            if (body.app.opacity) {
+                log.debug('Setting opacity for app:', body.app.opacity);
+                section.app.opacity = body.app.opacity;
             }
-            const opacity = body.app.opacity;
-            if (opacity) {
-                log.debug('Setting opacity for app:', opacity);
-                section.app.opacity = opacity;
+
+            if (primaryId !== undefined) {
+                _loadReplicatedState(body, primaryId, sectionId);
+            } else {
+                _loadSectionState(body.app, section, sectionId);
             }
         }
+
         server.state.set('sections[' + sectionId + ']', section);
 
         // Notify OVE viewers/controllers
@@ -474,7 +453,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         });
 
         ApiUtils.applyPrimary(ApiUtils.getSpaceForSection(section), (connection) => {
-            ApiUtils.forEachSpace(connection, s => _replicate(connection, section, s, body));
+            ApiUtils.forEachSpace(connection, s => _replicate(connection, section, s));
             log.debug('Successfully created replica');
         });
 
@@ -482,6 +461,49 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
         sendMessage({ id: sectionId });
         return sectionId;
+    };
+
+    const _objIsString = (obj) => typeof obj === 'string' || obj instanceof String;
+
+    const _loadSectionState = (app, section, sectionId) => {
+        const _loadCache = () => {
+            Object.keys(app.states.cache).forEach(function (name) {
+                log.debug('Caching new named state for future use:', name);
+                request.post(section.app.url + '/states/' + name, {
+                    headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                    json: app.states.cache[name]
+                }, _handleRequestError);
+            });
+        };
+
+        const _loadNamed = () => {
+            section.app.state = app.states.load;
+            log.debug('Loading existing named state:', section.app.state);
+        };
+
+        const _load = () => {
+            log.debug('Loading state configuration');
+            request.post(section.app.url + '/instances/' + sectionId + '/state', {
+                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
+                json: app.states.load
+            }, _handleRequestError);
+        };
+
+        if (!app.states) return;
+
+        /* istanbul ignore else */
+        // DEBUG logging is turned on by default, and only turned off in production deployments.
+        // The operation of the Constants.Logging.DEBUG flag has been tested elsewhere.
+        if (Constants.Logging.DEBUG) {
+            log.debug('Got state configuration for app:', JSON.stringify(app.states));
+        }
+
+        // Cache or load states if they were provided as a part of the create request.
+        if (app.states.cache) { _loadCache(); }
+        if (!app.states.load) return;
+
+        // Either a named state or an in-line state configuration can be loaded.
+        _objIsString(app.states.load) ? _loadNamed() : _load();
     };
 
     // Creates an individual section
@@ -535,7 +557,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     const _deleteSections = function (space, groupId, send, empty) {
         if (!send) { send = () => {}; }
-        if (!empty) { empty = () => {}; }
         _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
         let sections = server.state.get('sections');
         if (groupId) {
@@ -1246,7 +1267,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     server.app.get('/spaces', operation.listSpaces);
     server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
-
     server.app.get('/sections', operation.readSections);
     server.app.delete('/sections', operation.deleteSections);
     server.app.post('/section', operation.createSection);
@@ -1257,7 +1277,6 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.post('/sections/:id([0-9]+)/refresh', operation.refreshSectionById);
     server.app.post('/sections/transform', operation.transformSections);
     server.app.post('/sections/moveTo', operation.moveSectionsTo);
-
     server.app.get('/groups', operation.readGroups);
     server.app.post('/group', operation.createGroup);
     server.app.get('/groups/:id([0-9]+)', operation.readGroupById);
@@ -1267,13 +1286,11 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/connections', operation.listConnections);
     server.app.delete('/connections', operation.deleteConnections);
     server.app.post('/connection/:primary/:secondary', operation.createConnection);
-    server.app.post('/connection/hosted/:primary/:secondary', operation.hostConnection);
     server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
-
-    server.app.post('/event/:id([0-9]+)', operation.onEvent);
-    server.app.post('/cache/:id([0-9]+)', operation.cache);
+    server.app.post('/connections/event/:id([0-9]+)', operation.onEvent);
+    server.app.post('/connections/cache/:id([0-9]+)', operation.cache);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));
