@@ -1,4 +1,5 @@
 const request = require('request');
+const HttpStatus = require('http-status-codes');
 
 module.exports = (server, log, Utils, Constants) => {
     // returns the section information for a given id
@@ -149,6 +150,17 @@ module.exports = (server, log, Utils, Constants) => {
     const _getHost = (space) => space.includes('?host=') ? space.substring(space.indexOf('?host=') + 6) : undefined;
     const _getSpace = (space) => space.includes('?host=') ? space.substring(0, space.indexOf('?host=')) : undefined;
 
+    const post = async (url, headers, body) => new Promise((resolve, reject) =>
+        request.post(url, {
+            headers: headers,
+            json: body
+        }, (error, res, b) => Utils.isNullOrEmpty(error) && res.statusCode === HttpStatus.OK ? resolve(b) : reject(error)));
+
+    const del = async (url, headers) => new Promise((resolve, reject) =>
+        request.delete(url, {
+            headers: headers
+        }, (error, res, b) => Utils.isNullOrEmpty(error) && res.statusCode === HttpStatus.OK ? resolve(b) : reject(error)));
+
     return {
         getSectionForId: _getSectionForId,
         isValidSectionId: _isValidSectionId,
@@ -180,6 +192,8 @@ module.exports = (server, log, Utils, Constants) => {
         updateConnectionState: _updateConnectionState,
         isHostConnection: _isHostConnection,
         getHost: _getHost,
-        getSpace: _getSpace
+        getSpace: _getSpace,
+        post: post,
+        del: del
     };
 };

@@ -190,7 +190,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     };
 
     operation.hostConnection = (req, res) => {
-        if (!req.body.host) return;
+        if (!req.body.host) {
+            res.sendMessage(res, HttpStatus.OK, JSON.stringify({ error: 'No host specified while connecting server' }));
+            return;
+        }
         let hasErrored = false;
         _hostConnection(req.params.primary, req.params.secondary, req.body.host, msg => { log.error(msg); hasErrored = true; _sendError(res, msg); });
         if (hasErrored) return;
@@ -207,7 +210,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         ApiUtils.updateConnectionState(connection);
     };
 
-    const _createConnection = async function (primary, secondary, host, error, url) {
+    const _createConnection = async function (primary, secondary, host, error, thisURL) {
         secondary = host ? `${secondary}?host=${host}` : secondary;
         if (primary === secondary) { error(`Primary and secondary spaces are the same`); return; }
         // check if primary is a secondary anywhere else and if the secondary has any connections, if so, error
@@ -215,17 +218,24 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         // update connections to include new connection
         const connection = ApiUtils.updateConnection(primary, secondary);
         if (host) {
-            await request.post(Constants.HTTP_PROTOCOL + host + `/connection/hosted/${primary}/${ApiUtils.getSpace(secondary)}`, {
-                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                json: { host: url }
-            });
+            const url = `${Constants.HTTP_PROTOCOL}${host}/connection/hosted/${primary}/${ApiUtils.getSpace(secondary)}`;
+            try {
+                await ApiUtils.post(url, { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }, { host: thisURL });
+            } catch (err) {
+                error(err);
+                return;
+            }
         }
 
         // clear sections in secondary space
         if (host) {
-            await request.delete(Constants.HTTP_PROTOCOL + host + `/sections?space=${secondary}`, {
-                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }
-            }, _handleRequestError);
+            const url = Constants.HTTP_PROTOCOL + host + `/sections?space=${secondary}`;
+            try {
+                await ApiUtils.del(url, { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON });
+            } catch (err) {
+                error(err);
+                return;
+            }
         } else {
             _deleteSections(secondary, undefined);
         }
@@ -1291,6 +1301,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
+    server.app.post('/connection/hosted/:primary/:secondary', operation.hostConnection);
 
     server.app.post('/event/:id([0-9]+)', operation.onEvent);
     server.app.post('/cache/:id([0-9]+)', operation.cache);
