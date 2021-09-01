@@ -99,7 +99,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         if (ApiUtils.sectionIsPrimaryForConnection(connection, id)) {
             return { primary: id, secondary: ApiUtils.getReplicas(connection, id) };
         } else {
-            return { primary: ApiUtils.getPrimary(connection, id), secondary: id };
+            return { primary: ApiUtils.getPrimarySection(connection, id), secondary: id };
         }
     };
 
@@ -126,21 +126,23 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
 
-    const _replicate = async (connection, section, space) => {
-        let id;
-        if (ApiUtils.isHostConnection(space)) {
-            const data = ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space);
-            data.primaryId = section.id;
-            id = request.post(Constants.HTTP_PROTOCOL + ApiUtils.getHost(space) + '/section', {
-                headers: { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON },
-                json: data
-            });
-        } else {
-            const data = ApiUtils.getSectionData(section, _getSpaceGeometries()[connection.primary], _getSpaceGeometries()[space], space);
-            data.primaryId = section.id;
-            id = _createSection(data, undefined, undefined, section.id);
-        }
-        return ApiUtils.replicate(connection, section, id);
+    const _replicate = async (connection, section, elem) => {
+        const primaryGeometry = await ApiUtils.get(
+            `${Constants.HTTP_PROTOCOL}${connection.primary.host}/spaces/${connection.primary.space}/geometry`,
+            { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+        ).catch(log.warn);
+        const geometry = await ApiUtils.get(
+            `${Constants.HTTP_PROTOCOL}${elem.host}/spaces/${elem.space}/geometry`,
+            { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+        ).catch(log.warn);
+        const data = ApiUtils.getSectionData(section, primaryGeometry, geometry, elem.space);
+        data.primaryId = section.id;
+        const id = (await ApiUtils.post(
+            `${Constants.HTTP_PROTOCOL}${elem.host}/section`,
+            { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+            data
+        ).catch(log.warn)).id;
+        return ApiUtils.replicateWrapper(connection, section, elem, id);
     };
 
     operation.cache = (req, res) => {
@@ -150,6 +152,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
         let ids;
         if (req.body.host) {
+            // TODO: cache to replicated sections
             ids = [req.params.id];
         } else {
             const connection = ApiUtils.getConnectionForSection(req.params.id);
@@ -167,7 +170,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         if (ApiUtils.sectionIsPrimaryForConnection(connection, sectionId)) {
             return ApiUtils.getReplicas(connection, sectionId);
         } else {
-            const primary = ApiUtils.getPrimary(connection, sectionId);
+            const primary = ApiUtils.getPrimarySection(connection, sectionId);
             const replicas = ApiUtils.getReplicas(connection, primary).filter(id => id !== sectionId);
             return replicas.concat([primary]);
         }
@@ -191,7 +194,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     operation.hostConnection = (req, res) => {
         if (!req.body.host) {
-            res.sendMessage(res, HttpStatus.OK, JSON.stringify({ error: 'No host specified while connecting server' }));
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No host specified while connecting server' }));
             return;
         }
         let hasErrored = false;
@@ -210,48 +213,38 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         ApiUtils.updateConnectionState(connection);
     };
 
-    const _createConnection = async function (primary, secondary, host, error, thisURL) {
-        secondary = host ? `${secondary}?host=${host}` : secondary;
+    const _createConnection = async function (primary, secondary, error) {
+        const initialize = async (connection) => {
+            connection.isInitialized = true;
+            await ApiUtils.updateConnectionStateWrapper(primary.host, connection);
+            if (primary.host !== secondary.host) {
+                await ApiUtils.updateConnectionStateWrapper(secondary.host, connection);
+            }
+        };
+
         if (primary === secondary) { error(`Primary and secondary spaces are the same`); return; }
         // check if primary is a secondary anywhere else and if the secondary has any connections, if so, error
-        if (ApiUtils.isSecondary(primary) || ApiUtils.isConnected(secondary)) { error(`Could not connect ${primary} and ${secondary} as there is an existing connection`); return; }
-        // update connections to include new connection
-        const connection = ApiUtils.updateConnection(primary, secondary);
-        if (host) {
-            const url = `${Constants.HTTP_PROTOCOL}${host}/connection/hosted/${primary}/${ApiUtils.getSpace(secondary)}`;
-            try {
-                await ApiUtils.post(url, { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON }, { host: thisURL });
-            } catch (err) {
-                error(err);
-                return;
-            }
+        if ((await ApiUtils.isSecondaryWrapper(primary)) || (await ApiUtils.isConnectedWrapper(secondary))) {
+            error(`Could not connect ${primary.space} and ${secondary.space} as there is an existing connection`);
+            return;
         }
+        // update connections to include new connection
+        const connection = await ApiUtils.updateConnectionWrapper(primary, secondary);
 
         // clear sections in secondary space
-        if (host) {
-            const url = Constants.HTTP_PROTOCOL + host + `/sections?space=${secondary}`;
-            try {
-                await ApiUtils.del(url, { 'Content-Type': Constants.HTTP_CONTENT_TYPE_JSON });
-            } catch (err) {
-                error(err);
-                return;
-            }
-        } else {
-            _deleteSections(secondary, undefined);
-        }
+        await ApiUtils.del(`${Constants.HTTP_PROTOCOL}${secondary.host}/sections?space=${secondary.space}`, {});
 
         const primarySections = ApiUtils.getSectionsForSpace(primary);
         if (primarySections.length === 0) {
-            connection.isInitialized = true;
-            ApiUtils.updateConnectionState(connection);
+            await initialize(connection);
             return [];
         }
+
         // replicate all sections from primary space to secondary
         const replicas = await Promise.all(primarySections
-            .map(section => _replicate(connection, section, secondary))
-            .filter(({ _, secondary }) => secondary !== -1));
-        connection.isInitialized = true;
-        ApiUtils.updateConnectionState(connection);
+            .map(section => _replicate(connection, section, secondary)));
+
+        await initialize(connection);
 
         return replicas;
     };
@@ -260,8 +253,10 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     // expecting primary and secondary as url query parameters.
     operation.createConnection = async function (req, res) {
         const sendError = msg => { log.error(msg); _sendError(res, msg); };
-        const url = Constants.HTTP_PROTOCOL + req.get('host');
-        const sections = await _createConnection(req.params.primary, req.params.secondary, req.body.host, sendError, url);
+        const url = req.get('host');
+        const primary = { space: req.params.primary, host: req.body.primary || url };
+        const secondary = { space: req.params.secondary, host: req.body.secondary || url };
+        const sections = await _createConnection(primary, secondary, sendError);
         if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }));
     };
 
@@ -277,6 +272,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         const space = ApiUtils.getSpaceBySectionId(id);
 
         if (req.body.host) {
+            // TODO: handle replicated sections
             ids = [req.params.id];
         } else {
             const connection = ApiUtils.getConnection(space);
@@ -302,7 +298,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         if (ApiUtils.isPrimaryForConnection(connection, space)) {
             return ApiUtils.getReplicas(connection, id);
         } else {
-            return [ApiUtils.getPrimary(connection, id)];
+            return [ApiUtils.getPrimarySection(connection, id)];
         }
     };
 
@@ -1277,6 +1273,21 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         }
     };
 
+    operation.isSecondary = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ isSecondary: ApiUtils.isSecondary(req.body) }));
+
+    operation.isPrimary = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ isPrimary: ApiUtils.isPrimary(req.body) }));
+
+    operation.isConnected = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ isConnected: ApiUtils.isConnected(req.body) }));
+
+    operation.getConnection = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.getConnection(req.body) }));
+
+    operation.updateConnectionState = (req, res) => {
+        ApiUtils.updateConnectionState(req.body);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ message: 'This is a test' }));
+    };
+
+    operation.updateConnection = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.updateConnection(req.body) }));
+
     server.app.get('/spaces', operation.listSpaces);
     server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
     server.app.get('/sections', operation.readSections);
@@ -1294,6 +1305,13 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/groups/:id([0-9]+)', operation.readGroupById);
     server.app.post('/groups/:id([0-9]+)', operation.updateGroupById);
     server.app.delete('/groups/:id([0-9]+)', operation.deleteGroupById);
+
+    server.app.get('/connection/api/isSecondary', operation.isSecondary);
+    server.app.get('/connection/api/isPrimary', operation.isPrimary);
+    server.app.get('/connection/api/isConnected', operation.isConnected);
+    server.app.get('/connection/api/getConnection', operation.getConnection);
+    server.app.post('/connection/api/updateConnectionState', operation.updateConnectionState);
+    server.app.post('/connection/api/updateConnection', operation.updateConnection);
 
     server.app.get('/connections', operation.listConnections);
     server.app.delete('/connections', operation.deleteConnections);

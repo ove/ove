@@ -800,8 +800,12 @@ describe('The OVE Core server', () => {
     /* jshint ignore:end */
 
     afterEach(async () => {
+        nock('http://localhost:8081')
+            .delete('/connections')
+            .reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/connections');
         await request(app).delete('/sections');
+        nock.cleanAll();
     });
 
     afterAll(() => {
