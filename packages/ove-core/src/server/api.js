@@ -112,16 +112,18 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     // send error message with a http bad request
     const _sendError = (res, msg) => Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: msg }));
 
-    operation.deleteConnection = function (req, res) {
-        const connection = ApiUtils.getConnection(req.params.secondary || req.params.primary);
+    operation.deleteConnection = async (req, res) => {
+        const elem = ApiUtils.getElem(req.params.secondary || req.params.primary);
+        const connection = await ApiUtils.getConnectionWrapper(elem);
+
         if (!connection) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `No connection for space: ${req.params.secondary || req.params.primary}` }));
             return;
         }
         if (req.params.secondary) {
-            ApiUtils.disconnectSpace(req.params.secondary);
+            await ApiUtils.disconnectSpaceWrapper(elem);
         } else {
-            ApiUtils.removeConnection(req.params.primary);
+            await ApiUtils.removeConnectionWrapper(elem);
         }
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
     };
@@ -187,9 +189,9 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
         });
     };
 
-    operation.deleteConnections = (req, res) => {
-        ApiUtils.clearConnections();
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({}));
+    operation.deleteConnections = async (req, res) => {
+        await ApiUtils.clearConnectionsWrapper();
+        Utils.sendMessage(res, HttpStatus.OK, Utils.JSON.EMPTY);
     };
 
     operation.hostConnection = (req, res) => {
@@ -1279,14 +1281,28 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     operation.isConnected = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ isConnected: ApiUtils.isConnected(req.body) }));
 
-    operation.getConnection = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.getConnection(req.body) }));
+    operation.getConnection = (req, res) => Utils.sendMessage(res, HttpStatus.OK,
+        JSON.stringify({ connection: ApiUtils.getConnection(ApiUtils.getElem(req.params.space)) }));
 
     operation.updateConnectionState = (req, res) => {
         ApiUtils.updateConnectionState(req.body);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ message: 'This is a test' }));
+        Utils.sendMessage(res, HttpStatus.OK, Utils.JSON.EMPTY);
     };
 
     operation.updateConnection = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.updateConnection(req.body) }));
+
+    operation.removeConnection = (req, res) => {
+        ApiUtils.removeConnection(req.params.space);
+        Utils.sendMessage(res, HttpStatus.OK, Utils.JSON.EMPTY);
+    };
+
+    operation.deleteSpace = (req, res) =>
+        Utils.sendMessage(res, HttpStatus.OK,
+            JSON.stringify(ApiUtils.deleteSpace(ApiUtils.getConnectionFromSpace(req.params.primary), req.params.space)));
+
+    operation.deleteAllForSpace = (req, res) =>
+        Utils.sendMessage(res, HttpStatus.OK,
+            JSON.stringify(ApiUtils.deleteAllForSpace(ApiUtils.getConnectionFromSpace(req.params.primary), req.params.space)));
 
     server.app.get('/spaces', operation.listSpaces);
     server.app.get('/spaces/:name/geometry', operation.getSpaceGeometry);
@@ -1309,9 +1325,12 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
     server.app.get('/connection/api/isSecondary', operation.isSecondary);
     server.app.get('/connection/api/isPrimary', operation.isPrimary);
     server.app.get('/connection/api/isConnected', operation.isConnected);
-    server.app.get('/connection/api/getConnection', operation.getConnection);
+    server.app.get('/connection/api/getConnection/:space', operation.getConnection);
     server.app.post('/connection/api/updateConnectionState', operation.updateConnectionState);
     server.app.post('/connection/api/updateConnection', operation.updateConnection);
+    server.app.delete('/connection/api/removeConnection/:space', operation.removeConnection);
+    server.app.delete('/connection/api/deleteSpace/:primary/:space', operation.deleteSpace);
+    server.app.delete('/connection/api/deleteAllForSpace/:primary/:space', operation.deleteAllForSpace);
 
     server.app.get('/connections', operation.listConnections);
     server.app.delete('/connections', operation.deleteConnections);
