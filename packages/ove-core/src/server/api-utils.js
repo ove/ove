@@ -105,8 +105,7 @@ module.exports = (server, log, Utils, Constants) => {
         return connection.secondary.find(s => s.space === space);
     };
 
-    const _getConnectionId = (connection) => server.state.get('connections').findIndex(c => c.primary === connection.primary);
-    const _getConnectionFromSpace = (space) => server.state.get('connections').find(c => c.primary === space);
+    const _getConnectionId = (connection) => server.state.get('connections').findIndex(c => _elemEquals(c.primary, connection.primary));
 
     const _getUniqueHosts = (spaces) => _unique(spaces, _elemEquals).map(s => s.host);
 
@@ -127,7 +126,7 @@ module.exports = (server, log, Utils, Constants) => {
     const _isConnected = (space) => _isPrimary(space) || _isSecondary(space);
 
     // returns the connection corresponding to the space or undefined if not connected
-    const _getConnection = (elem) => {
+    const _getConnection = elem => {
         if (server.state.get('connections').length === 0) return;
         const primary = server.state.get('connections')
             .filter(connection => !Utils.isNullOrEmpty(connection))
@@ -145,8 +144,14 @@ module.exports = (server, log, Utils, Constants) => {
     };
 
     const _updateConnection = (connection) => {
-        connection.id = server.state.get('connections').length;
+        if (connection.id !== undefined) {
+            connection.id = _getConnectionId(connection);
+        } else {
+            connection.id = server.state.get('connections').length;
+        }
+
         _updateConnectionState(connection, true);
+
         return connection;
     };
 
@@ -169,9 +174,7 @@ module.exports = (server, log, Utils, Constants) => {
     const _deleteAllForSpace = (connection, space) => _getSectionsForSpace(space).forEach(s => _deleteSecondarySection(connection, s.id));
 
     const _removeConnection = (elem) => {
-        const _remove = (index) => {
-            server.state.set(`connections[${index}]`, {});
-        };
+        const _remove = (index) => server.state.set(`connections[${index}]`, {});
         const primary = _getConnections().findIndex(connection => _elemEquals(connection.primary, elem));
         _remove(primary !== -1 ? primary : _getConnections()
             .findIndex(connection => connection.secondary && connection.secondary.some(s => _elemEquals(s, elem))));
@@ -179,41 +182,33 @@ module.exports = (server, log, Utils, Constants) => {
 
     // -------------------------------- //
 
-    const post = async (url, headers, body) => new Promise((resolve, reject) =>
+    const _defaultError = (resolve, reject, url, error, res, b) => {
+        if (!Utils.isNullOrEmpty(error)) {
+            reject(error);
+        } else if (res.statusCode !== HttpStatus.OK) {
+            reject(new Error(`Received status code: ${res.statusCode} and reason: ${JSON.stringify(b)} when connecting to: ${url}`));
+        } else {
+            resolve(b);
+        }
+    };
+
+    const post = async (url, headers, body, handler) => new Promise((resolve, reject) =>
         request.post(url, {
             headers: headers,
             json: body
-        }, (error, res, b) => {
-            if (!Utils.isNullOrEmpty(error)) {
-                reject(error);
-            } else if (res.statusCode !== HttpStatus.OK) {
-                reject(new Error(`Received status code: ${res.statusCode} and reason: ${b} when connecting to: ${url}`));
-            } else {
-                resolve(b);
-            }
-        }));
+        }, (handler || _defaultError).bind(null, resolve, reject, url)));
 
-    const del = async (url, headers, body) => new Promise((resolve, reject) =>
-        request.delete(url, { headers: headers, json: body || {} }, (error, res, b) => {
-            if (!Utils.isNullOrEmpty(error)) {
-                reject(error);
-            } else if (res.statusCode !== HttpStatus.OK) {
-                reject(new Error(`Received status code: ${res.statusCode} and reason: ${b} when connecting to: ${url}`));
-            } else {
-                resolve(b);
-            }
-        }));
+    const del = async (url, headers, body, handler) => new Promise((resolve, reject) =>
+        request.delete(url, {
+            headers: headers,
+            json: body || {}
+        }, (handler || _defaultError).bind(null, resolve, reject, url)));
 
-    const get = async (url, headers, body) => new Promise((resolve, reject) =>
-        request.get(url, { headers: headers, json: body || {} }, (error, res, b) => {
-            if (!Utils.isNullOrEmpty(error)) {
-                reject(error);
-            } else if (res.statusCode !== HttpStatus.OK) {
-                reject(new Error(`Received status code: ${res.statusCode} and reason: ${b} when connecting to: ${url}`));
-            } else {
-                resolve(b);
-            }
-        }));
+    const get = async (url, headers, body, handler) => new Promise((resolve, reject) =>
+        request.get(url, {
+            headers: headers,
+            json: body || {}
+        }, (handler || _defaultError).bind(null, resolve, reject, url)));
 
     // -------------------------------- //
 
@@ -237,7 +232,7 @@ module.exports = (server, log, Utils, Constants) => {
         elem
     ).catch(log.warn)).isConnected;
 
-    const _getConnectionWrapper = async (elem) => (await get(
+    const _getConnectionWrapper = async elem => (await get(
         `${Constants.HTTP_PROTOCOL}${elem.host}/connection/api/getConnection`,
         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
         elem
@@ -292,13 +287,12 @@ module.exports = (server, log, Utils, Constants) => {
         server.state.set('connections', []);
 
         for (const connection of connections) {
-            for (const secondary of connection.secondary) {
-                await del(
-                    `${Constants.HTTP_PROTOCOL}${secondary.host}/connection/${connection.primary.space}/${secondary.space}`,
-                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                    { primary: connection.primary.host, secondary: secondary.host }
-                );
-            }
+            await del(
+                `${Constants.HTTP_PROTOCOL}${connection.primary.host}/connection/${connection.primary.space}`,
+                { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+                { primary: connection.primary.host },
+                resolve => resolve()
+            );
         }
     };
 
@@ -329,10 +323,10 @@ module.exports = (server, log, Utils, Constants) => {
     };
 
     const _removeConnectionWrapper = async elem => {
-        const connection = _getConnectionFromSpace(elem.space);
-        for (const host of _getUniqueHosts([connection.primary] + connection.secondary)) {
+        const connection = await _getConnectionWrapper(elem);
+        for (const host of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
             await del(
-                `${Constants.HTTP_PROTOCOL}${host}/connection/removeConnection`,
+                `${Constants.HTTP_PROTOCOL}${host}/connection/api/removeConnection`,
                 { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                 elem
             );
@@ -362,7 +356,6 @@ module.exports = (server, log, Utils, Constants) => {
         getSectionData: _getSectionData,
         getConnections: _getConnections,
         getElem: _getElem,
-        getConnectionFromSpace: _getConnectionFromSpace,
         elemEquals: _elemEquals,
 
         isPrimary: _isPrimary,

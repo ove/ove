@@ -148,7 +148,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             data
         ).catch(log.warn)).id;
-        return ApiUtils.replicateWrapper(connection, section, elem, id);
+        return ApiUtils.replicateWrapper(connection, section, id);
     };
 
     operation.cache = (req, res) => {
@@ -1303,7 +1303,7 @@ module.exports = function (server, log, Utils, Constants, ApiUtils) {
 
     operation.deleteSpace = (req, res) =>
         Utils.sendMessage(res, HttpStatus.OK,
-            JSON.stringify(ApiUtils.deleteSpace(ApiUtils.getConnectionFromSpace(req.body.primary), req.body.elem)));
+            JSON.stringify(ApiUtils.deleteSpace(ApiUtils.getConnection(req.body.primary), req.body.elem)));
 
     operation.deleteAllForSpace = (req, res) =>
         Utils.sendMessage(res, HttpStatus.OK,
