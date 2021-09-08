@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "@ove-lib/utils": "^0.5.0",
-    "axios": "0.21.1",
+    "axios": "0.21.2",
     "cors": "2.8.5",
     "d3": "6.7.0",
     "datatables.net-dt": "1.10.24",
