@@ -7,7 +7,8 @@
       "restart_delay": 3000,
       "script": "dist/index.js",
       "env": {
-          "PORT": "9080"
+          "PORT": "9080",
+          "OVE_HOST": "localhost:8080"
       }
     }
   ]

@@ -2,37 +2,6 @@ const request = require('request');
 const HttpStatus = require('http-status-codes');
 
 module.exports = (server, log, Utils, Constants) => {
-    // returns the section information for a given id
-    const _getSectionForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId));
-    const _isValidSectionId = (sectionId) => {
-        const section = server.state.get(`sections[${sectionId}]`);
-        return section !== undefined && !Utils.isNullOrEmpty(section);
-    };
-    // whether a space is primary within the given connection
-    const _isPrimaryForConnection = (connection, space) => space === connection.primary;
-    // whether a section is primary within the given connection
-    const _sectionIsPrimaryForConnection = (connection, sectionId) => _isPrimaryForConnection(connection, _getSpaceForSection(_getSectionForId(sectionId)));
-    // returns the replicated sections for the sectionId
-    const _getReplicas = (connection, sectionId) => connection.map.filter(s => Number(s.primary) === Number(sectionId)).map(s => s.secondary);
-    // returns the connection corresponding to the space the section with id: sectionId is contained in
-    const _getConnectionForSection = (sectionId) => {
-        const section = _getSectionForId(sectionId);
-        if (!section) return undefined;
-        return _getConnection(_getSpaceForSection(section));
-    };
-
-    // returns the primary section for the sectionId
-    const _getPrimarySection = (connection, sectionId) => connection.map.find(s => Number(s.secondary) === Number(sectionId)).primary;
-    const _getSpaceBySectionId = (id) => _getSpaceForSection(_getSectionForId(id));
-    const _forEachSpace = (connection, f) => connection.secondary.forEach(s => f(s));
-
-    const _applyPrimary = (space, f) => {
-        const connection = _getConnection(space);
-        if (connection && connection.isInitialized && _isPrimaryForConnection(connection, space)) {
-            f(connection);
-        }
-    };
-
     // -------------------------------- //
 
     const _unique = (xs, handler) => {
@@ -45,10 +14,19 @@ module.exports = (server, log, Utils, Constants) => {
         return arr;
     };
 
-    const _generateConnection = async (primary, secondary) => {
+    const _getSpaceBySectionId = (id) => _getSpaceForSection(_getSectionForId(id));
+
+    const _getSectionForId = (id) => server.state.get('sections').find(section => Number(section.id) === Number(id));
+
+    const _isValidSectionId = (sectionId) => !Utils.isNullOrEmpty(server.state.get(`sections[${sectionId}]`));
+
+    // returns the replicated sections for the sectionId
+    const _getReplicas = (connection, sectionId) => connection.map.filter(s => Number(s.primary) === Number(sectionId));
+
+    const _generateConnection = (primary, secondary) => {
         let connection;
-        if ((await _isConnectedWrapper(primary))) {
-            connection = await _getConnectionWrapper(primary);
+        if (_isConnected(primary)) {
+            connection = _getConnection(primary);
             connection.secondary = [...connection.secondary, secondary];
         } else {
             connection = {
@@ -61,7 +39,7 @@ module.exports = (server, log, Utils, Constants) => {
     };
 
     // returns the space for a section
-    const _getSpaceForSection = (section) => Object.keys(section.spaces)[0];
+    const _getSpaceForSection = (section) => section ? Object.keys(section.spaces)[0] : undefined;
 
     const _getSectionsForSpace = (elem) => server.state.get('sections').filter(section => !Utils.isNullOrEmpty(section) && _getSpaceForSection(section) === elem.space);
 
@@ -105,11 +83,29 @@ module.exports = (server, log, Utils, Constants) => {
         return connection.secondary.find(s => s.space === space);
     };
 
-    const _getConnectionId = (connection) => server.state.get('connections').findIndex(c => _elemEquals(c.primary, connection.primary));
+    const _getConnectionId = (connection) => _getConnections().findIndex(c => !Utils.isNullOrEmpty(c) && _elemEquals(c.primary, connection.primary));
 
-    const _getUniqueHosts = (spaces) => _unique(spaces, _elemEquals).map(s => s.host);
+    const _getUniqueHosts = (spaces) => _unique(spaces, (x, y) => x.host === y.host).map(s => s.host);
 
     const _elemEquals = (x, y) => x.space === y.space && x.host === y.host;
+
+    const _getDefaultElem = space => ({ space: space, host: process.env.OVE_HOST });
+
+    // whether a space is primary within the given connection
+    const _isPrimaryForConnection = (connection, elem) => _elemEquals(connection.primary, elem);
+
+    // returns the primary section for the sectionId
+    const _getPrimarySection = (connection, sectionId, elem) => connection.map.find(s => Number(s.secondary) === Number(sectionId) && _elemEquals(s.elem, elem)).primary;
+
+    const _getMappingsForSecondary = (connection, elem) => connection.map ? connection.map.filter(x => _elemEquals(x.elem, elem)).map(({ secondary }) => secondary) : [];
+
+    const _filterWithIndex = (arr, handler) => arr.map((x, i) => ({ index: i, value: x })).filter(({ value }) => handler(value));
+
+    const _setToArray = set => {
+        const arr = [];
+        set.forEach(x => arr.push(x));
+        return arr;
+    };
 
     // -------------------------------- //
 
@@ -123,7 +119,7 @@ module.exports = (server, log, Utils, Constants) => {
         .find(connection => connection.secondary && connection.secondary.some(s => _elemEquals(s, elem))) !== undefined;
 
     // whether the space is currently connected, either as primary or secondary
-    const _isConnected = (space) => _isPrimary(space) || _isSecondary(space);
+    const _isConnected = (elem) => _isPrimary(elem) || _isSecondary(elem);
 
     // returns the connection corresponding to the space or undefined if not connected
     const _getConnection = elem => {
@@ -163,15 +159,16 @@ module.exports = (server, log, Utils, Constants) => {
         return connection;
     };
 
-    const _deleteSecondarySection = (connection, sectionId) => {
+    const _deleteSecondarySection = (connection, sectionId, elem) => {
         const id = _getConnectionId(connection);
-        connection.map.splice(connection.map.findIndex(s => Number(s.secondary) === Number(sectionId)), 1);
+        log.debug('elem:', elem);
+        connection.map.splice(connection.map.findIndex(s => Number(s.secondary) === Number(sectionId) && _elemEquals(s.elem, elem)), 1);
         connection.id = id;
         server.state.set(`connections[${id}]`, connection);
         return connection;
     };
 
-    const _deleteAllForSpace = (connection, space) => _getSectionsForSpace(space).forEach(s => _deleteSecondarySection(connection, s.id));
+    const _deleteAllForSpace = (primary, secondary) => _getSectionsForSpace(secondary.space).forEach(s => _deleteSecondarySection(_getConnection(primary), s.id, secondary));
 
     const _removeConnection = (elem) => {
         const _remove = (index) => server.state.set(`connections[${index}]`, {});
@@ -180,13 +177,16 @@ module.exports = (server, log, Utils, Constants) => {
             .findIndex(connection => connection.secondary && connection.secondary.some(s => _elemEquals(s, elem))));
     };
 
+    // returns the section information for a given id
+    const _getURLForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId)).app.url;
+
     // -------------------------------- //
 
     const _defaultError = (resolve, reject, url, error, res, b) => {
         if (!Utils.isNullOrEmpty(error)) {
             reject(error);
-        } else if (res.statusCode !== HttpStatus.OK) {
-            reject(new Error(`Received status code: ${res.statusCode} and reason: ${JSON.stringify(b)} when connecting to: ${url}`));
+        } else if (res?.statusCode !== HttpStatus.OK) {
+            reject(new Error(`Received status code: ${res?.statusCode} and reason: ${JSON.stringify(b)} when connecting to: ${url}`));
         } else {
             resolve(b);
         }
@@ -215,65 +215,72 @@ module.exports = (server, log, Utils, Constants) => {
     // whether the space is connected as a secondary
     const _isSecondaryWrapper = async (elem) =>
         (await get(
-            `${Constants.HTTP_PROTOCOL}${elem.host}/connection/api/isSecondary`,
+            `${Constants.HTTP_PROTOCOL}${elem.host}/api/isSecondary`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             elem
         ).catch(log.warn)).isSecondary;
 
-    const _isPrimaryWrapper = async (elem) => (await get(
-        `${Constants.HTTP_PROTOCOL}${elem.host}/connection/api/isPrimary`,
+    const _isPrimaryWrapper = async elem => (await get(
+        `${Constants.HTTP_PROTOCOL}${elem.host}/api/isPrimary`,
         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
         elem
     ).catch(log.warn)).isPrimary;
 
-    const _isConnectedWrapper = async (elem) => (await get(
-        `${Constants.HTTP_PROTOCOL}${elem.host}/connection/api/isConnected`,
-        { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-        elem
-    ).catch(log.warn)).isConnected;
+    const _isConnectedWrapper = async elem => {
+        log.debug('elem:', elem);
+        const v = (await get(
+            `${Constants.HTTP_PROTOCOL}${elem.host}/api/isConnected`,
+            { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+            elem
+        ).catch(log.warn));
+        log.debug('v:', v);
+        return v.isConnected;
+    };
 
     const _getConnectionWrapper = async elem => (await get(
-        `${Constants.HTTP_PROTOCOL}${elem.host}/connection/api/getConnection`,
+        `${Constants.HTTP_PROTOCOL}${elem.host}/api/getConnection`,
         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
         elem
     ).catch(log.warn)).connection;
 
     const _updateConnectionStateWrapper = async (host, connection) => post(
-        `${Constants.HTTP_PROTOCOL}${host}/connection/api/updateConnectionState`,
+        `${Constants.HTTP_PROTOCOL}${host}/api/updateConnectionState`,
         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
         connection
     ).catch(log.warn);
 
     // updates/creates connection for connection
     const _updateConnectionWrapper = async (primary, secondary) => {
-        const connection = await _generateConnection(primary, secondary);
+        const connection = _generateConnection(primary, secondary);
+        await _forEachSecondary(connection, async (connection, s) => {
+            if (primary.host !== s.host) {
+                await post(
+                    `${Constants.HTTP_PROTOCOL}${s.host}/api/updateConnection`,
+                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+                    { connection: connection, host: s.host }
+                );
+            }
+        });
         await post(
-            `${Constants.HTTP_PROTOCOL}${primary.host}/connection/api/updateConnection`,
+            `${Constants.HTTP_PROTOCOL}${primary.host}/api/updateConnection`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             connection
-        ).catch(log.warn);
-        if (primary.host !== secondary.host) {
-            await post(
-                `${Constants.HTTP_PROTOCOL}${secondary.host}/connection/api/updateConnection`,
-                { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                connection
-            ).catch(log.warn);
-        }
+        );
         return connection;
     };
 
-    const _replicateWrapper = async (connection, section, id) => {
-        const mapping = { primary: section.id, secondary: id };
+    const _replicateWrapper = async (connection, section, id, elem) => {
+        const mapping = { primary: section.id, secondary: id, elem: elem };
         connection.map = !connection.map ? [mapping] : [...connection.map, mapping];
 
         await post(
-            `${Constants.HTTP_PROTOCOL}${connection.primary.host}/connection/api/updateConnectionState`,
+            `${Constants.HTTP_PROTOCOL}${connection.primary.host}/api/updateConnectionState`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             connection
         ).catch(log.warn);
         for (const s of connection.secondary.filter(s => s.host !== connection.primary.host)) {
             await post(
-                `${Constants.HTTP_PROTOCOL}${s.host}/connection/api/updateConnectionState`,
+                `${Constants.HTTP_PROTOCOL}${s.host}/api/updateConnectionState`,
                 { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                 connection
             ).catch(log.warn);
@@ -296,60 +303,83 @@ module.exports = (server, log, Utils, Constants) => {
         }
     };
 
-    const _disconnectSpaceWrapper = async elem => {
-        const connection = await _getConnectionWrapper(elem);
+    const _disconnectSpaceWrapper = async (connection, elem) => {
         if (connection.secondary.length > 1) {
-            for (const host of _getUniqueHosts(connection.secondary)) {
+            const hosts = _getUniqueHosts([connection.primary].concat(connection.secondary));
+            log.debug('hosts: ', hosts);
+            for (const host of hosts) {
                 await del(
-                    `${Constants.HTTP_PROTOCOL}${host}/connection/api/deleteSpace`,
+                    `${Constants.HTTP_PROTOCOL}${host}/api/deleteSpace`,
                     { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                    { primary: connection.primary, elem: elem }
+                    { primary: connection.primary, elem: elem, host: host }
                 );
                 await del(
-                    `${Constants.HTTP_PROTOCOL}${host}/connection/api/deleteAllForSpace`,
+                    `${Constants.HTTP_PROTOCOL}${host}/api/deleteAllForSpace`,
                     { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                    { primary: connection.primary, elem: elem }
+                    { primary: connection.primary, elem: elem, host: host }
                 );
             }
         } else {
-            for (const host of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
-                await del(
-                    `${Constants.HTTP_PROTOCOL}${host}/connection/api/removeConnection`,
-                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                    connection.primary
-                );
-            }
+            await del(
+                `${Constants.HTTP_PROTOCOL}${connection.primary.host}/api/removeConnection`,
+                { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+                connection.primary
+            );
         }
     };
 
-    const _removeConnectionWrapper = async elem => {
-        const connection = await _getConnectionWrapper(elem);
+    const _deleteSecondarySectionWrapper = async (connection, id, elem) => {
         for (const host of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
             await del(
-                `${Constants.HTTP_PROTOCOL}${host}/connection/api/removeConnection`,
+                `${Constants.HTTP_PROTOCOL}${host}/api/deleteSecondarySection/${id}`,
+                { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+                { primary: connection.primary, elem: elem }
+            );
+        }
+    };
+
+    const _removeConnectionWrapper = async (connection, elem) => {
+        for (const host of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
+            await del(
+                `${Constants.HTTP_PROTOCOL}${host}/api/removeConnection`,
                 { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                 elem
             );
         }
     };
 
+    const _getURLForIdWrapper = async (host, id) => (await get(
+        `${Constants.HTTP_PROTOCOL}${host}/api/getURLForId/${id}`,
+        { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+    )).url;
+
+    const _forEachSecondarySection = async (connection, f) => Promise.all(connection.secondary.map(async s => Promise.all(_getMappingsForSecondary(connection, s).map(async (id) => f(connection, id, s)))));
+
+    const _forEachSecondary = async (connection, f) => Promise.all(connection.secondary.map(s => f(connection, s)));
+
+    const _applyPrimaryForSections = async (space, f) => {
+        const elem = _getDefaultElem(space);
+        const connection = _getConnection(elem);
+
+        if (connection && connection.isInitialized && _isPrimaryForConnection(connection, elem)) {
+            await _forEachSecondarySection(connection, f);
+        }
+    };
+
+    const _applyPrimary = async (space, f) => {
+        const elem = _getDefaultElem(space);
+        const connection = _getConnection(elem);
+
+        if (connection && connection.isInitialized && _isPrimaryForConnection(connection, elem)) {
+            await _forEachSecondary(connection, f);
+        }
+    };
+
     // -------------------------------- //
 
     return {
-        getSectionForId: _getSectionForId,
-        isValidSectionId: _isValidSectionId,
-        isPrimaryForConnection: _isPrimaryForConnection,
-        sectionIsPrimaryForConnection: _sectionIsPrimaryForConnection,
-        getReplicas: _getReplicas,
-        getConnectionForSection: _getConnectionForSection,
-        getPrimarySection: _getPrimarySection,
         getSpaceBySectionId: _getSpaceBySectionId,
-        deleteSecondarySection: _deleteSecondarySection,
-        deleteSpace: _deleteSpace,
-        deleteAllForSpace: _deleteAllForSpace,
-        forEachSpace: _forEachSpace,
-        applyPrimary: _applyPrimary,
-
+        getSectionForId: _getSectionForId,
         generateConnection: _generateConnection,
         getSpaceForSection: _getSpaceForSection,
         getSectionsForSpace: _getSectionsForSpace,
@@ -357,6 +387,14 @@ module.exports = (server, log, Utils, Constants) => {
         getConnections: _getConnections,
         getElem: _getElem,
         elemEquals: _elemEquals,
+        isValidSectionId: _isValidSectionId,
+        getDefaultElem: _getDefaultElem,
+        isPrimaryForConnection: _isPrimaryForConnection,
+        getReplicas: _getReplicas,
+        getPrimarySection: _getPrimarySection,
+        getMappingsForSecondary: _getMappingsForSecondary,
+        filterWithIndex: _filterWithIndex,
+        setToArray: _setToArray,
 
         isPrimary: _isPrimary,
         isSecondary: _isSecondary,
@@ -365,6 +403,10 @@ module.exports = (server, log, Utils, Constants) => {
         updateConnectionState: _updateConnectionState,
         updateConnection: _updateConnection,
         removeConnection: _removeConnection,
+        getURLForId: _getURLForId,
+        deleteSecondarySection: _deleteSecondarySection,
+        deleteSpace: _deleteSpace,
+        deleteAllForSpace: _deleteAllForSpace,
 
         post: post,
         del: del,
@@ -379,6 +421,12 @@ module.exports = (server, log, Utils, Constants) => {
         replicateWrapper: _replicateWrapper,
         clearConnectionsWrapper: _clearConnectionsWrapper,
         disconnectSpaceWrapper: _disconnectSpaceWrapper,
-        removeConnectionWrapper: _removeConnectionWrapper
+        removeConnectionWrapper: _removeConnectionWrapper,
+        getURLForIdWrapper: _getURLForIdWrapper,
+        deleteSecondarySectionWrapper: _deleteSecondarySectionWrapper,
+        forEachSecondarySection: _forEachSecondarySection,
+        forEachSecondary: _forEachSecondary,
+        applyPrimaryForSections: _applyPrimaryForSections,
+        applyPrimary: _applyPrimary
     };
 };

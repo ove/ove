@@ -26,6 +26,9 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
+    "@babel/core": "7.15.5",
+    "@babel/preset-env": "7.15.4",
+    "@babel/cli": "7.15.4",
     "chalk": "4.1.1",
     "dateformat": "4.5.1",
     "express": "4.17.1",
