@@ -1,0 +1,12 @@
+version: '3'
+services:
+  ovehub-ove-test:
+    image: ovehub/ove:${SERVICE_VERSION}
+    build: .
+    ports:
+      - "8080:8080"
+  ovehub-ove-test-clone:
+    image: ovehub/ove:${SERVICE_VERSION}
+    build: .
+    ports:
+      - "7080:8080"

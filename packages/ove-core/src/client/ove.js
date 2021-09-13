@@ -353,7 +353,7 @@ function OVE (appId, hostname, sectionId) {
     //-----------------------------------------------------------//
     //--                  Geometry Variables                   --//
     //-----------------------------------------------------------//
-    const setGeometry = function (__self, __private) {
+    const setGeometry = async function (__self, __private) {
         __self.geometry = {};
         const fetchSection = async function (sectionId) {
             if (!sectionId) return;
@@ -385,7 +385,7 @@ function OVE (appId, hostname, sectionId) {
             if (!sectionId && sectionId !== 0) {
                 log.warn('Section id not provided');
             }
-            fetchSection(sectionId);
+            await fetchSection(sectionId);
             return;
         }
         let sectionId = id.substring(id.lastIndexOf('.') + 1);
@@ -412,11 +412,10 @@ function OVE (appId, hostname, sectionId) {
         }
         log.debug('OVE instance UUID:', __self.context.uuid);
         //-- call APIs /spaces or /spaces?oveSectionId={sectionId}  --//
-        fetch(getHostName(true) + '/spaces' + (sectionId ? '?oveSectionId=' + sectionId : ''))
-            .then(function (r) { return r.text(); }).then(function (text) {
-                __self.geometry = (JSON.parse(text)[space] || [])[client] || {};
-                fetchSection(sectionId);
-            });
+        const raw = await fetch(getHostName(true) + '/spaces' + (sectionId ? '?oveSectionId=' + sectionId : ''));
+        const text = await raw.text();
+        __self.geometry = (JSON.parse(text)[space] || [])[client] || {};
+        await fetchSection(sectionId);
     };
 
     //-----------------------------------------------------------//
@@ -486,7 +485,7 @@ function OVE (appId, hostname, sectionId) {
     this.frame = new OVEFrame(this, __private);
     this.state = new OVEState(this, __private);
     this.clock = new OVEClock(__private);
-    setGeometry(this, __private);
+    setGeometry(this, __private).then(log.debug('Geometry set'));
 }
 
 //-----------------------------------------------------------//

@@ -13,7 +13,7 @@ describe('The OVE Core server', () => {
         jest.resetModules();
         process.env = { ...OLD_ENV };
         process.env.OVE_HOST = 'localhost:8080';
-        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */
@@ -870,6 +870,7 @@ describe('The OVE Core server', () => {
     });
 
     it('should replicate state when creating replicated sections', async () => {
+        nock('http://localhost:8081').post('/test/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         nock('http://localhost:8081').get('/test/instances/0/state').reply(HttpStatus.OK, JSON.stringify({ state: 'test' }));
         nock('http://localhost:8081').post('/test/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         nock('http://localhost:8081').post('/test/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -879,6 +880,24 @@ describe('The OVE Core server', () => {
         TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+    });
+
+    it('should be able to list multiple connections', async () => {
+        const connections = [{ primary: { space: 'TestingNine', host: 'localhost:8080' },
+            secondary: [{ space: 'TestingNineClone', host: 'localhost:8080' }, { space: 'TestingFour', host: 'localhost:8080' }],
+            sections: { 0: ['1', '2'] } }];
+        TestUtils.createConnection('TestingNineClone');
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        TestUtils.createConnection('TestingFour');
+        await request(app).post('/connection/TestingNine/TestingFour');
+        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        await request(app).get('/connections').expect(HttpStatus.OK, JSON.stringify(connections));
+    });
+
+    it('cannot cache an invalid section id', async () => {
+        await request(app).post('/cache/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 1' }));
     });
     /* jshint ignore:end */
 

@@ -229,7 +229,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     };
 
     const _createConnection = async (primary, secondary, error) => {
-        const initialize = async (connection) => {
+        const initialize = async connection => {
             connection.isInitialized = true;
             await ApiUtils.updateConnectionStateWrapper(primary.host, connection);
             await ApiUtils.forEachSecondary(connection, async (connection, s) => {
@@ -291,9 +291,13 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             sendError(`Expected two hosts, only received one`);
             return;
         }
+        if (req.body.primary && !req.body.protocol) {
+            sendError('No protocol for the secondary host has been provided');
+            return;
+        }
 
-        const primary = { space: req.params.primary, host: req.body.primary || process.env.OVE_HOST };
-        const secondary = { space: req.params.secondary, host: req.body.secondary || process.env.OVE_HOST };
+        const primary = { space: req.params.primary, host: req.body.primary || process.env.OVE_HOST, protocol: request.protocol };
+        const secondary = { space: req.params.secondary, host: req.body.secondary || process.env.OVE_HOST, protocol: req.body.protocol || request.protocol };
 
         const sections = await _createConnection(primary, secondary, sendError);
         if (sections) Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }));

@@ -1,5 +1,7 @@
-const request = require('request');
-const HttpStatus = require('http-status-codes');
+const RequestUtils = require('./request-utils');
+const get = RequestUtils.get;
+const post = RequestUtils.post;
+const del = RequestUtils.delete;
 
 module.exports = (server, log, Utils, Constants) => {
     // -------------------------------- //
@@ -179,36 +181,6 @@ module.exports = (server, log, Utils, Constants) => {
 
     // returns the section information for a given id
     const _getURLForId = (sectionId) => server.state.get('sections').find(s => Number(s.id) === Number(sectionId)).app.url;
-
-    // -------------------------------- //
-
-    const _defaultError = (resolve, reject, url, error, res, b) => {
-        if (!Utils.isNullOrEmpty(error)) {
-            reject(error);
-        } else if (res?.statusCode !== HttpStatus.OK) {
-            reject(new Error(`Received status code: ${res?.statusCode} and reason: ${JSON.stringify(b)} when connecting to: ${url}`));
-        } else {
-            resolve(b);
-        }
-    };
-
-    const post = async (url, headers, body, handler) => new Promise((resolve, reject) =>
-        request.post(url, {
-            headers: headers,
-            json: body
-        }, (handler || _defaultError).bind(null, resolve, reject, url)));
-
-    const del = async (url, headers, body, handler) => new Promise((resolve, reject) =>
-        request.delete(url, {
-            headers: headers,
-            json: body || {}
-        }, (handler || _defaultError).bind(null, resolve, reject, url)));
-
-    const get = async (url, headers, body, handler) => new Promise((resolve, reject) =>
-        request.get(url, {
-            headers: headers,
-            json: body || {}
-        }, (handler || _defaultError).bind(null, resolve, reject, url)));
 
     // -------------------------------- //
 
