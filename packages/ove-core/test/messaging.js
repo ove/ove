@@ -9,7 +9,6 @@ const Constants = global.Constants;
 const Utils = global.Utils;
 const log = global.log;
 const server = global.server;
-const TestUtils = global.TestUtils;
 
 // Do not expose console during init.
 const OLD_CONSOLE = global.console;
@@ -774,9 +773,7 @@ describe('The OVE Core server', () => {
 
     it('should forward message to all sockets on connected event', async () => {
         const event = { appId: 'test', sectionId: '0', message: { test: 'test' } };
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).post('/event/0').send(event);
         expect(sockets.messages.filter(message => JSON.parse(message).appId !== 'core').length).toBe(2);

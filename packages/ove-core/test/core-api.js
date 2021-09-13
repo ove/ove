@@ -3,7 +3,6 @@ const HttpStatus = global.HttpStatus;
 const app = global.app;
 const Utils = global.Utils;
 const nock = global.nock;
-const TestUtils = global.TestUtils;
 
 // Core functionality tests.
 describe('The OVE Core server', () => {
@@ -13,7 +12,7 @@ describe('The OVE Core server', () => {
         jest.resetModules();
         process.env = { ...OLD_ENV };
         process.env.OVE_HOST = 'localhost:8080';
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */
@@ -502,18 +501,14 @@ describe('The OVE Core server', () => {
     });
 
     it('should be able to successfully create and delete connections between two spaces', async () => {
-        const primary = { space: 'TestingNine', host: 'localhost:8080' };
-        const secondary = { space: 'TestingNineClone', host: 'localhost:8080' };
-        TestUtils.createConnection('TestingNineClone');
+        const primary = { space: 'TestingNine' };
+        const secondary = { space: 'TestingNineClone' };
 
         await request(app).post('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [] }));
 
         await request(app).get('/connections?space=TestingNine')
-            .expect(HttpStatus.OK, JSON.stringify({ primary: primary, secondary: [secondary], sections: {} }));
-
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
-        TestUtils.nock(8080, 'DELETE', '/api/removeConnection');
+            .expect(HttpStatus.OK, JSON.stringify({ primary: { ...primary, host: 'localhost:8080' }, secondary: [{ ...secondary, host: 'localhost:8080' }], sections: {} }));
 
         await request(app).delete('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -525,9 +520,7 @@ describe('The OVE Core server', () => {
     });
 
     it('lists all connections if no space specified', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingFourClone');
         await request(app).post('/connection/TestingFour/TestingFourClone');
 
         let res = await request(app).get('/connections');
@@ -549,9 +542,6 @@ describe('The OVE Core server', () => {
     });
 
     it('fetches correct mapping of section connection details for primary sections', async () => {
-        TestUtils.createConnection('TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
-
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).get(`/connections/section/0`)
@@ -561,8 +551,6 @@ describe('The OVE Core server', () => {
     it('fetches correct mapping of section connection details for secondary sections', async () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        TestUtils.createConnection('TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [1] }));
         await request(app).get('/connections/section/1')
@@ -570,40 +558,29 @@ describe('The OVE Core server', () => {
     });
 
     it('allows multiple replica spaces to be connected', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK);
 
-        TestUtils.createConnection('TestingFour');
         await request(app).post('/connection/TestingNine/TestingFour')
             .expect(HttpStatus.OK);
     });
 
     it('can create multiple sections in a connected space', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
 
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
 
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 2 }));
     });
 
     it('deleting connection by secondary space only deletes that connection', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingFour');
         await request(app).post('/connection/TestingNine/TestingFour');
 
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
-        TestUtils.nock(8080, 'DELETE', '/api/deleteSpace');
-        TestUtils.nock(8080, 'DELETE', '/api/deleteAllForSpace');
         await request(app).delete('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK);
         await request(app).get('/connections/section/2')
@@ -611,15 +588,10 @@ describe('The OVE Core server', () => {
     });
 
     it('deleting connection by primary deletes all connections', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingFour');
         await request(app).post('/connection/TestingNine/TestingFour');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
-        TestUtils.nock(8080, 'DELETE', '/api/removeConnection');
         await request(app).delete('/connection/TestingNine')
             .expect(HttpStatus.OK);
         await request(app).get('/connections')
@@ -627,36 +599,18 @@ describe('The OVE Core server', () => {
     });
 
     it('can create connection for a space with a section with an app', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8080/app/maps', states: { 'load': 'London' } } })
             .expect(HttpStatus.OK);
     });
 
     it('deletes all sections in replicas if deleting all in primary', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingFour');
         await request(app).post('/connection/TestingNine/TestingFour');
 
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        TestUtils.nock(8080, 'DELETE', '/sections/1');
-        TestUtils.nock(8080, 'DELETE', '/sections/4');
-        TestUtils.nock(8080, 'DELETE', '/sections/2');
-        TestUtils.nock(8080, 'DELETE', '/sections/5');
-        TestUtils.nock(8080, 'DELETE', '/api/deleteSecondarySection/1');
-        TestUtils.nock(8080, 'DELETE', '/api/deleteSecondarySection/4');
-        TestUtils.nock(8080, 'DELETE', '/api/deleteSecondarySection/2');
-        TestUtils.nock(8080, 'DELETE', '/api/deleteSecondarySection/5');
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
         await request(app).delete('/sections?space=TestingNine')
             .expect(HttpStatus.OK);
         await request(app).get('/sections?space=TestingNineClone')
@@ -665,10 +619,8 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
     });
 
-    /* it('should not be able to delete sections in secondary space', async () => {
-        TestUtils.createConnection('TestingNineClone');
+    it('should not be able to delete sections in secondary space', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
         await request(app).delete('/sections?space=TestingNineClone')
@@ -677,15 +629,12 @@ describe('The OVE Core server', () => {
         const res = await request(app).get('/connections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(JSON.parse(res.text).length).toBe(1);
-    }); */
+    });
 
     it('should update all replicas if updating a primary section', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        TestUtils.nock(8080, 'POST', '/sections/1');
         await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 20, 'y': 0, 'x': 20 })
             .expect(HttpStatus.OK);
 
@@ -694,7 +643,7 @@ describe('The OVE Core server', () => {
         expect(JSON.parse(res.text).w).toEqual(20);
     });
 
-    /* it('should not be able to update a secondary section', async () => {
+    it('should not be able to update a secondary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         let res = await request(app).post('/sections/1').send({ 'h': 10, 'space': 'TestingNineClone', 'w': 20, 'y': 0, 'x': 20 });
@@ -702,15 +651,12 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/connections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(JSON.parse(res.text).length).toBe(1);
-    }); */
+    });
 
     it('should delete all replica sections if deleting a primary section', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        TestUtils.nock(8080, 'DELETE', '/sections/1');
         await request(app).delete('/sections/0').expect(HttpStatus.OK);
 
         const res = await request(app).get('/sections?space=TestingNineClone');
@@ -718,7 +664,7 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify([]));
     });
 
-    /* it('should not be able to delete a secondary section', async () => {
+    it('should not be able to delete a secondary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         let res = await request(app).delete('/sections/1');
@@ -726,39 +672,32 @@ describe('The OVE Core server', () => {
         res = await request(app).get('/connections');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(JSON.parse(res.text).length).toBe(1);
-    }); */
+    });
 
     it('should error when connecting a space to itself', async () => {
-        TestUtils.createConnection('TestingNine');
         await request(app).post('/connection/TestingNine/TestingNine')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Primary and secondary spaces are the same' }));
     });
 
     it('should error when connecting a primary space as a secondary', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingNine');
         await request(app).post('/connection/TestingFour/TestingNine')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Could not connect TestingFour and TestingNine as there is an existing connection' }));
     });
 
     it('can delete all connections', async () => {
-        TestUtils.createConnection('TestingNineClone');
-        TestUtils.createConnection('TestingFourClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/connection/TestingFour/TestingFourClone');
         await request(app).delete('/connections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
     it('can delete all sections when no space is or group is specified', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
-    /* it('should error when connecting a secondary space', async () => {
+    it('should error when connecting a secondary space', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         let res = await request(app).post('/connection/TestingNineClone/TestingFour');
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
@@ -766,7 +705,7 @@ describe('The OVE Core server', () => {
         res = await request(app).post('/connection/TestingFour/TestingNineClone');
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'Could not connect TestingFour and TestingNineClone as there is an existing connection' }));
-    }); */
+    });
 
     it('should return empty when sending event without connection', async () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
@@ -780,86 +719,64 @@ describe('The OVE Core server', () => {
     });
 
     it('should send events from secondary to primary sections', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).post('/event/1').send({ appId: 'test', sectionId: '1', message: {} })
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
     it('should send events from primary to secondary sections', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingFour');
         await request(app).post('/connection/TestingNine/TestingFour');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).post('/event/0').send({ appId: 'test', sectionId: '0', message: {} })
             .expect(HttpStatus.OK, JSON.stringify({ ids: [1, 2] }));
     });
 
-    /* it('should fail to create section in secondary space', async () => {
+    it('should fail to create section in secondary space', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNineClone', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica' }));
-    }); */
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica. Space: TestingNineClone' }));
+    });
 
     it('should refresh replicated sections', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        TestUtils.nock(8080, 'POST', '/sections/1/refresh');
         await request(app).post('/sections/0/refresh')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
     it('should refresh replicated spaces', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        TestUtils.nock(8080, 'POST', '/sections/refresh?space=TestingNine');
         await request(app).post('/sections/refresh?space=TestingNine')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
     it('cannot move connected sections', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        TestUtils.nock(8080, 'POST', '/sections/moveTo?space=TestingNine');
         await request(app).post('/sections/moveTo?space=TestingNine').send({ space: 'TestingNineClone' })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is currently connected' }));
     });
 
     it('should error with most specific connection if trying to delete a non-existent connection', async () => {
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
         await request(app).delete('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No connection for space: TestingNineClone' }));
-        TestUtils.nock(8080, 'GET', '/api/getConnection');
         await request(app).delete('/connection/TestingNine')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No connection for space: TestingNine' }));
     });
 
     it('should cache across all replicas if caching state of primary section', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        TestUtils.nock(8080, 'GET', '/api/getURLForId/1');
         nock('http://localhost:8080').post('/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/cache/0').send({}).expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
     it('should cache replica state to other replicas and primary section', async () => {
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        TestUtils.nock(8080, 'GET', '/api/getURLForId/0');
         nock('http://localhost:8082').post('/instances/0/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/cache/1').send({}).expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
@@ -875,9 +792,7 @@ describe('The OVE Core server', () => {
         nock('http://localhost:8081').post('/test/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         nock('http://localhost:8081').post('/test/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         nock('http://localhost:8081').post('/test/instances/1/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
     });
@@ -886,11 +801,8 @@ describe('The OVE Core server', () => {
         const connections = [{ primary: { space: 'TestingNine', host: 'localhost:8080' },
             secondary: [{ space: 'TestingNineClone', host: 'localhost:8080' }, { space: 'TestingFour', host: 'localhost:8080' }],
             sections: { 0: ['1', '2'] } }];
-        TestUtils.createConnection('TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        TestUtils.createConnection('TestingFour');
         await request(app).post('/connection/TestingNine/TestingFour');
-        TestUtils.duplicateSection('TestingNine', ['TestingNineClone', 'TestingFour']);
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         await request(app).get('/connections').expect(HttpStatus.OK, JSON.stringify(connections));

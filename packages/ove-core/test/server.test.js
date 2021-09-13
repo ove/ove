@@ -30,59 +30,6 @@ const spaces = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resou
 
 const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, log, Utils, Constants);
 
-const _createConnection = (secondary) => {
-    _nock(8080, 'GET', '/api/isSecondary');
-    _nock(8080, 'GET', '/api/isConnected');
-    _nock(8080, 'POST', '/api/updateConnection');
-    _nock(8080, 'POST', '/api/updateConnectionState');
-    _nock(8080, 'DELETE', `/sections?space=${secondary}`);
-};
-
-const _duplicateSection = (primary, secondary) => {
-    secondary.forEach(s => {
-        _nock(8080, 'GET', `/spaces/${primary}/geometry`);
-        _nock(8080, 'GET', `/spaces/${s}/geometry`);
-        _nock(8080, 'POST', '/section');
-        _nock(8080, 'POST', '/api/updateConnectionState');
-    });
-};
-
-const _forwardNock = async (type, url, body) => {
-    let res;
-    if (type === 'GET') {
-        res = await request(app).get(url).send(body);
-    } else if (type === 'POST') {
-        res = await request(app).post(url).send(body);
-    } else {
-        res = await request(app).delete(url).send(body);
-    }
-    return [res.statusCode, res.text, res.headers];
-};
-
-const _nock = (port, type, url) => {
-    let scope = nock(`http://localhost:${port}`);
-    const holder = {};
-    if (type === 'GET') {
-        scope = scope.get(url, _bodySnatching.bind(null, holder));
-    } else if (type === 'POST') {
-        scope = scope.post(url, _bodySnatching.bind(null, holder));
-    } else {
-        scope = scope.delete(url, _bodySnatching.bind(null, holder));
-    }
-    scope.reply(async (uri, body, cb) => cb(null, await _forwardNock(type, url, holder.body)));
-};
-
-const _bodySnatching = (holder, body) => {
-    holder.body = body;
-    return true;
-};
-
-const TestUtils = {
-    createConnection: _createConnection,
-    duplicateSection: _duplicateSection,
-    nock: _nock
-};
-
 // All variables are set in the global scope so that they can then be used appropriately in the test files.
 global.path = path;
 global.fs = fs;
@@ -100,7 +47,6 @@ global.Utils = Utils;
 global.log = log;
 global.spaces = spaces;
 global.server = server;
-global.TestUtils = TestUtils;
 
 // Restore console before run.
 global.console = OLD_CONSOLE;
