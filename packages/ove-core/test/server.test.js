@@ -88,9 +88,7 @@ require(path.join(srcDir, '..', 'test', 'messaging.js'));
 // The server should be able to start on a random port.
 describe('The OVE Core server', () => {
     const PORT = 5555;
-    const httpRequest = () => {
-        return request('http://localhost:' + PORT);
-    };
+    const httpRequest = () => request(`http://localhost:${PORT}`);
 
     let server;
     const OLD_CONSOLE = global.console;

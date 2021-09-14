@@ -38,7 +38,7 @@ describe('The OVE Core server', () => {
     it('should fail to successfully create or update sections with an app without a URL', async () => {
         await request(app).post('/section')
             .send({ 'h': 10, 'app': { }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid App Configuration' }));
 
         let res = await request(app).post('/section')
             .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
@@ -52,7 +52,7 @@ describe('The OVE Core server', () => {
         let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/sections/0')
             .send({ 'h': 10, 'app': { }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid app configuration' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid App Configuration' }));
         expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
 
         await request(app).delete('/sections')
@@ -99,14 +99,14 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
         await request(app).get('/groups/0')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
 
         res = await request(app).delete('/groups/1');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 1 }));
 
         await request(app).get('/groups/1')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 1' }));
 
         nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -211,7 +211,7 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(Utils.JSON.EMPTY);
 
         await request(app).get('/groups/0')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
 
         await request(app).get('/groups/2')
             .expect(HttpStatus.OK, JSON.stringify([1]));
@@ -225,7 +225,7 @@ describe('The OVE Core server', () => {
         expect(scope2.isDone()).toBeTruthy(); // request should be made at this point.
 
         await request(app).get('/groups/1')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid group id' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 1' }));
     });
 
     it('should be able to successfully read, update and delete sections by space, with an app', async () => {
@@ -304,7 +304,7 @@ describe('The OVE Core server', () => {
         expect(res.text).toEqual(JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } } ]));
 
         await request(app).post('/sections/transform').send({ 'translate': { x: -11, y: 0 } })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid dimensions' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions. Unable to update sections due to one or more range errors' }));
 
         res = await request(app).get('/sections/0');
         expect(res.statusCode).toEqual(HttpStatus.OK);

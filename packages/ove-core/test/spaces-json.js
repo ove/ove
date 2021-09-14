@@ -44,7 +44,7 @@ describe('The OVE Core server', () => {
     it('should return an error if the space name was invalid', async () => {
         let res = await request(app).get('/spaces/Fake/geometry');
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
-        expect(res.text).toEqual(JSON.stringify({ error: 'invalid space' }));
+        expect(res.text).toEqual(JSON.stringify({ error: 'Invalid Space: Fake' }));
     });
     /* jshint ignore:end */
 
