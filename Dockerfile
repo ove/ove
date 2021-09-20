@@ -1,7 +1,7 @@
 FROM node:14-alpine
 WORKDIR /usr/src/app
 
-ARG port
+ARG port=8080
 
 RUN npm install -global pm2
 RUN npm install -global lerna
