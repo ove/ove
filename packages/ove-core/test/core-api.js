@@ -3,6 +3,7 @@ const HttpStatus = global.HttpStatus;
 const app = global.app;
 const Utils = global.Utils;
 const nock = global.nock;
+const RequestUtils = global.RequestUtils;
 
 // Core functionality tests.
 describe('The OVE Core server', () => {
@@ -12,7 +13,7 @@ describe('The OVE Core server', () => {
         jest.resetModules();
         process.env = { ...OLD_ENV };
         process.env.OVE_HOST = 'localhost:8080';
-        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */
@@ -347,7 +348,7 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [1] }));
         await request(app).get('/connections/section/1')
-            .expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: 1 } }));
+            .expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: [1] } }));
     });
 
     it('allows multiple replica spaces to be connected', async () => {
@@ -369,15 +370,14 @@ describe('The OVE Core server', () => {
     });
 
     it('deleting connection by secondary space only deletes that connection', async () => {
-        await request(app).post('/connection/TestingNine/TestingNineClone');
-        await request(app).post('/connection/TestingNine/TestingFour');
-
-        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-
-        await request(app).delete('/connection/TestingNine/TestingNineClone')
-            .expect(HttpStatus.OK);
-        await request(app).get('/connections/section/2')
-            .expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: 2 } }));
+        await request(app).post('/connection/TestingNine/TestingNineClone').expect(HttpStatus.OK, JSON.stringify({ ids: [] }));
+        await request(app).post('/connection/TestingNine/TestingFour').expect(HttpStatus.OK, JSON.stringify({ ids: [] }));
+        await request(app).get('/connections').expect(HttpStatus.OK);
+        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 }).expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        await request(app).get('/sections/1').expect(HttpStatus.OK, JSON.stringify({ id: 1, x: 10, y: 0, w: 10, h: 10, space: 'TestingNineClone' }));
+        await request(app).get('/sections/2').expect(HttpStatus.OK, JSON.stringify({ id: 2, x: 6, y: 0, w: 6, h: 6, space: 'TestingFour' }));
+        await request(app).delete('/connection/TestingNine/TestingNineClone').expect(HttpStatus.OK);
+        await request(app).get('/connections/section/2').expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: [2] } }));
     });
 
     it('deleting connection by primary deletes all connections', async () => {
@@ -385,10 +385,8 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingFour');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        await request(app).delete('/connection/TestingNine')
-            .expect(HttpStatus.OK);
-        await request(app).get('/connections')
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
+        await request(app).delete('/connection/TestingNine').expect(HttpStatus.OK);
+        await request(app).get('/connections').expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
     });
 
     it('can create connection for a space with a section with an app', async () => {
@@ -598,6 +596,22 @@ describe('The OVE Core server', () => {
 
     it('cannot cache an invalid section id', async () => {
         await request(app).post('/cache/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 1' }));
+    });
+
+    it('should fail when wrapping request if status code is not OK', async () => {
+        nock('http://localhost:8081').get('/invalid').reply(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Test error' }));
+        const error = new Error('Received status code: 400 and reason: {"error":"Test error"} when connecting to: http://localhost:8081/invalid');
+        try {
+            await RequestUtils.get('http://localhost:8081/invalid');
+        } catch (e) {
+            expect(JSON.stringify(e)).toBe(JSON.stringify(error));
+        }
+    });
+
+    it('can send a delete request without a body', async () => {
+        nock('http://localhost:8081').delete('/valid').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        const body = await RequestUtils.delete('http://localhost:8081/valid');
+        expect(JSON.stringify(body)).toBe(Utils.JSON.EMPTY);
     });
     /* jshint ignore:end */
 

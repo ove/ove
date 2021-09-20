@@ -41,9 +41,9 @@ module.exports = (server, log, Utils, Constants) => {
     };
 
     // returns the space for a section
-    const _getSpaceForSection = (section) => section ? Object.keys(section.spaces)[0] : undefined;
+    const _getSpaceForSection = section => section ? Object.keys(section.spaces)[0] : undefined;
 
-    const _getSectionsForSpace = (elem) =>
+    const _getSectionsForSpace = elem =>
         server.state.get('sections').filter(section => !Utils.isNullOrEmpty(section) && _getSpaceForSection(section) === elem.space);
 
     const _getSectionData = (section, primary, secondary, space) => {
@@ -72,7 +72,7 @@ module.exports = (server, log, Utils, Constants) => {
 
     const _getConnectionId = connection => _getConnections().findIndex(c => !Utils.isNullOrEmpty(c) && _elemEquals(c.primary, connection.primary));
 
-    const _getUniqueHosts = spaces => _unique(spaces, (x, y) => x.host === y.host).map(s => s.host);
+    const _getUniqueHosts = spaces => _unique(spaces, (x, y) => x.host === y.host);
 
     const _elemEquals = (x, y) => x.space === y.space && x.host === y.host;
 
@@ -154,7 +154,14 @@ module.exports = (server, log, Utils, Constants) => {
         return connection;
     };
 
-    const _deleteAllForSpace = (primary, secondary) => _getSectionsForSpace(secondary.space).forEach(s => _deleteSecondarySection(_getConnection(primary), s.id, secondary));
+    const _deleteAllForSpace = (primary, secondary) => {
+        let connection = _getConnection(primary);
+        connection.sections
+            .filter(({ elem }) => _elemEquals(elem, secondary))
+            .map(({ secondary }) => secondary)
+            .forEach(s => { connection = _deleteSecondarySection(connection, s, secondary); });
+        return connection;
+    };
 
     const _removeConnection = elem => {
         const _remove = (index) => server.state.set(`connections[${index}]`, {});
@@ -164,7 +171,7 @@ module.exports = (server, log, Utils, Constants) => {
     };
 
     // returns the section information for a given id
-    const _getURLForId = sectionId => server.state.get('sections').find(s => Number(s.id) === Number(sectionId)).app.url;
+    const _getURLForId = sectionId => server.state.get(`sections[${sectionId}]`)?.app?.url;
 
     // -------------------------------- //
 
@@ -172,7 +179,7 @@ module.exports = (server, log, Utils, Constants) => {
     const _isSecondaryWrapper = async elem => _isLocal(elem.host)
         ? _isSecondary(elem)
         : (await RequestUtils.get(
-            `${Constants.HTTP_PROTOCOL}${elem.host}/api/isSecondary?override=true`,
+            `${elem.protocol}${elem.host}/api/isSecondary?override=true`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             elem
         ).catch(log.warn)).isSecondary;
@@ -180,7 +187,7 @@ module.exports = (server, log, Utils, Constants) => {
     const _isPrimaryWrapper = async elem => _isLocal(elem.host)
         ? _isPrimary(elem)
         : (await RequestUtils.get(
-            `${Constants.HTTP_PROTOCOL}${elem.host}/api/isPrimary?override=true`,
+            `${elem.protocol}${elem.host}/api/isPrimary?override=true`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             elem
         ).catch(log.warn)).isPrimary;
@@ -188,7 +195,7 @@ module.exports = (server, log, Utils, Constants) => {
     const _isConnectedWrapper = async elem => _isLocal(elem.host)
         ? _isConnected(elem)
         : (await RequestUtils.get(
-            `${Constants.HTTP_PROTOCOL}${elem.host}/api/isConnected?override=true`,
+            `${elem.protocol}${elem.host}/api/isConnected?override=true`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             elem
         ).catch(log.warn)).isConnected;
@@ -196,15 +203,15 @@ module.exports = (server, log, Utils, Constants) => {
     const _getConnectionWrapper = async elem => _isLocal(elem.host)
         ? _getConnection(elem)
         : (await RequestUtils.get(
-            `${Constants.HTTP_PROTOCOL}${elem.host}/api/getConnection?override=true`,
+            `${elem.protocol}${elem.host}/api/getConnection?override=true`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             elem
         ).catch(log.warn)).connection;
 
-    const _updateConnectionStateWrapper = async (host, connection) => _isLocal(host)
+    const _updateConnectionStateWrapper = async (elem, connection) => _isLocal(elem.host)
         ? _updateConnectionState(connection)
         : RequestUtils.post(
-            `${Constants.HTTP_PROTOCOL}${host}/api/updateConnectionState?override=true`,
+            `${elem.protocol}${elem.host}/api/updateConnectionState?override=true`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
             connection
         ).catch(log.warn);
@@ -217,7 +224,7 @@ module.exports = (server, log, Utils, Constants) => {
                 _isLocal(s.host)
                     ? _updateConnection(connection)
                     : await RequestUtils.post(
-                        `${Constants.HTTP_PROTOCOL}${s.host}/api/updateConnection?override=true`,
+                        `${s.protocol}${s.host}/api/updateConnection?override=true`,
                         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                         { connection: connection, host: s.host }
                     );
@@ -226,7 +233,7 @@ module.exports = (server, log, Utils, Constants) => {
         _isLocal(primary.host)
             ? _updateConnection(connection)
             : await RequestUtils.post(
-                `${Constants.HTTP_PROTOCOL}${primary.host}/api/updateConnection`,
+                `${primary.protocol}${primary.host}/api/updateConnection`,
                 { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                 connection
             );
@@ -240,7 +247,7 @@ module.exports = (server, log, Utils, Constants) => {
         _isLocal(connection.primary.host)
             ? _updateConnectionState(connection)
             : await RequestUtils.post(
-                `${Constants.HTTP_PROTOCOL}${connection.primary.host}/api/updateConnectionState`,
+                `${connection.primary.protocol}${connection.primary.host}/api/updateConnectionState`,
                 { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                 connection
             ).catch(log.warn);
@@ -248,7 +255,7 @@ module.exports = (server, log, Utils, Constants) => {
             _isLocal(s.host)
                 ? _updateConnectionState(connection)
                 : await RequestUtils.post(
-                    `${Constants.HTTP_PROTOCOL}${s.host}/api/updateConnectionState?override=true`,
+                    `${s.protocol}${s.host}/api/updateConnectionState?override=true`,
                     { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                     connection
                 ).catch(log.warn);
@@ -264,7 +271,7 @@ module.exports = (server, log, Utils, Constants) => {
         for (const connection of connections) {
             if (_isLocal(connection.primary.host)) { continue; }
             await RequestUtils.delete(
-                `${Constants.HTTP_PROTOCOL}${connection.primary.host}/connection/${connection.primary.space}`,
+                `${connection.primary.protocol}${connection.primary.host}/connection/${connection.primary.space}`,
                 { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                 { primary: connection.primary.host },
                 resolve => resolve()
@@ -275,39 +282,41 @@ module.exports = (server, log, Utils, Constants) => {
     const _disconnectSpaceWrapper = async (connection, elem) => {
         if (connection.secondary.length > 1) {
             const hosts = _getUniqueHosts([connection.primary].concat(connection.secondary));
-            for (const host of hosts) {
+            for (const { protocol, host } of hosts) {
                 _isLocal(host)
                     ? _deleteSpace(connection, elem)
                     : await RequestUtils.delete(
-                        `${Constants.HTTP_PROTOCOL}${host}/api/deleteSpace?override=true`,
+                        `${protocol}${host}/api/deleteSpace?override=true`,
                         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                        { primary: connection.primary, elem: elem, host: host }
+                        { primary: connection.primary, elem: elem }
                     );
                 _isLocal(host)
                     ? _deleteAllForSpace(connection.primary, elem)
                     : await RequestUtils.delete(
-                        `${Constants.HTTP_PROTOCOL}${host}/api/deleteAllForSpace?override=true`,
+                        `${protocol}${host}/api/deleteAllForSpace?override=true`,
                         { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                        { primary: connection.primary, elem: elem, host: host }
+                        { primary: connection.primary, elem: elem }
                     );
             }
         } else {
-            _isLocal(connection.primary.host)
-                ? _removeConnection(connection.primary)
-                : await RequestUtils.delete(
-                    `${Constants.HTTP_PROTOCOL}${connection.primary.host}/api/removeConnection`,
-                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                    connection.primary
-                );
+            for (const { protocol, host } of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
+                _isLocal(host)
+                    ? _removeConnection(connection.primary)
+                    : await RequestUtils.delete(
+                        `${protocol}${host}/api/removeConnection`,
+                        { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+                        connection.primary
+                    );
+            }
         }
     };
 
     const _deleteSecondarySectionWrapper = async (connection, id, elem) => {
-        for (const host of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
+        for (const { protocol, host } of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
             _isLocal(host)
                 ? _deleteSecondarySection(connection, id, elem)
                 : await RequestUtils.delete(
-                    `${Constants.HTTP_PROTOCOL}${host}/api/deleteSecondarySection/${id}?override=true`,
+                    `${protocol}${host}/api/deleteSecondarySection/${id}?override=true`,
                     { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                     { primary: connection.primary, elem: elem }
                 );
@@ -315,25 +324,26 @@ module.exports = (server, log, Utils, Constants) => {
     };
 
     const _removeConnectionWrapper = async (connection, elem) => {
-        for (const host of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
+        for (const { protocol, host } of _getUniqueHosts([connection.primary].concat(connection.secondary))) {
             _isLocal(host)
                 ? _removeConnection(elem)
                 : await RequestUtils.delete(
-                    `${Constants.HTTP_PROTOCOL}${host}/api/removeConnection?override=true`,
+                    `${protocol}${host}/api/removeConnection?override=true`,
                     { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
                     elem
                 );
         }
     };
 
-    const _getURLForIdWrapper = async (host, id) => _isLocal(host)
+    const _getURLForIdWrapper = async (elem, id) => _isLocal(elem.host)
         ? _getURLForId(id)
         : (await RequestUtils.get(
-            `${Constants.HTTP_PROTOCOL}${host}/api/getURLForId/${id}?override=true`,
+            `${elem.protocol}${elem.host}/api/getURLForId/${id}?override=true`,
             { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
         )).url;
 
-    const _forEachSecondarySection = async (connection, f) => Promise.all(connection.secondary.map(async s => Promise.all(_getMappingsForSecondary(connection, s).map(async (id) => f(connection, id, s)))));
+    const _forEachSecondarySection = async (connection, f) => Promise.all(connection.secondary.map(async s =>
+        Promise.all(_getMappingsForSecondary(connection, s).map(async (id) => f(connection, id, s)))));
 
     const _forEachSecondary = async (connection, f) => Promise.all(connection.secondary.map(s => f(connection, s)));
 

@@ -29,6 +29,9 @@ app.use(express.json());
 const spaces = JSON.parse(fs.readFileSync(path.join(srcDir, '..', 'test', 'resources', Constants.SPACES_JSON_FILENAME)));
 
 const server = require(path.join(srcDir, 'server', 'main'))(app, wss, spaces, log, Utils, Constants);
+const RequestUtils = require(path.join(srcDir, 'server', 'request-utils'));
+const ApiUtils = require(path.join(srcDir, 'server', 'api-utils'))(server, log, Utils, Constants);
+const ApiBacking = require(path.join(srcDir, 'server', 'api-backing'))(server, {}, log, Utils, Constants, ApiUtils);
 
 // All variables are set in the global scope so that they can then be used appropriately in the test files.
 global.path = path;
@@ -47,6 +50,9 @@ global.Utils = Utils;
 global.log = log;
 global.spaces = spaces;
 global.server = server;
+global.RequestUtils = RequestUtils;
+global.ApiUtils = ApiUtils;
+global.ApiBacking = ApiBacking;
 
 // Restore console before run.
 global.console = OLD_CONSOLE;

@@ -47,16 +47,33 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     // handler for details api call, including errors
     operation.getSectionConnection = (req, res) => {
         log.debug('Getting Section Connection');
-        const mapping = Backing.getSectionConnection(Number(req.params.id), msg => _sendError(res, msg));
+
+        if (req.body.protocol && !req.body.host) {
+            _sendError(res, `No host provided, only protocol`);
+            return;
+        } else if (req.body.host && !req.query.space) {
+            _sendError(res, `Space must be specified`);
+            return;
+        }
+
+        const id = Number(req.params.id);
+        const space = req.query.space || ApiUtils.getSpaceBySectionId(id);
+        const elem = req.body.host ? { space: space, host: req.body.host, protocol: req.body.protocol || req.protocol }
+            : ApiUtils.getDefaultElem(space);
+        const mapping = Backing.getSectionConnection(id, elem);
 
         mapping ? Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ section: mapping }))
-            : _sendError(res, `Section ${req.params.id} is not connected`);
+            : _sendError(res, `Section ${id} is not connected`);
     };
 
     operation.deleteConnection = async (req, res) => {
+        log.debug('Deleting Connection');
         const spaces = { primary: req.params.primary, secondary: req.params.secondary };
 
-        (await Backing.deleteConnection(spaces, req.body)) ? Utils.sendEmptySuccess(res)
+        const primary = { space: spaces.primary, host: req.body?.primary || process.env.OVE_HOST, protocol: `${req.protocol}://` };
+        const secondary = spaces.secondary ? { space: spaces.secondary, host: req.body?.secondary || process.env.OVE_HOST, protocol: `${req.body.protocol || req.protocol}://` } : undefined;
+
+        (await Backing.deleteConnection(primary, secondary)) ? Utils.sendEmptySuccess(res)
             : _sendError(res, `No connection for space: ${spaces.secondary || spaces.primary}`);
     };
 
@@ -93,8 +110,8 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const primary = { space: req.params.primary, host: req.body.primary || process.env.OVE_HOST, protocol: req.protocol };
-        const secondary = { space: req.params.secondary, host: req.body.secondary || process.env.OVE_HOST, protocol: req.body.protocol || req.protocol };
+        const primary = { space: req.params.primary, host: req.body.primary || process.env.OVE_HOST, protocol: `${req.protocol}://` };
+        const secondary = { space: req.params.secondary, host: req.body.secondary || process.env.OVE_HOST, protocol: `${req.body.protocol || req.protocol}://` };
 
         if (ApiUtils.elemEquals(primary, secondary)) {
             _sendError(res, `Primary and secondary spaces are the same`);
@@ -135,6 +152,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     };
 
     operation.createSection = async (req, res) => {
+        log.debug(`Creating section: ${JSON.stringify(req.body)} on server: ${process.env.OVE_HOST}`);
         const body = req.body;
 
         if (body.space && (await ApiUtils.isSecondaryWrapper(ApiUtils.getDefaultElem(body.space)) && !req.query.override)) {
@@ -430,13 +448,9 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     };
 
     operation.deleteSpace = (req, res) =>
-        Utils.sendMessage(res, HttpStatus.OK,
-            JSON.stringify(ApiUtils.deleteSpace(ApiUtils.getConnection(req.body.primary), req.body.elem)));
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.deleteSpace(ApiUtils.getConnection(req.body.primary), req.body.elem) }));
 
-    operation.deleteAllForSpace = (req, res) => {
-        ApiUtils.deleteAllForSpace(req.body.primary, req.body.elem);
-        Utils.sendEmptySuccess(res);
-    };
+    operation.deleteAllForSpace = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.deleteAllForSpace(req.body.primary, req.body.elem) }));
 
     operation.getURLForId = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ url: ApiUtils.getURLForId(req.params.id) }));
 
