@@ -90,17 +90,17 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
         return true;
     };
 
-    const _replicate = async (connection, section, elem, url) => {
+    const _replicate = async (connection, section, elem) => {
         let oldURL;
-        const convertURL = (url, replace) => {
+        const convertURL = url => {
             const split = url.split('/');
-            split[2] = replace || elem.host;
+            split[2] = elem.host;
             return split.join('/');
         };
 
         if (section?.app?.url) {
             oldURL = section.app.url;
-            section.app.url = convertURL(section.app.url, url);
+            section.app.url = convertURL(section.app.url);
         }
 
         const primaryGeometry = ApiUtils.isLocal(connection.primary.host)
@@ -165,7 +165,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             )));
     };
 
-    const _createConnection = async (primary, secondary, url) => {
+    const _createConnection = async (primary, secondary) => {
         const initialize = async connection => {
             connection.isInitialized = true;
             await ApiUtils.updateConnectionStateWrapper(primary, connection);
@@ -192,7 +192,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
 
         // replicate all sections from primary space to secondary
         const replicas = await Promise.all(primarySections
-            .map(section => _replicate(connection, section, secondary, url)));
+            .map(section => _replicate(connection, section, secondary)));
 
         await initialize(connection);
 
@@ -218,6 +218,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
                 { ...body, elem: elem }
             ).catch(log.warn);
         });
+        return map.map(({ id }) => id);
     };
 
     const _distributeEvent = (id, body) => {
@@ -359,7 +360,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             }
         });
 
-        await ApiUtils.applyPrimary(body.space, async (connection, elem) => _replicate(connection, section, elem, body.url));
+        await ApiUtils.applyPrimary(body.space, async (connection, elem) => _replicate(connection, section, elem));
 
         log.debug('Successfully created replicas');
         log.info('Successfully created new section:', sectionId);
@@ -453,20 +454,6 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
         let sections = server.state.get('sections');
         _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
 
-        // TODO: Handle if no space provided
-        if (space) {
-            await ApiUtils.applyPrimaryForSections(space, async (connection, id, elem) => {
-                ApiUtils.isLocal(elem.host)
-                    ? await _deleteSections(elem.space, undefined, () => {}, () => {})
-                    : await RequestUtils.delete(
-                        `${elem.protocol}${elem.host}/sections/${id}?override=true`,
-                        { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
-                    );
-                await ApiUtils.deleteSecondarySectionWrapper(connection, id, elem);
-            });
-            log.debug('Deleted replicated sections');
-        }
-
         if (groupId || space) {
             const map = groupId ? e => { _deleteSectionById(e); return parseInt(e, 10); }
                 : ({ index }) => { _deleteSectionById(index); return parseInt(index, 10); };
@@ -475,6 +462,21 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             log.info('Successfully deleted sections:', deletedSections);
             return deletedSections;
         }
+
+        const spaces = Object.keys(_listSpaces());
+
+        spaces.forEach(space => {
+            ApiUtils.applyPrimaryForSections(space, async (connection, id, elem) => {
+                if (!ApiUtils.isLocal(elem.host)) {
+                    await RequestUtils.delete(
+                        `${elem.protocol}${elem.host}/sections/${id}?override=true`,
+                        { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+                    );
+                    await ApiUtils.deleteSecondarySectionWrapper(connection, id, elem);
+                }
+            });
+            log.debug('Deleted replicated sections');
+        });
 
         sections.filter(s => s.app?.url).map(s => {
             log.debug('Flushing application at URL:', s.app.url);
@@ -696,14 +698,30 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
 
         server.state.set('sections[' + sectionId + ']', section);
 
-        ApiUtils.applyPrimaryForSections(space, async (connection, id, elem) => ApiUtils.isLocal(elem.host)
-            // TODO: resize for replicas
-            ? _updateSectionById(id, { ...body, space: elem.space })
-            : RequestUtils.post(
-                `${elem.protocol}${elem.host}/sections/${id}?override=true`,
-                { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
-                { ...body, space: elem.space }
-            )).then(log.debug('Successfully updated replicas'));
+        ApiUtils.applyPrimaryForSections(space, async (connection, id, elem) => {
+            const primaryGeometry = ApiUtils.isLocal(connection.primary.host)
+                ? _getSpaceGeometries()[connection.primary.space]
+                : await RequestUtils.get(
+                    `${connection.primary.protocol}${connection.primary.host}/spaces/${connection.primary.space}/geometry`,
+                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+                ).catch(log.warn);
+
+            const geometry = ApiUtils.isLocal(elem.host)
+                ? _getSpaceGeometries()[elem.space]
+                : await RequestUtils.get(
+                    `${elem.protocol}${elem.host}/spaces/${elem.space}/geometry?override=true`,
+                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+                ).catch(log.warn);
+            const resized = ApiUtils.getSectionData(section, primaryGeometry, geometry, elem.space);
+            const newBody = { ...body, space: elem.space, x: resized.x, y: resized.y, w: resized.w, h: resized.h };
+            return ApiUtils.isLocal(elem.host)
+                ? _updateSectionById(id, newBody)
+                : RequestUtils.post(
+                    `${elem.protocol}${elem.host}/sections/${id}?override=true`,
+                    { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+                    newBody
+                );
+        }).then(log.debug('Successfully updated replicas'));
     };
 
     // Internal utility function to transform or move all or some sections.
@@ -811,6 +829,15 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
                 .map(({ index }) => parseInt(index, 10));
         } else {
             _getReadySockets().forEach(c => c.safeSend(JSON.stringify({ operation: Constants.Operation.REFRESH })));
+            const spaces = Object.keys(_listSpaces());
+            spaces.forEach(async space => ApiUtils.applyPrimaryForSections(space, async (connection, id, elem) => {
+                if (!ApiUtils.isLocal(elem.host)) {
+                    await RequestUtils.post(
+                        `${elem.protocol}${elem.host}/sections/${id}/refresh?override=true`,
+                        { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON }
+                    );
+                }
+            }).then(log.debug('Successfully refreshed replicated sections')));
             log.info('Successfully refreshed all sections');
             return;
         }

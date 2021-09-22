@@ -3,6 +3,8 @@ WORKDIR /usr/src/app
 
 ARG port=8080
 
+RUN echo "Starting OVE on port: ${port}"
+
 RUN npm install -global pm2
 RUN npm install -global lerna
 

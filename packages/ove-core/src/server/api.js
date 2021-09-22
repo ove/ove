@@ -85,8 +85,8 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        await Backing.cache(id, req.body);
-        Utils.sendEmptySuccess(res);
+        const ids = await Backing.cache(id, req.body);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
     };
 
     operation.deleteConnections = async (req, res) => {
@@ -121,7 +121,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const sections = await Backing.createConnection(primary, secondary, req.body.url);
+        const sections = await Backing.createConnection(primary, secondary);
         sections ? Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }))
             : _sendError(res, `Error creating connection between spaces ${primary.space} and ${secondary.space}`);
     };
@@ -134,8 +134,8 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        Backing.onEvent(id, req.body);
-        Utils.sendEmptySuccess(res);
+        const ids = Backing.onEvent(id, req.body);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
     };
 
     operation.distributeEvent = (req, res) => {

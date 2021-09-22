@@ -40,7 +40,7 @@ const TestUtils = {
 
 describe('Integration Testing for Multiple Server Implementations', () => {
     const JSONHeader = { [Constants.HTTP_CONTENT_TYPE_HEADER]: Constants.HTTP_CONTENT_TYPE_JSON };
-    const build = true;
+    const build = false;
     const log = true;
     let environment;
     let containers;
@@ -49,6 +49,7 @@ describe('Integration Testing for Multiple Server Implementations', () => {
     let ports;
     let urls;
     let body;
+    let cloneBody;
 
     const stream = async () => {
         (await containers.main.logs())
@@ -73,6 +74,7 @@ describe('Integration Testing for Multiple Server Implementations', () => {
         urls = { main: `${Constants.HTTP_PROTOCOL}${hosts.main}:${ports.main}`, clone: `${Constants.HTTP_PROTOCOL}${hosts.clone}:${ports.clone}` };
         remotes = { main: `ovehub-ove-test:${ports.main}`, clone: `ovehub-ove-test-clone:${ports.clone}` };
         body = { primary: remotes.main, secondary: remotes.clone, protocol: 'http' };
+        cloneBody = { primary: remotes.clone, secondary: remotes.main, protocol: 'http' };
 
         console.log(`main server: ${urls.main}`);
         console.log(`clone server: ${urls.clone}`);
@@ -222,227 +224,251 @@ describe('Integration Testing for Multiple Server Implementations', () => {
         expect(res.statusCode).toBe(HttpStatus.OK);
         res = await TestUtils.get(`${urls.main}/connections/section/0`);
         expect(res).toEqual({ statusCode: HttpStatus.OK, text: { section: { primary: 0, secondary: [1] } } });
-    });/*
+    });
 
     it('deleting connection by primary deletes all connections', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/DevFour/TestingFour');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/connection/DevFour/LocalFour`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
 
-        await request(app).delete('/connection/DevFour')
-            .expect(HttpStatus.OK);
-        await request(app).get('/connections')
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
+        res = await TestUtils.delete(`${urls.main}/connection/DevFour`);
+        expect(res.statusCode).toBe(HttpStatus.OK);
+        res = await TestUtils.get(`${urls.main}/connections`, JSONHeader);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: [] });
+        res = await TestUtils.get(`${urls.main}/connections`, JSONHeader);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: [] });
     });
 
     it('can create connection for a space with a section with an app', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8080/app/maps', states: { 'load': 'London' } } })
-            .expect(HttpStatus.OK);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8080/app/maps', states: { 'load': 'London' } } });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.get(`${urls.main}/connections/section/0`, JSONHeader);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { section: { primary: 0, secondary: [0] } } });
     });
 
     it('deletes all sections in replicas if deleting all in primary', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/DevFour/TestingFour');
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/connection/DevFour/LocalFour`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
 
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 1 } });
 
-        await request(app).delete('/sections?space=DevFour')
-            .expect(HttpStatus.OK);
-        await request(app).get('/sections?space=DevFourClone')
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
-        await request(app).get('/sections?space=TestingFour')
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
+        res = await TestUtils.delete(`${urls.main}/sections?space=DevFour`);
+        expect(res.statusCode).toEqual(HttpStatus.OK);
+        res = await TestUtils.get(`${urls.clone}/sections?space=DevFourClone`, JSONHeader);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: [] });
+        res = await TestUtils.get(`${urls.clone}/sections?space=TestingFour`, JSONHeader);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: [] });
     });
 
     it('should not be able to delete sections in secondary space', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
 
-        await request(app).delete('/sections?space=DevFourClone')
-            .expect(HttpStatus.BAD_REQUEST);
+        await TestUtils.delete(`${urls.clone}/sections?space=DevFourClone`).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Operation unavailable as space is connected as a replica. Space: DevFourClone' } });
 
-        const res = await request(app).get('/connections');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(JSON.parse(res.text).length).toBe(1);
+        res = await TestUtils.get(`${urls.main}/connections`, JSONHeader);
+        expect(res.statusCode).toBe(HttpStatus.OK);
+        expect(res.text.length).toBe(1);
     });
 
     it('should update all replicas if updating a primary section', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
 
-        await request(app).post('/sections/0').send({ 'h': 10, 'space': 'DevFour', 'w': 20, 'y': 0, 'x': 20 })
-            .expect(HttpStatus.OK);
+        res = await TestUtils.post(`${urls.main}/sections/0`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 20, 'y': 0, 'x': 10 });
+        expect(res.statusCode).toBe(HttpStatus.OK);
 
-        const res = await request(app).get('/sections/1');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(JSON.parse(res.text).w).toEqual(20);
+        res = await TestUtils.get(`${urls.clone}/sections/0`, JSONHeader);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { h: 10, id: 0, space: 'DevFourClone', w: 20, y: 0, x: 10 } });
     });
 
     it('should not be able to update a secondary section', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/sections/1').send({ 'h': 10, 'space': 'DevFourClone', 'w': 20, 'y': 0, 'x': 20 })
-            .expect(HttpStatus.BAD_REQUEST);
-        const res = await request(app).get('/connections');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(JSON.parse(res.text).length).toBe(1);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        await TestUtils.post(`${urls.clone}/sections/0`, JSONHeader, { 'h': 10, 'space': 'DevFourClone', 'w': 20, 'y': 0, 'x': 20 }).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Operation unavailable as space is connected as a replica. Space: DevFourClone' } });
+        res = await TestUtils.get(`${urls.main}/connections`, JSONHeader);
+        expect(res.statusCode).toBe(HttpStatus.OK);
+        expect(res.text.length).toBe(1);
     });
 
     it('should delete all replica sections if deleting a primary section', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
 
-        await request(app).delete('/sections/0').expect(HttpStatus.OK);
-        await request(app).get('/sections?space=DevFourClone').expect(HttpStatus.OK, JSON.stringify([]));
+        res = await TestUtils.delete(`${urls.main}/sections/0`);
+        expect(res.statusCode).toBe(HttpStatus.OK);
+        res = await TestUtils.get(`${urls.clone}/sections?space=DevFourClone`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: [] });
     });
 
     it('should not be able to delete a secondary section', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).delete('/sections/1').expect(HttpStatus.BAD_REQUEST);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        await TestUtils.delete(`${urls.clone}/sections/1`).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Invalid Section Id: 1' } });
 
-        const res = await request(app).get('/connections');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(JSON.parse(res.text).length).toBe(1);
+        res = await TestUtils.get(`${urls.main}/connections`, JSONHeader);
+        expect(res.statusCode).toBe(HttpStatus.OK);
+        expect(res.text.length).toBe(1);
     });
 
-    it('should error when connecting a space to itself', async () => {
-        await request(app).post('/connection/DevFour/DevFour')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Primary and secondary spaces are the same' }));
+    it('should be able to connect to remote space with same name', async () => {
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFour`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
     });
 
     it('should error when connecting a primary space as a secondary', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/TestingFour/DevFour')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Could not connect TestingFour and DevFour as there is an existing connection' }));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        await TestUtils.post(`${urls.main}/connection/LocalFour/DevFour`, JSONHeader).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: JSON.stringify({ error: 'Could not connect LocalFour and DevFour as there is an existing connection' }) });
     });
 
     it('can delete all connections', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/TestingFour/TestingFourClone');
-        await request(app).delete('/connections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/connection/TestingFour/TestingFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.delete(`${urls.main}/connections`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: {} });
     });
 
     it('can delete all sections when no space is or group is specified', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.delete(`${urls.main}/sections`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: {} });
     });
 
     it('should error when connecting a secondary space', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/DevFourClone/TestingFour')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Could not connect DevFourClone and TestingFour as there is an existing connection' }));
-        await request(app).post('/connection/TestingFour/DevFourClone')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Could not connect TestingFour and DevFourClone as there is an existing connection' }));
-    });
-
-    it('should return empty when sending event without connection', async () => {
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/event/0').expect(HttpStatus.OK, JSON.stringify({}));
-    });
-
-    it('should fail if no section for id', async () => {
-        await request(app).post('/event/0')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 0' }));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        await TestUtils.post(`${urls.clone}/connection/DevFourClone/LocalFour`, JSONHeader, cloneBody).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Could not connect DevFourClone and LocalFour as there is an existing connection' } });
+        await TestUtils.post(`${urls.main}/connection/LocalFour/DevFourClone`, JSONHeader, body).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Could not connect LocalFour and DevFourClone as there is an existing connection' } });
     });
 
     it('should send events from secondary to primary sections', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/event/1').send({ appId: 'test', sectionId: '1', message: {} })
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.clone}/event/0`, JSONHeader, { appId: 'test', sectionId: '1', message: {} });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [0] } });
     });
 
     it('should send events from primary to secondary sections', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/DevFour/TestingFour');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/event/0').send({ appId: 'test', sectionId: '0', message: {} })
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/connection/DevFour/LocalFour`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.main}/event/0`, JSONHeader, { appId: 'test', sectionId: '0', message: {} });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [0, 1] } });
     });
 
     it('should fail to create section in secondary space', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFourClone', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is connected as a replica. Space: DevFourClone' }));
+        let res = await TestUtils.post(`${urls.clone}/connection/DevFour/DevFourClone`, JSONHeader, cloneBody);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFourClone', 'w': 10, 'y': 0, 'x': 10 }).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Operation unavailable as space is connected as a replica. Space: DevFourClone' } });
     });
 
     it('should refresh replicated sections', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/sections/0/refresh')
-            .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.main}/sections/0/refresh`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: JSON.stringify({ ids: [0] }) });
     });
 
     it('should refresh replicated spaces', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/sections/refresh?space=DevFour')
-            .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.main}/sections/refresh?space=DevFour`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: JSON.stringify({ ids: [0] }) });
     });
 
     it('cannot move connected sections', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/sections/moveTo?space=DevFour').send({ space: 'DevFourClone' })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is currently connected' }));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        await TestUtils.post(`${urls.main}/sections/moveTo?space=DevFour`, JSONHeader, { space: 'DevFourClone' }).catch(e => { res = e; });
+        expect(res).toEqual({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Operation unavailable as space is currently connected' } });
     });
 
-    it('should error with most specific connection if trying to delete a non-existent connection', async () => {
-        await request(app).delete('/connection/DevFour/DevFourClone')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No connection for space: DevFourClone' }));
-        await request(app).delete('/connection/DevFour')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No connection for space: DevFour' }));
-    });
-
-    it('should cache across all replicas if caching state of primary section', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        nock('http://localhost:8080').post('/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/cache/0').send({}).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    /* it('should cache across all replicas if caching state of primary section', async () => {
+        nock(`http://${urls.clone}`).post(`/instances/0/state`).reply(HttpStatus.OK, JSON.stringify({}));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.main}/cache/0`, JSONHeader, {});
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [0] } });
     });
 
     it('should cache replica state to other replicas and primary section', async () => {
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        nock('http://localhost:8082').post('/instances/0/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/cache/1').send({}).expect(HttpStatus.OK, Utils.JSON.EMPTY);
-    });
-
-    it('should not cache state for non-existent connection', async () => {
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        await request(app).post('/cache/0').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.post(`${urls.clone}/cache/0`, JSONHeader, {});
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [0] } });
     });
 
     it('should replicate state when creating replicated sections', async () => {
-        nock('http://localhost:8081').post('/test/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8081').get('/test/instances/0/state').reply(HttpStatus.OK, JSON.stringify({ state: 'test' }));
-        nock('http://localhost:8081').post('/test/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8081').post('/test/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        nock('http://localhost:8081').post('/test/instances/1/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } })
-            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-    });
+        nock(`http://${remotes.clone}`).post(`/instances/0/state`).reply(HttpStatus.OK, JSON.stringify({}));
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post('/section', JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8081/test', 'states': { 'load': 'London' } } });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+    }); */
 
     it('should be able to list multiple connections', async () => {
-        const connections = [{ primary: { space: 'DevFour', host: 'localhost:8080', protocol: 'http' },
-            secondary: [{ space: 'DevFourClone', host: 'localhost:8080', protocol: 'http' }, { space: 'TestingFour', host: 'localhost:8080', protocol: 'http' }],
-            sections: { 0: ['1', '2'] } }];
-        await request(app).post('/connection/DevFour/DevFourClone');
-        await request(app).post('/connection/DevFour/TestingFour');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        await request(app).get('/connections').expect(HttpStatus.OK, JSON.stringify(connections));
+        const connections = [{ primary: { space: 'DevFour', host: remotes.main, protocol: 'http' },
+            secondary: [{ space: 'DevFourClone', host: remotes.clone, protocol: 'http' }, { space: 'LocalFour', host: remotes.clone, protocol: 'http' }],
+            sections: { 0: ['0', '1'] } }];
+        let res = await TestUtils.post(`${urls.main}/connection/DevFour/DevFourClone`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/connection/DevFour/LocalFour`, JSONHeader, body);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { ids: [] } });
+        res = await TestUtils.post(`${urls.main}/section`, JSONHeader, { 'h': 10, 'space': 'DevFour', 'w': 10, 'y': 0, 'x': 10 });
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: { id: 0 } });
+        res = await TestUtils.get(`${urls.main}/connections`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: connections });
+        res = await TestUtils.get(`${urls.clone}/connections`);
+        expect(res).toEqual({ statusCode: HttpStatus.OK, text: connections });
     });
-
-    it('cannot cache an invalid section id', async () => {
-        await request(app).post('/cache/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 1' }));
-    }); */
 
     afterEach(async () => {
         await TestUtils.delete(`${urls.main}/sections`);

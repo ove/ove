@@ -13,7 +13,7 @@ describe('The OVE Core server', () => {
         jest.resetModules();
         process.env = { ...OLD_ENV };
         process.env.OVE_HOST = 'localhost:8080';
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */
@@ -426,7 +426,7 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
 
-        await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 20, 'y': 0, 'x': 20 })
+        await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 20, 'y': 0, 'x': 10 })
             .expect(HttpStatus.OK);
 
         const res = await request(app).get('/sections/1');
@@ -508,7 +508,7 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).post('/event/1').send({ appId: 'test', sectionId: '1', message: {} })
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+            .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
     it('should send events from primary to secondary sections', async () => {
@@ -516,7 +516,7 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingFour');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
         await request(app).post('/event/0').send({ appId: 'test', sectionId: '0', message: {} })
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+            .expect(HttpStatus.OK, JSON.stringify({ ids: [1, 2] }));
     });
 
     it('should fail to create section in secondary space', async () => {
@@ -557,14 +557,14 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
         nock('http://localhost:8080').post('/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/cache/0').send({}).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/cache/0').send({}).expect(HttpStatus.OK, JSON.stringify({ ids: [1] }));
     });
 
     it('should cache replica state to other replicas and primary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
         nock('http://localhost:8082').post('/instances/0/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/cache/1').send({}).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/cache/1').send({}).expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
     it('should not cache state for non-existent connection', async () => {
