@@ -22,6 +22,14 @@ tags:
   description: "Operations on an individual section group"
 - name: "other"
   description: "Other operations"
+- name: "connection"
+  description: "Operations on an individual connection"
+- name: "connections"
+  description: "Operations on all connections"
+- name: "link"
+  description: "Operation on an individual link"
+- name: "links"
+  description: "Operation on all links"
 schemes:
 - "http"
 paths:
@@ -38,7 +46,7 @@ paths:
           properties:
             url:
               type: "string"
-              description: "URL of the persistence service"  
+              description: "URL of the persistence service"
         required: true
       produces:
       - "application/json"
@@ -100,6 +108,7 @@ paths:
         type: "integer"
         format: "int32"
         description: "Section ID"
+        required: false
       responses:
         200:
           description: "successful operation"
@@ -130,7 +139,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid space' if the name of the space was not provided or not found."
+                description: "Returns an error message 'Invalid Space: {name}' if the name of the space was not provided or not found."
   /sections:
     get:
       tags:
@@ -174,7 +183,7 @@ paths:
       tags:
       - "sections"
       summary: "Deletes sections"
-      description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them. This operation will be limited to subset of sections if a group id or a space was provided."
+      description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them. This operation will be limited to subset of sections if a group id or a space was provided. If any section is in a connected space, all replicated sections will also be deleted."
       produces:
       - "application/json"
       parameters:
@@ -189,17 +198,30 @@ paths:
         format: "int32"
         description: "Group ID"
         required: false
+      - name: "override"
+        in: "query"
+        type: "boolean"
+        required: false
+        description: "If override is set, error checking for connections is disabled. This allows for distributing API calls across servers."
       responses:
         200:
           description: "successful operation"
           schema:
             type: "object"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'Operation unavailable as space is connected as a replica. Space: {space}' if space is provided and connected as a secondary."
   /section:
     post:
       tags:
       - "section"
       summary: "Creates a section on OVE and deploys an application instance into it."
-      description: "All parameters except for the load and cache parameters within the app configuration are mandatory. Please make sure to replace the hostname/port of the application URL if you are posting the example payload to a non-local OVE installation."
+      description: "All parameters except for the load and cache parameters within the app configuration are mandatory. Please make sure to replace the hostname/port of the application URL if you are posting the example payload to a non-local OVE installation. If space is connected as a primary, the section will be replicated to all secondary spaces."
       consumes:
       - "application/json"
       produces:
@@ -211,6 +233,11 @@ paths:
         required: true
         schema:
           $ref: "#/definitions/Section"
+      - name: "override"
+        in: "query"
+        type: "boolean"
+        required: false
+        description: "If override is set, error checking for connections is disabled. This allows for distributing API calls across servers."
       responses:
         200:
           description: "successful operation"
@@ -227,7 +254,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid space' if the name of the space was not provided or not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly setup. Returns an error message 'invalid app configuration' if the application configuration was not properly provided."
+                description: "Returns an error message 'Invalid Space' if the name of the space was not provided or not found. Returns an error message 'Invalid Dimensions' if the dimensions of the section were not properly setup. Returns an error message 'Invalid App Configuration' if the application configuration was not properly provided. Returns 'Operation unavailable as space is connected as a replica. Space: {body.space}' if space is already connected as a replica and override is not set."
   /sections/{id}:
     get:
       tags:
@@ -260,7 +287,7 @@ paths:
       tags:
       - "section"
       summary: "Updates a section that has been created"
-      description: "Out of the parameters provided, section, x, y, w and h are optional. If these are not provided the existing values will be left unchanged. The app parameter is required, unless the intention is to remove the app from the section. The url parameter within the app configuration is mandatory but both load and cache are optional. Please make sure to replace the hostname/port of the application URL if you are posting the example payload to a non-local OVE installation."
+      description: "Out of the parameters provided, section, x, y, w and h are optional. If these are not provided the existing values will be left unchanged. The app parameter is required, unless the intention is to remove the app from the section. The url parameter within the app configuration is mandatory but both load and cache are optional. Please make sure to replace the hostname/port of the application URL if you are posting the example payload to a non-local OVE installation. If the section is in a space connected as a primary, all replicated sections will be updated."
       consumes:
       - "application/json"
       produces:
@@ -277,6 +304,11 @@ paths:
         description: "Section configuration"
         schema:
           $ref: "#/definitions/Section"
+      - name: "override"
+        in: "query"
+        type: "boolean"
+        required: false
+        description: "If override is set, error checking for connections is disabled. This allows for distributing API calls across servers."
       responses:
         200:
           description: "successful operation"
@@ -293,12 +325,12 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid section id' if the section id was not found. Returns an error message 'invalid space' if the name of the space was not found. Returns an error message 'invalid dimensions' if the dimensions of the section were not properly provided. Returns an error message 'invalid app configuration' if the application configuration was not properly provided."
+                description: "Returns an error message 'Invalid Operation' if an invalid operation was attempted using this API. Returns an error message 'Invalid Section Id' if the section id was not found. Returns an error message 'Invalid Space' if the name of the space was not found. Returns an error message 'Invalid Dimensions' if the dimensions of the section were not properly provided. Returns an error message 'Invalid App Configuration' if the application configuration was not properly provided. Returns 'Operation unavailable as space is connected as a replica' if space is already connected as a replica and the override is not set."
     delete:
       tags:
       - "section"
       summary: "Deletes the section with the given id"
-      description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them."
+      description: "Each application associated with each existing section will be discarded by invoking the corresponding flush operation on them. If section is in a space connected as a primary, all replicated sections will be deleted."
       produces:
       - "application/json"
       parameters:
@@ -307,7 +339,12 @@ paths:
         type: "integer"
         format: "int32"
         description: "Section ID"
-        required: true      
+        required: true
+      - name: "override"
+        in: "query"
+        type: "boolean"
+        required: false
+        description: "If override is set, error checking for connections is disabled. This allows for distributing API calls across servers."
       responses:
         200:
           description: "successful operation"
@@ -326,7 +363,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid section id' if the section id was not found."
+                description: "Returns an error message 'Invalid Section Id' if the section id was not found. Returns 'Operation unavailable as space is connected as a replica' if section is in a space connected as a replica and the override is not set."
   /sections/{id}/refresh:
     post:
       tags:
@@ -341,7 +378,7 @@ paths:
         type: "integer"
         format: "int32"
         description: "Section ID"
-        required: true      
+        required: true
       responses:
         200:
           description: "successful operation"
@@ -360,7 +397,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid section id' if the section id was not found."
+                description: "Returns an error message 'Invalid Section Id' if the section id was not found."
   /sections/moveTo:
     post:
       tags:
@@ -403,13 +440,13 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid space' if the name of the space was not found."
+                description: "Returns an error message 'Invalid Operation' if an invalid operation was attempted using this API. Returns an error message 'Invalid Space' if the name of the space was not found. Returns an error message 'Invalid Dimensions' if the dimensions for the operations were not properly provided or if the section does not fit within its space after a transformation. Returns 'Operation unavailable as space is currently connected' if space is already connected."
   /sections/refresh:
     post:
       tags:
       - "sections"
       summary: "Refreshes sections"
-      description: "Each application associated with each existing section will be refreshed. This will make applications reload their state, if they were updated. This operation will be limited to subset of sections if a group id or a space was provided."
+      description: "Each application associated with each existing section will be refreshed. This will make applications reload their state, if they were updated. This operation will be limited to subset of sections if a group id or a space was provided. If sections are in a space connected as a primary, all replicated sections will also be refreshed."
       produces:
       - "application/json"
       parameters:
@@ -434,7 +471,7 @@ paths:
       tags:
       - "sections"
       summary: "Transforms sections"
-      description: "Each section will be updated using a scale or translate transformation. This operation will be limited to a subset of sections if a group id or a space was provided."
+      description: "Each section will be updated using a scale or translate transformation. This operation will be limited to a subset of sections if a group id or a space was provided. If sections are in a space connected as a primary, the replicated sections will also be transformed."
       produces:
       - "application/json"
       parameters:
@@ -473,6 +510,11 @@ paths:
                 y:
                   type: "integer"
                   format: "int32"
+      - name: "override"
+        in: "query"
+        type: "boolean"
+        required: false
+        description: "If override is set, error checking for connections is disabled. This allows for distributing API calls across servers."
       responses:
         200:
           description: "successful operation"
@@ -485,7 +527,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid operation' if an invalid operation was attempted using this API. Returns an error message 'invalid dimensions' if the dimensions for the operations were not properly provided or if the section does not fit within its space after a transformation."
+                description: "Returns an error message 'Invalid Operation' if an invalid operation was attempted using this API. Returns an error message 'Invalid Dimensions' if the dimensions for the operations were not properly provided or if the section does not fit within its space after a transformation. Returns 'Operation unavailable as space is currently connected as a replica' if space is already connected as a replica and the override is not set."
   /groups:
     get:
       tags:
@@ -541,7 +583,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid group' if the group was not an array or contained invalid section ids."
+                description: "Returns an error message 'Invalid Group' if the group was not an array or contained invalid section ids or if any of the sections in the group are in a space that's connected as a secondary."
   /groups/{id}:
     get:
       tags:
@@ -566,6 +608,14 @@ paths:
             items:
               type: "integer"
               format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns an error message 'Invalid Group Id' if the group id was not found."
     post:
       tags:
       - "group"
@@ -606,7 +656,7 @@ paths:
             properties:
               error:
                 type: "string"
-                description: "Returns an error message 'invalid group id' if the group id was not found."
+                description: "Returns an error message 'Invalid Group' if the group was not an array or contained invalid section ids or if any of the sections in the group are in a space that's connected as a secondary."
     delete:
       tags:
       - "group"
@@ -620,7 +670,7 @@ paths:
         type: "integer"
         format: "int32"
         description: "Group ID"
-        required: true      
+        required: true
       responses:
         200:
           description: "successful operation"
@@ -638,6 +688,520 @@ paths:
               error:
                 type: "string"
                 description: "Returns an error message 'invalid group id' if the group id was not found."
+  /connection:
+    get:
+      tags:
+        - "connection"
+      summary: "Returns the connection for the provided link."
+      description: "Will return the connection that contains the provided link if such a connection exists, otherwise it will return an empty object"
+      produces:
+        - "application/json"
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "Link to check"
+          required: true
+          schema:
+            $ref: "#/definitions/Link"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              connection:
+                schema:
+                  $ref: "#/definitions/Connection"
+    post:
+      tags:
+        - "connection"
+      summary: "Updates the connection."
+      description: "Will update the connection with the provided state. If a connection doesn't exist, it will be created."
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "Connection to update"
+          required: true
+          schema:
+            $ref: "#/definitions/Connection"
+      responses:
+        200:
+          description: "successful operation"
+    delete:
+      tags:
+        - "connection"
+      summary: "Deletes the connection"
+      description: "Will delete the connection with the given link as a primary."
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "Primary link for connection to delete."
+          required: true
+          schema:
+            $ref: "#/definitions/Link"
+      responses:
+        200:
+          description: "successful operation"
+  /link:
+    delete:
+      tags:
+        - "link"
+      summary: "Delete the link from its connection"
+      description: "Disconnects this link from its connection. Must be a secondary link."
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "link"
+          in: "body"
+          description: "Link to be disconnected."
+          schema:
+            $ref: "#/definitions/Link"
+          required: true
+      responses:
+        200:
+          description: "successful operation"
+  /links/sections:
+    delete:
+      tags:
+        - "links"
+        - "sections"
+      summary: "Deletes all mappings for the sections in the link's space from its connection"
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "link"
+          in: "body"
+          required: true
+          description: "Link to have its mappings deleted"
+          schema:
+            $ref: "#/definitions/Link"
+      responses:
+        200:
+          description: "successful operation"
+  /links/sections/{id}:
+    delete:
+      tags:
+        - "links"
+        - "sections"
+      summary: "Deletes the mappings for the section from its connection"
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "link"
+          in: "body"
+          description: "Link containing section with mappings to delete."
+          required: true
+          schema:
+            $ref: "#/definitions/Link"
+        - name: "id"
+          in: "path"
+          description: "ID of section to delete the mappings of"
+          type: "integer"
+          format: "int32"
+      responses:
+        200:
+          description: "successful operation"
+  /sections/{id}/url:
+    get:
+      tags:
+        - "sections"
+      summary: "Returns the URL for the section's app."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "ID of section to fetch app URL for"
+          type: "integer"
+          format: "int32"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              url:
+                type: "string"
+                description: "URL of section's app."
+                example: "localhost:8080/app/example"
+  /connection/{primary}:
+    delete:
+      tags:
+        - "connection"
+      summary: "Deletes the connection with {primary} as its primary link"
+      description: "Given the primary space, delete the connection with the corresponding primary link."
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "primary"
+          in: "body"
+          description: "Host of primary server. Defaults to local server host."
+          required: false
+          example: "localhost:8080"
+          type: "string"
+        - name: "primary"
+          in: "path"
+          description: "Space of primary link."
+          example: "LocalNine"
+          type: "string"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'No connection for space: {primary}' if space is not connected."
+  /connections/sections/cache/{id}:
+    post:
+      tags:
+        - "connections"
+        - "sections"
+      summary: "Caches the state of a section across all connected sections."
+      produces:
+        "application/json"
+      consumes:
+        "application/json"
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "ID of section whose state is being cached."
+          type: "integer"
+          format: "int32"
+        - name: "body"
+          in: "body"
+          required: true
+          type: "object"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              ids:
+                schema:
+                  type: "array"
+                  items:
+                    type: "integer"
+                    format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'No section found for id: {id}' if no section with correct id exists. Returns any other error that occurs while caching the state across all the connected sections."
+  /connections:
+    get:
+      tags:
+        - "connections"
+      summary: "Reads details of OVE connections"
+      description: "This will return details of all connections if no link was provided. This will return a filtered list of connections if a link was provided and will return an empty array if a connection containing the given link does not exist."
+      produces:
+        - "application/json"
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          required: false
+          schema:
+            $ref: "#/definitions/Link"
+          description: "Link contained within desired connection"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Connection%20Formatted"
+    delete:
+      tags:
+        - "connections"
+      summary: "Deletes connections"
+      responses:
+        200:
+          description: "successful operation"
+  /connection/{primary}/{secondary}:
+    post:
+      tags:
+        - "connection"
+      summary: "Creates an individual connection."
+      description: "Creates a connection between the primary and secondary spaces. If a host is specified in the body, the secondary space will be connected on the server at that host address. All sections in the secondary space are deleted and any sections in the primary space are replicated. Will return the ids of these replicated sections."
+      produces:
+        - "application/json"
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "primary"
+          in: "path"
+          description: "Name of space to connect as primary."
+          type: "string"
+        - name: "secondary"
+          in: "path"
+          description: "Name of space to connect as secondary."
+          type: "string"
+        - name: "primary"
+          in: "body"
+          description: "Host of primary space's server. If specified, must be that of the local server. Defaults to local server host."
+          required: false
+          type: "string"
+          example: "localhost:8080"
+        - name: "secondary"
+          in: "body"
+          description: "Host of secondary space's server. Defaults to local server host."
+          required: false
+          type: "string"
+          example: "localhost:8080"
+        - name: "protocol"
+          in: "body"
+          description: "Protocol for connecting to secondary server. Defaults to protocol used during current request."
+          required: false
+          type: "string"
+          example: "http"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              ids:
+                schema:
+                  type: "array"
+                  items:
+                    type: "integer"
+                    format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'Expected primary host: {local server host}, received: {primary}'. Returns 'Expected two hosts, only received one' if only one host is provided. Returns 'Primary and secondary spaces are the same' if trying to connect a space to itself on the same server. Returns 'Could not connect {primary} and {secondary} as there is an existing connection' if the spaces are already connected. Returns Error creating connection between spaces"
+  /connections/sections/event/{id}:
+    post:
+      tags:
+        - "connections"
+        - "sections"
+      summary: "Propagates the event to all connected sections."
+      description: "Distributes an event triggered by a connected section to all other connected sections and controllers."
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "id"
+          in: "path"
+          type: "integer"
+          format: "int32"
+          description: "ID of section that triggered event"
+        - name: "body"
+          in: "body"
+          type: "object"
+          required: true
+          description: "Event to propagate."
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              ids:
+                schema:
+                  type: "array"
+                  items:
+                    type: "integer"
+                    format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'No section found for id: {id}' if no section with id {id} exists."
+  /connections/sections/distribute/{id}:
+    post:
+      tags:
+        - "connections"
+        - "sections"
+      summary: "Distributes an event to all controllers for the section."
+      produces:
+        - "application/json"
+      consumes:
+        - "application/json"
+      parameters:
+        - name: "id"
+          in: "path"
+          type: "integer"
+          format: "int32"
+          description: "ID of section to distribute event to controllers of"
+        - name: "link"
+          in: "body"
+          schema:
+            $ref: "#/definitions/Link"
+          required: true
+          description: "Link of space that section is in."
+        - name: "event"
+          in: "body"
+          type: "object"
+          description: "Event to distribute to section's controllers."
+          required: true
+      responses:
+        200:
+          description: "successful operation"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'Expected host: {local server host}, received host: {link.host}' if the provided host doesn't match the local server's."
+  /connections/sections/{id}:
+    get:
+      tags:
+        - "connections"
+        - "sections"
+      summary: "Returns the connection details for a particular section"
+      description: "Returns the primary section id and the ids of the replicated sections."
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "protocol"
+          in: "body"
+          required: false
+          type: "string"
+          example: "http"
+          description: "Protocol for sending requests to the secondary link's server. Defaults to the protocol used to send this request."
+        - name: "host"
+          in: "body"
+          required: false
+          type: "string"
+          example: "localhost:8080"
+          description: "Host for secondary link's server. Defaults to the host of this request."
+        - name: "space"
+          in: "query"
+          type: "string"
+          example: "LocalNine"
+          required: false
+          description: "If section id is hosted on another server, specify this to prevent conflation between which server the section id is held by."
+        - name: "id"
+          in: "path"
+          type: "integer"
+          format: "int32"
+          example: 0
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              primary:
+                description: "ID of primary section"
+                type: "integer"
+                format: "int32"
+              secondary:
+                description: "IDs of replicated sections"
+                schema:
+                  type: "array"
+                  items:
+                    type: "integer"
+                    format: "int32"
+        400:
+          description: "bad request"
+          schema:
+            type: "object"
+            properties:
+              error:
+                type: "string"
+                description: "Returns 'No host provided, only protocol' if body contains only {protocol} and no {host}. Returns 'Space must be specified' if body contains {host} but query doesn't contain {space}. Returns 'Section {id} is not connected' if the section for {id} is not in a connected."
+  /link/isSecondary:
+    get:
+      tags:
+        - "link"
+      summary: "Returns whether the link is connected as a secondary."
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "Link to check."
+          schema:
+            $ref: "#/definitions/Link"
+          required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              isSecondary:
+                type: "boolean"
+                description: "If link is secondary."
+  /link/isPrimary:
+    get:
+      tags:
+        - "link"
+      summary: "Returns whether the link is connected as a primary."
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "Link to check."
+          schema:
+            $ref: "#/definitions/Link"
+          required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              isPrimary:
+                type: "boolean"
+                description: "If link is primary."
+  /link/isConnected:
+    get:
+      tags:
+        - "link"
+      summary: "Returns whether the link is connected."
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "body"
+          in: "body"
+          description: "Link to check."
+          schema:
+            $ref: "#/definitions/Link"
+          required: true
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "object"
+            properties:
+              isConnected:
+                type: "boolean"
+                description: "If link is connected."
 definitions:
   Spaces:
     type: "object"
@@ -793,6 +1357,93 @@ definitions:
             format: "float"
             description: "Sets the opacity of an element to a value that can be between 0.0 (completely transparent, and hence invisible) and 1.0 (completely opaque)"
             example: 0.75
+  Link:
+    description: "Information for linking to a space/server through a connection"
+    type: "object"
+    properties:
+      space:
+        type: "string"
+        required: true
+        example: "LocalNine"
+      host:
+        type: "string"
+        required: false
+        example: "localhost:8080"
+      protocol:
+        type: "string"
+        required: false
+        example: "http"
+  Connection:
+    description: "Information for connecting spaces/servers together in a primary/secondary architecture"
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+        format: "int32"
+        required: false
+        example: 0
+      primary:
+        schema:
+          $ref: "#/definitions/Link"
+      secondary:
+        type: "array"
+        items:
+          schema:
+            $ref: "#/definitions/Link"
+      sections:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            primary:
+              required: true
+              type: "integer"
+              format: "int32"
+              example: 0
+            secondary:
+              required: true
+              type: "integer"
+              format: "int32"
+              example: 0
+            link:
+              required: true
+              schema:
+                $ref: "#/definitions/Link"
+      isInitialized:
+        type: "boolean"
+        description: "Whether the connection has been initialized yet"
+        required: true
+  Connection Formatted:
+    description: "Formatted information for connecting spaces/servers together in a primary/secondary architecture"
+    type: "object"
+    properties:
+      primary:
+        schema:
+          $ref: "#/definitions/Link"
+      secondary:
+        type: "array"
+        items:
+          schema:
+            $ref: "#/definitions/Link"
+      sections:
+        type: "array"
+        items:
+          type: "object"
+          properties:
+            primary:
+              required: true
+              type: "integer"
+              format: "int32"
+              example: 0
+            secondary:
+              required: true
+              type: "integer"
+              format: "int32"
+              example: 0
+            link:
+              required: true
+              schema:
+                $ref: "#/definitions/Link"
 
 externalDocs:
   description: "Find out more about OVE"

@@ -3,7 +3,7 @@ const HttpStatus = require('http-status-codes');
 
 module.exports = (server, log, Utils, Constants, ApiUtils) => {
     const operation = {};
-    const Backing = require('./api-backing')(server, operation, log, Utils, Constants, ApiUtils);
+    const APIBacking = require(path.resolve(__dirname, 'api-backing'))(server, operation, log, Utils, Constants, ApiUtils);
 
     // send error message with a http bad request
     const _sendError = (res, msg, logging) => {
@@ -15,7 +15,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     operation.listSpaces = (req, res) => {
         log.debug('Listing Spaces');
         const sectionId = req.query.oveSectionId;
-        const spaces = Backing.listSpaces(sectionId);
+        const spaces = APIBacking.listSpaces(sectionId);
 
         if (spaces) {
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(spaces));
@@ -27,14 +27,14 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
 
     operation.listConnections = (req, res) => {
         log.debug('Listing Connections');
-        const connections = Backing.listConnections(req.query.space);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(connections || { msg: `No connections for space: ${req.query.space}` }));
+        const connections = APIBacking.listConnections(req.body);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(connections));
     };
 
     // Gets geometry of a named space.
     operation.getSpaceGeometry = (req, res) => {
         const space = req.params.name;
-        const geometry = Backing.getSpaceGeometries()[space];
+        const geometry = APIBacking.getSpaceGeometries()[space];
 
         if (Utils.isNullOrEmpty(geometry)) {
             _sendError(res, `Invalid Space: ${space}`);
@@ -58,9 +58,9 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
 
         const id = Number(req.params.id);
         const space = req.query.space || ApiUtils.getSpaceBySectionId(id);
-        const elem = req.body.host ? { space: space, host: req.body.host, protocol: req.body.protocol || req.protocol }
-            : ApiUtils.getDefaultElem(space);
-        const mapping = Backing.getSectionConnection(id, elem);
+        const link = req.body.host ? { space: space, host: req.body.host, protocol: req.body.protocol || req.protocol }
+            : ApiUtils.getDefaultLink(space);
+        const mapping = APIBacking.getSectionConnection(id, link);
 
         mapping ? Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ section: mapping }))
             : _sendError(res, `Section ${id} is not connected`);
@@ -70,10 +70,18 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         log.debug('Deleting Connection');
         const spaces = { primary: req.params.primary, secondary: req.params.secondary };
 
-        const primary = { space: spaces.primary, host: req.body?.primary || process.env.OVE_HOST, protocol: `${req.protocol}://` };
-        const secondary = spaces.secondary ? { space: spaces.secondary, host: req.body?.secondary || process.env.OVE_HOST, protocol: `${req.body.protocol || req.protocol}://` } : undefined;
+        const primary = {
+            space: spaces.primary,
+            host: req.body?.primary || process.env.OVE_HOST,
+            protocol: `${req.protocol}://`
+        };
+        const secondary = spaces.secondary ? {
+            space: spaces.secondary,
+            host: req.body?.secondary || process.env.OVE_HOST,
+            protocol: `${req.body.protocol || req.protocol}://`
+        } : undefined;
 
-        (await Backing.deleteConnection(primary, secondary)) ? Utils.sendEmptySuccess(res)
+        (await APIBacking.deleteConnection(primary, secondary)) ? Utils.sendEmptySuccess(res)
             : _sendError(res, `No connection for space: ${spaces.secondary || spaces.primary}`);
     };
 
@@ -85,8 +93,16 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const ids = await Backing.cache(id, req.body);
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
+        let error;
+        const ids = await APIBacking.cache(id, req.body).catch(e => {
+            error = e.message;
+        });
+
+        if (error) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: error }));
+        } else {
+            Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
+        }
     };
 
     operation.deleteConnections = async (req, res) => {
@@ -105,15 +121,20 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         } else if ((req.body.primary && !req.body.secondary) || (req.body.secondary && !req.body.primary)) {
             sendError(`Expected two hosts, only received one`);
             return;
-        } else if (req.body.primary && !req.body.protocol) {
-            sendError('No protocol for the secondary host has been provided');
-            return;
         }
 
-        const primary = { space: req.params.primary, host: req.body.primary || process.env.OVE_HOST, protocol: `${req.protocol}://` };
-        const secondary = { space: req.params.secondary, host: req.body.secondary || process.env.OVE_HOST, protocol: `${req.body.protocol || req.protocol}://` };
+        const primary = {
+            space: req.params.primary,
+            host: req.body.primary || process.env.OVE_HOST,
+            protocol: `${req.protocol}://`
+        };
+        const secondary = {
+            space: req.params.secondary,
+            host: req.body.secondary || process.env.OVE_HOST,
+            protocol: `${req.body.protocol || req.protocol}://`
+        };
 
-        if (ApiUtils.elemEquals(primary, secondary)) {
+        if (ApiUtils.linkEquals(primary, secondary)) {
             _sendError(res, `Primary and secondary spaces are the same`);
             return;
         } else if ((await ApiUtils.isSecondaryWrapper(primary)) || (await ApiUtils.isConnectedWrapper(secondary))) {
@@ -121,9 +142,8 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const sections = await Backing.createConnection(primary, secondary);
-        sections ? Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }))
-            : _sendError(res, `Error creating connection between spaces ${primary.space} and ${secondary.space}`);
+        const sections = await APIBacking.createConnection(primary, secondary);
+        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: sections }));
     };
 
     operation.onEvent = (req, res) => {
@@ -134,20 +154,20 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const ids = Backing.onEvent(id, req.body);
+        const ids = APIBacking.onEvent(id, req.body);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }));
     };
 
     operation.distributeEvent = (req, res) => {
-        const elem = req.body.elem;
+        const link = req.body.link;
         const id = Number(req.params.id);
 
-        if (elem.host !== process.env.OVE_HOST) {
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Expected host: ${process.env.OVE_HOST}, received host: ${elem.host}` }));
+        if (link.host !== process.env.OVE_HOST) {
+            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Expected host: ${process.env.OVE_HOST}, received host: ${link.host}` }));
             return;
         }
 
-        Backing.distributeEvent(id, req.body);
+        APIBacking.distributeEvent(id, req.body.event);
         Utils.sendEmptySuccess(res);
     };
 
@@ -155,7 +175,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         log.debug(`Creating section: ${JSON.stringify(req.body)} on server: ${process.env.OVE_HOST}`);
         const body = req.body;
 
-        if (body.space && (await ApiUtils.isSecondaryWrapper(ApiUtils.getDefaultElem(body.space)) && !req.query.override)) {
+        if (body.space && (await ApiUtils.isSecondaryWrapper(ApiUtils.getDefaultLink(body.space)) && !req.query.override)) {
             _sendError(res, `Operation unavailable as space is connected as a replica. Space: ${body.space}`);
             return;
         } else if (!body.space || !server.spaces[body.space]) {
@@ -170,7 +190,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const id = await Backing.createSection(body);
+        const id = await APIBacking.createSection(body);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: id }));
     };
 
@@ -178,12 +198,12 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         const space = req.query.space;
         const groupId = req.query.groupId;
 
-        if (space && await ApiUtils.isSecondaryWrapper(ApiUtils.getDefaultElem(space)) && !req.query.override) {
+        if (space && await ApiUtils.isSecondaryWrapper(ApiUtils.getDefaultLink(space)) && !req.query.override) {
             _sendError(res, `Operation unavailable as space is connected as a replica. Space: ${space}`);
             return;
         }
 
-        const sections = await Backing.deleteSections(space, groupId);
+        const sections = await APIBacking.deleteSections(space, groupId);
 
         log.debug('Existing sections (active/deleted):', server.state.get('sections').length);
         log.debug('Existing groups (active/deleted):', server.state.get('groups').length);
@@ -192,11 +212,12 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
 
     // Returns details of sections
     operation.readSections = async (req, res) => {
+        log.debug('sections:', JSON.stringify(server.state.get('sections')));
         const space = req.query.space;
         const groupId = req.query.groupId;
         const geometry = req.query.geometry;
         const fetchAppStates = ((req.query.includeAppStates + '').toLowerCase() === 'true');
-        const result = (await Backing.readSections(space, groupId, geometry, fetchAppStates)).result;
+        const result = (await APIBacking.readSections(space, groupId, geometry, fetchAppStates)).result;
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(result));
     };
 
@@ -209,26 +230,26 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
 
         if (!(op.transform.scale || op.transform.translate)) {
             // An attempt to do something we don't understand
-            _sendError(res, `Invalid Operation: ${JSON.stringify(op)}`);
+            _sendError(res, 'Invalid Operation', `Invalid Operation: ${JSON.stringify(op)}`);
             return;
         } else if (op.transform.scale && (op.transform.scale.x === undefined || op.transform.scale.y === undefined)) {
-            _sendError(res, `Invalid Dimensions for Scale Operation: ${JSON.stringify(op.transform)}`);
+            _sendError(res, 'Invalid Dimensions', `Invalid Dimensions for Scale Operation: ${JSON.stringify(op.transform)}`);
             return;
         } else if (op.transform.translate && (op.transform.translate.x === undefined || op.transform.translate.y === undefined)) {
-            _sendError(res, `Invalid Dimensions for Translate Operation: ${JSON.stringify(op.transform)}`);
+            _sendError(res, 'Invalid Dimensions', `Invalid Dimensions for Translate Operation: ${JSON.stringify(op.transform)}`);
             return;
-        } else if (Utils.isNullOrEmpty(Backing.filterSections(groupId, space, sections, 'Updating'))) {
+        } else if (Utils.isNullOrEmpty(APIBacking.filterSections(groupId, space, sections, 'Updating'))) {
             // We check whether any operation has to be made.
             Utils.sendEmptySuccess(res);
             return;
-        } else if (space && ApiUtils.isSecondary(ApiUtils.getDefaultElem(space)) && !req.query.override) {
-            _sendError(res, 'Operation unavailable as space is currently connected as a replica');
+        } else if (space && ApiUtils.isSecondary(ApiUtils.getDefaultLink(space)) && !req.query.override) {
+            _sendError(res, 'Operation unavailable as space is currently connected as a replica', `Operation unavailable as space is currently connected as a replica. Space: ${space}`);
             return;
         }
 
-        const ids = Backing.updateSections({ transform: req.body }, space, groupId, req.body, sections);
+        const ids = APIBacking.updateSections({ transform: req.body }, space, groupId, req.body, sections);
         ids ? Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }))
-            : _sendError(res, 'Invalid Dimensions. Unable to update sections due to one or more range errors');
+            : _sendError(res, 'Invalid Dimensions', 'Invalid Dimensions. Unable to update sections due to one or more range errors');
     };
 
     // Moves sections to another space
@@ -239,23 +260,23 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
 
         if (!op.moveTo.space) {
             // An attempt to do something we don't understand
-            _sendError(res, `Invalid Operation: ${JSON.stringify(op)}`);
+            _sendError(res, 'Invalid Operation', `Invalid Operation: ${JSON.stringify(op)}`);
             return;
         } else if (op.moveTo.space && !server.spaces[op.moveTo.space]) {
-            _sendError(res, `Invalid Space: ${JSON.stringify(op)}`);
+            _sendError(res, 'Invalid Space', `Invalid Space: ${JSON.stringify(op)}`);
             return;
-        } else if (Utils.isNullOrEmpty(Backing.filterSections(groupId, space, server.state.get('sections'), 'Updating'))) {
+        } else if (Utils.isNullOrEmpty(APIBacking.filterSections(groupId, space, server.state.get('sections'), 'Updating'))) {
             // We check whether any operation has to be made.
             Utils.sendEmptySuccess(res);
             return;
-        } else if (space && ApiUtils.isConnected(ApiUtils.getDefaultElem(space)) && !req.query.override) {
+        } else if (space && ApiUtils.isConnected(ApiUtils.getDefaultLink(space))) {
             _sendError(res, 'Operation unavailable as space is currently connected');
             return;
         }
 
-        const ids = Backing.updateSections({ moveTo: req.body }, space, groupId, req.body, server.state.get('sections'));
+        const ids = APIBacking.updateSections({ moveTo: req.body }, space, groupId, req.body, server.state.get('sections'));
         ids ? Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: ids }))
-            : _sendError(res, 'Invalid Dimensions. Unable to update sections due to one or more range errors');
+            : _sendError(res, 'Invalid Dimensions', 'Invalid Dimensions. Unable to update sections due to one or more range errors');
     };
 
     // Refreshes individual section
@@ -263,12 +284,11 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         let sectionId = req.params.id;
 
         if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
-            log.error('Invalid Section Id:', sectionId);
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'invalid section id' }));
+            _sendError(res, 'Invalid Section Id', `Invalid Section Id: ${sectionId}`);
             return;
         }
 
-        Backing.refreshSectionById(sectionId);
+        APIBacking.refreshSectionById(sectionId);
         log.info('Successfully refreshed section:', sectionId);
 
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [parseInt(sectionId, 10)] }));
@@ -278,7 +298,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     operation.refreshSections = (req, res) => {
         const space = req.query.space;
         const groupId = req.query.groupId;
-        const sectionsToRefresh = Backing.refreshSections(space, groupId);
+        const sectionsToRefresh = APIBacking.refreshSections(space, groupId);
 
         if (sectionsToRefresh) {
             log.info('Successfully refreshed sections:', sectionsToRefresh);
@@ -299,7 +319,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        const section = await Backing.readSectionById(sectionId, s, req.query.includeAppStates);
+        const section = await APIBacking.readSectionById(sectionId, s, req.query.includeAppStates);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(section));
     };
 
@@ -312,7 +332,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             _sendError(res, 'Invalid Operation', `Invalid Operation for Request: ${JSON.stringify(req.body)}`);
             return;
         } else if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
-            _sendError(res, `Invalid Section Id: ${sectionId}`);
+            _sendError(res, 'Invalid Section Id', `Invalid Section Id: ${sectionId}`);
             return;
         } else if (req.body.app && !req.body.app.url) {
             _sendError(res, 'Invalid App Configuration', `Invalid App Configuration for Request: ${JSON.stringify(req.body.app)}`);
@@ -330,12 +350,12 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             // x and y positions must be provided together
             _sendError(res, 'Invalid Dimensions', `Invalid Dimensions. Both x and y positions are required for a resize operation. Request: ${JSON.stringify(req.body)}`);
             return;
-        } else if (ApiUtils.isSecondary(ApiUtils.getDefaultElem(req.body.space)) && !req.query.override) {
-            _sendError(res, `Operation unavailable as space is connected as a replica. Space: ${req.body.space}`);
+        } else if (ApiUtils.isSecondary(ApiUtils.getDefaultLink(req.body.space)) && !req.query.override) {
+            _sendError(res, 'Operation unavailable as space is connected as a replica', `Operation unavailable as space is connected as a replica. Space: ${req.body.space}`);
             return;
         }
 
-        Backing.updateSectionById(sectionId, req.body);
+        APIBacking.updateSectionById(sectionId, req.body);
 
         log.info('Successfully updated section:', sectionId);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(sectionId, 10) }));
@@ -346,14 +366,14 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         let sectionId = req.params.id;
 
         if (Utils.isNullOrEmpty(server.state.get('sections[' + sectionId + ']'))) {
-            _sendError(res, `Invalid Section Id: ${sectionId}`);
+            _sendError(res, 'Invalid Section Id', `Invalid Section Id: ${sectionId}`);
             return;
-        } else if (ApiUtils.isSecondary(ApiUtils.getDefaultElem(ApiUtils.getSpaceBySectionId(Number(sectionId)))) && !req.query.override) {
-            _sendError(res, `Operation unavailable as space is connected as a replica. Space: ${ApiUtils.getSpaceBySectionId(sectionId)}`);
+        } else if (ApiUtils.isSecondary(ApiUtils.getDefaultLink(ApiUtils.getSpaceBySectionId(Number(sectionId)))) && !req.query.override) {
+            _sendError(res, 'Operation unavailable as space is connected as a replica', `Operation unavailable as space is connected as a replica. Space: ${ApiUtils.getSpaceBySectionId(Number(sectionId))}`);
             return;
         }
 
-        Backing.deleteSectionById(Number(sectionId));
+        APIBacking.deleteSectionById(Number(sectionId));
 
         log.info('Successfully deleted section:', sectionId);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ ids: [parseInt(sectionId, 10)] }));
@@ -370,12 +390,12 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     operation.createGroup = (req, res) => {
         const groupId = server.state.get('groups').length;
 
-        if (!req.body || !req.body.length || !Backing.validateSections(req.body)) {
+        if (!req.body || !req.body.length || !APIBacking.validateSections(req.body)) {
             _sendError(res, 'Invalid Group', `Invalid Group for Request: ${JSON.stringify(req.body)}`);
             return;
         }
 
-        Backing.createOrUpdateGroup(groupId, 'create', req.body);
+        APIBacking.createOrUpdateGroup(groupId, 'create', req.body);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
     };
 
@@ -384,7 +404,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         let groupId = req.params.id;
 
         if (Utils.isNullOrEmpty(server.state.get('groups[' + groupId + ']'))) {
-            _sendError(res, `Invalid Group Id: ${groupId}`);
+            _sendError(res, 'Invalid Group Id', `Invalid Group Id: ${groupId}`);
         } else {
             log.debug('Successfully read configuration for group id:', groupId);
             Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(server.state.get('groups[' + groupId + ']')));
@@ -395,12 +415,12 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     operation.updateGroupById = (req, res) => {
         let groupId = req.params.id;
 
-        if (!req.body || !req.body.length || !Backing.validateSections(req.body)) {
+        if (!req.body || !req.body.length || !APIBacking.validateSections(req.body)) {
             _sendError(res, 'Invalid Group', `Invalid Group for Request: ${JSON.stringify(req.body)}`);
             return;
         }
 
-        Backing.createOrUpdateGroup(groupId, 'update', req.body);
+        APIBacking.createOrUpdateGroup(groupId, 'update', req.body);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
     };
 
@@ -414,7 +434,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             return;
         }
 
-        Backing.deleteGroupById(groupId);
+        APIBacking.deleteGroupById(groupId);
         Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ id: parseInt(groupId, 10) }));
     };
 
@@ -426,20 +446,11 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
 
     operation.getConnection = (req, res) =>
         Utils.sendMessage(res, HttpStatus.OK,
-            JSON.stringify({ connection: ApiUtils.getConnection(req.body) }));
-
-    operation.updateConnectionState = (req, res) => {
-        ApiUtils.updateConnectionState(req.body);
-        Utils.sendEmptySuccess(res);
-    };
+            JSON.stringify({ connection: ApiUtils.getConnection(req.body) || {} }));
 
     operation.updateConnection = (req, res) => {
-        if (req.body.host && req.body.host !== process.env.OVE_HOST) {
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Expected host: ${process.env.OVE_HOST}, received host: ${req.body.host}` }));
-            return;
-        }
-
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.updateConnection(req.body.host ? req.body.connection : req.body) }));
+        ApiUtils.updateConnection(req.body);
+        Utils.sendEmptySuccess(res);
     };
 
     operation.removeConnection = (req, res) => {
@@ -447,15 +458,20 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         Utils.sendEmptySuccess(res);
     };
 
-    operation.deleteSpace = (req, res) =>
-        Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.deleteSpace(ApiUtils.getConnection(req.body.primary), req.body.elem) }));
+    operation.deleteLink = (req, res) => {
+        ApiUtils.deleteLink(req.body.link);
+        Utils.sendEmptySuccess(res);
+    };
 
-    operation.deleteAllForSpace = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ connection: ApiUtils.deleteAllForSpace(req.body.primary, req.body.elem) }));
+    operation.deleteSectionsForLink = (req, res) => {
+        ApiUtils.deleteSectionsForLink(req.body.link);
+        Utils.sendEmptySuccess(res);
+    };
 
     operation.getURLForId = (req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify({ url: ApiUtils.getURLForId(req.params.id) }));
 
-    operation.deleteSecondarySection = (req, res) => {
-        ApiUtils.deleteSecondarySection(ApiUtils.getConnection(req.body.primary), req.params.id, req.body.elem);
+    operation.deleteSectionForLink = (req, res) => {
+        ApiUtils.deleteSectionForLink(req.params.id, req.body.link);
         Utils.sendEmptySuccess(res);
     };
 
@@ -467,6 +483,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     server.app.get('/sections/:id([0-9]+)', operation.readSectionById);
     server.app.post('/sections/:id([0-9]+)', operation.updateSectionById);
     server.app.delete('/sections/:id([0-9]+)', operation.deleteSectionById);
+    server.app.get('/sections/:id([0-9]+)/url', operation.getURLForId);
     server.app.post('/sections/refresh', operation.refreshSections);
     server.app.post('/sections/:id([0-9]+)/refresh', operation.refreshSectionById);
     server.app.post('/sections/transform', operation.transformSections);
@@ -477,28 +494,25 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     server.app.post('/groups/:id([0-9]+)', operation.updateGroupById);
     server.app.delete('/groups/:id([0-9]+)', operation.deleteGroupById);
 
-    server.app.get('/api/isSecondary', operation.isSecondary);
-    server.app.get('/api/isPrimary', operation.isPrimary);
-    server.app.get('/api/isConnected', operation.isConnected);
-    server.app.get('/api/getConnection', operation.getConnection);
-    server.app.post('/api/updateConnectionState', operation.updateConnectionState);
-    server.app.post('/api/updateConnection', operation.updateConnection);
-    server.app.delete('/api/removeConnection', operation.removeConnection);
-    server.app.delete('/api/deleteSpace', operation.deleteSpace);
-    server.app.delete('/api/deleteAllForSpace', operation.deleteAllForSpace);
-    server.app.get('/api/getURLForId/:id([0-9]+)', operation.getURLForId);
-    server.app.delete('/api/deleteSecondarySection/:id([0-9]+)', operation.deleteSecondarySection);
+    server.app.get('/link/isSecondary', operation.isSecondary);
+    server.app.get('/link/isPrimary', operation.isPrimary);
+    server.app.get('/link/isConnected', operation.isConnected);
+    server.app.delete('/link', operation.deleteLink);
+    server.app.delete('/links/sections', operation.deleteSectionsForLink);
+    server.app.delete('/links/sections/:id([0-9]+)', operation.deleteSectionForLink);
 
+    server.app.get('/connection', operation.getConnection);
     server.app.get('/connections', operation.listConnections);
-    server.app.delete('/connections', operation.deleteConnections);
+    server.app.get('/connections/sections/:id([0-9]+)', operation.getSectionConnection);
+    server.app.post('/connection', operation.updateConnection);
+    server.app.post('/connections/sections/event/:id([0-9]+)', operation.onEvent);
+    server.app.post('/connections/sections/distribute/:id([0-9]+)', operation.distributeEvent);
+    server.app.post('/connections/sections/cache/:id([0-9]+)', operation.cache);
     server.app.post('/connection/:primary/:secondary', operation.createConnection);
-    server.app.get('/connections/section/:id([0-9]+)', operation.getSectionConnection);
+    server.app.delete('/connection', operation.removeConnection);
+    server.app.delete('/connections', operation.deleteConnections);
     server.app.delete('/connection/:primary', operation.deleteConnection);
     server.app.delete('/connection/:primary/:secondary', operation.deleteConnection);
-
-    server.app.post('/event/:id([0-9]+)', operation.onEvent);
-    server.app.post('/distribute/event/:id([0-9]+)', operation.distributeEvent);
-    server.app.post('/cache/:id([0-9]+)', operation.cache);
 
     // Swagger API documentation
     Utils.buildAPIDocs(path.join(__dirname, 'swagger.yaml'), path.join(__dirname, '..', '..', 'package.json'));

@@ -20,6 +20,7 @@ const Constants = {
     WEBSOCKET_READY: 1,
     SECTION_UPDATE_DELAY: 150, //-- Unit: milliseconds --//
     HTTP_PROTOCOL: 'http://',
+    DEFAULT_PROTOCOL: 'http',
 
     //-----------------------------------------------------------//
     //--                        Common                         --//

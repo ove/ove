@@ -1,34 +1,32 @@
-const HttpStatus = require('http-status-codes');
 const request = require('request');
+const HttpStatus = require('http-status-codes');
 
 const _defaultError = (resolve, reject, url, error, res, b) => {
     if (error !== null && error !== undefined) {
-        reject(error);
+        reject({ statusCode: res?.statusCode, text: error });
     } else if (res?.statusCode !== HttpStatus.OK) {
-        reject(new Error(`Received status code: ${res?.statusCode} and reason: ${JSON.stringify(b)} when connecting to: ${url}`));
+        reject({ statusCode: res?.statusCode, text: b });
     } else {
-        resolve(b);
+        resolve({ statusCode: res?.statusCode, text: b });
     }
 };
 
-const post = async (url, headers, body, handler) => new Promise((resolve, reject) =>
-    request.post(url, {
-        headers: headers || {},
-        json: body
-    }, (handler || _defaultError).bind(null, resolve, reject, url)));
+module.exports = {
+    post: async (url, headers, body, handler) => new Promise((resolve, reject) =>
+        request.post(url, {
+            headers: headers || {},
+            json: body
+        }, (handler || _defaultError).bind(null, resolve, reject, url))),
 
-const del = async (url, headers, body, handler) => new Promise((resolve, reject) =>
-    request.delete(url, {
-        headers: headers || {},
-        json: body || {}
-    }, (handler || _defaultError).bind(null, resolve, reject, url)));
+    delete: async (url, headers, body, handler) => new Promise((resolve, reject) =>
+        request.delete(url, {
+            headers: headers || {},
+            json: body || {}
+        }, (handler || _defaultError).bind(null, resolve, reject, url))),
 
-const get = async (url, headers, body, handler) => new Promise((resolve, reject) =>
-    request.get(url, {
-        headers: headers || {},
-        json: body || {}
-    }, (handler || _defaultError).bind(null, resolve, reject, url)));
-
-exports.post = post;
-exports.delete = del;
-exports.get = get;
+    get: async (url, headers, body, handler) => new Promise((resolve, reject) =>
+        request.get(url, {
+            headers: headers || {},
+            json: body || {}
+        }, (handler || _defaultError).bind(null, resolve, reject, url)))
+};

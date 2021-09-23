@@ -13,7 +13,7 @@ describe('The OVE Core server', () => {
         jest.resetModules();
         process.env = { ...OLD_ENV };
         process.env.OVE_HOST = 'localhost:8080';
-        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */
@@ -22,9 +22,9 @@ describe('The OVE Core server', () => {
         await request(app).post('/section').send({ fake: 'request' })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Space' }));
         await request(app).post('/sections/transform').send({ fake: 'request' })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Invalid Operation: ${JSON.stringify({ transform: { fake: 'request' } })}` }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Operation' }));
         await request(app).post('/sections/moveTo').send({ fake: 'request' })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Invalid Operation: ${JSON.stringify({ moveTo: { fake: 'request' } })}` }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Operation' }));
         await request(app).post('/group').send({ fake: 'request' })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group' }));
 
@@ -85,10 +85,10 @@ describe('The OVE Core server', () => {
         await request(app).get('/groups/0').expect(HttpStatus.OK, JSON.stringify([0, 1]));
         await request(app).get('/groups').expect(HttpStatus.OK, JSON.stringify([[0, 1], [1]]));
         await request(app).delete('/groups/0').expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        await request(app).get('/groups/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
+        await request(app).get('/groups/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
         await request(app).get('/groups').expect(HttpStatus.OK, JSON.stringify([[1]]));
         await request(app).delete('/groups/1').expect(HttpStatus.OK, JSON.stringify({ id: 1 }));
-        await request(app).get('/groups/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 1' }));
+        await request(app).get('/groups/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
     });
 
     it('should be able to successfully read, update and delete sections by group, without an app', async () => {
@@ -121,11 +121,11 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0, 1] }));
         await request(app).delete('/sections?groupId=0').expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
         await request(app).get('/sections/0').expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).get('/groups/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
+        await request(app).get('/groups/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
         await request(app).get('/groups/2').expect(HttpStatus.OK, JSON.stringify([1]));
         await request(app).get('/groups/1').expect(HttpStatus.OK, JSON.stringify([1]));
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).get('/groups/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 1' }));
+        await request(app).get('/groups/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
     });
 
     it('should be able to successfully read, update and delete sections by space, without an app', async () => {
@@ -161,7 +161,7 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
 
         await request(app).post('/sections/transform').send({ 'translate': { x: -11, y: 0 } })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions. Unable to update sections due to one or more range errors' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
 
         await request(app).get('/sections/0')
             .expect(HttpStatus.OK, JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine' }));
@@ -286,18 +286,16 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [] }));
 
-        await request(app).get('/connections?space=TestingNine')
+        await request(app).get('/connections').send({ ...primary, host: 'localhost:8080' })
             .expect(HttpStatus.OK, JSON.stringify([{ primary: { ...primary, host: 'localhost:8080', protocol: 'http' },
                 secondary: [{ ...secondary, host: 'localhost:8080', protocol: 'http' }],
                 sections: {} }]));
 
-        await request(app).delete('/connection/TestingNine/TestingNineClone')
-            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).delete('/connection/TestingNine/TestingNineClone').expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
 
-    it('should return special message if no connections present', async () => {
-        await request(app).get('/connections?space=TestingNine')
-            .expect(HttpStatus.OK, JSON.stringify({ msg: 'No connections for space: TestingNine' }));
+    it('should return an empty array if no connections present', async () => {
+        await request(app).get('/connections').expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
     });
 
     it('lists all connections if no space specified', async () => {
@@ -318,7 +316,7 @@ describe('The OVE Core server', () => {
     });
 
     it('fetching section connection details errors if section is not connected', async () => {
-        await request(app).get('/connections/section/2')
+        await request(app).get('/connections/sections/2')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Section 2 is not connected' }));
     });
 
@@ -338,7 +336,7 @@ describe('The OVE Core server', () => {
     it('fetches correct mapping of section connection details for primary sections', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).get(`/connections/section/0`)
+        await request(app).get(`/connections/sections/0`)
             .expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: [1] } }));
     });
 
@@ -347,7 +345,7 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         await request(app).post('/connection/TestingNine/TestingNineClone')
             .expect(HttpStatus.OK, JSON.stringify({ ids: [1] }));
-        await request(app).get('/connections/section/1')
+        await request(app).get('/connections/sections/1')
             .expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: [1] } }));
     });
 
@@ -377,7 +375,7 @@ describe('The OVE Core server', () => {
         await request(app).get('/sections/1').expect(HttpStatus.OK, JSON.stringify({ id: 1, x: 10, y: 0, w: 10, h: 10, space: 'TestingNineClone' }));
         await request(app).get('/sections/2').expect(HttpStatus.OK, JSON.stringify({ id: 2, x: 6, y: 0, w: 6, h: 6, space: 'TestingFour' }));
         await request(app).delete('/connection/TestingNine/TestingNineClone').expect(HttpStatus.OK);
-        await request(app).get('/connections/section/2').expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: [2] } }));
+        await request(app).get('/connections/sections/2').expect(HttpStatus.OK, JSON.stringify({ section: { primary: 0, secondary: [2] } }));
     });
 
     it('deleting connection by primary deletes all connections', async () => {
@@ -496,18 +494,18 @@ describe('The OVE Core server', () => {
 
     it('should return empty when sending event without connection', async () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/event/0').expect(HttpStatus.OK, JSON.stringify({}));
+        await request(app).post('/connections/sections/event/0').expect(HttpStatus.OK, JSON.stringify({ ids: [] }));
     });
 
     it('should fail if no section for id', async () => {
-        await request(app).post('/event/0')
+        await request(app).post('/connections/sections/event/0')
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 0' }));
     });
 
     it('should send events from secondary to primary sections', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/event/1').send({ appId: 'test', sectionId: '1', message: {} })
+        await request(app).post('/connections/sections/event/1').send({ appId: 'test', sectionId: '1', message: {} })
             .expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
@@ -515,7 +513,7 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/connection/TestingNine/TestingFour');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
-        await request(app).post('/event/0').send({ appId: 'test', sectionId: '0', message: {} })
+        await request(app).post('/connections/sections/event/0').send({ appId: 'test', sectionId: '0', message: {} })
             .expect(HttpStatus.OK, JSON.stringify({ ids: [1, 2] }));
     });
 
@@ -557,19 +555,19 @@ describe('The OVE Core server', () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
         nock('http://localhost:8080').post('/instances/1/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/cache/0').send({}).expect(HttpStatus.OK, JSON.stringify({ ids: [1] }));
+        await request(app).post('/connections/sections/cache/0').send({}).expect(HttpStatus.OK, JSON.stringify({ ids: [1] }));
     });
 
     it('should cache replica state to other replicas and primary section', async () => {
         await request(app).post('/connection/TestingNine/TestingNineClone');
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
         nock('http://localhost:8082').post('/instances/0/state').reply(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).post('/cache/1').send({}).expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
+        await request(app).post('/connections/sections/cache/1').send({}).expect(HttpStatus.OK, JSON.stringify({ ids: [0] }));
     });
 
     it('should not cache state for non-existent connection', async () => {
         await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10, 'app': { 'url': 'http://localhost:8082' } });
-        await request(app).post('/cache/0').expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).post('/connections/sections/cache/0').expect(HttpStatus.OK, JSON.stringify({ ids: [] }));
     });
 
     it('should replicate state when creating replicated sections', async () => {
@@ -595,30 +593,27 @@ describe('The OVE Core server', () => {
     });
 
     it('cannot cache an invalid section id', async () => {
-        await request(app).post('/cache/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 1' }));
+        await request(app).post('/connections/sections/cache/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No section found for id: 1' }));
     });
 
     it('should fail when wrapping request if status code is not OK', async () => {
         nock('http://localhost:8081').get('/invalid').reply(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Test error' }));
-        const error = new Error('Received status code: 400 and reason: {"error":"Test error"} when connecting to: http://localhost:8081/invalid');
         try {
             await RequestUtils.get('http://localhost:8081/invalid');
         } catch (e) {
-            expect(JSON.stringify(e)).toBe(JSON.stringify(error));
+            expect(JSON.stringify(e)).toBe(JSON.stringify({ statusCode: HttpStatus.BAD_REQUEST, text: { error: 'Test error' } }));
         }
     });
 
     it('can send a delete request without a body', async () => {
         nock('http://localhost:8081').delete('/valid').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         const body = await RequestUtils.delete('http://localhost:8081/valid');
-        expect(JSON.stringify(body)).toBe(Utils.JSON.EMPTY);
+        expect(body).toEqual({ statusCode: HttpStatus.OK, text: {} });
     });
     /* jshint ignore:end */
 
     afterEach(async () => {
-        nock('http://localhost:8081')
-            .delete('/connections')
-            .reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        nock('http://localhost:8081').delete('/connections').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/connections');
         await request(app).delete('/sections');
         nock.cleanAll();

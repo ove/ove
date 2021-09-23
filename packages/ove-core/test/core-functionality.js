@@ -64,21 +64,21 @@ describe('The OVE Core server', () => {
 
     it('should reject requests for deleting a section when it does not exist', async () => {
         await request(app).delete('/sections/0')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Section Id: 0' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Section Id' }));
     });
 
     it('should reject requests for updating a section when it does not exist', async () => {
         await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Section Id: 0' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Section Id' }));
     });
 
     it('should reject invalid requests when updating sections', async () => {
         await request(app).post('/sections/moveTo').send({ 'space': 'fake' })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Invalid Space: ${JSON.stringify({ moveTo: { space: 'fake' } })}` }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Space' }));
         await request(app).post('/sections/transform').send({ 'scale': { x: 0 } })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Invalid Dimensions for Scale Operation: ${JSON.stringify({ scale: { x: 0 } })}` }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
         await request(app).post('/sections/transform').send({ 'translate': {} })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Invalid Dimensions for Translate Operation: ${JSON.stringify({ translate: {} })}` }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
     });
 
     // This condition is important to avoid many errors getting printed on the browser
@@ -110,7 +110,7 @@ describe('The OVE Core server', () => {
 
     it('should reject requests for reading a group when it does not exist', async () => {
         await request(app).get('/groups/0').send([0])
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
     });
 
     it('should be supporting offsets', async () => {

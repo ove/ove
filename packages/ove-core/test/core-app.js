@@ -66,11 +66,11 @@ describe('The OVE Core server', () => {
         await request(app).get('/groups/0').expect(HttpStatus.OK, JSON.stringify([0, 1]));
         await request(app).delete('/groups/0').expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         await request(app).get('/groups/0')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
 
         await request(app).delete('/groups/1').expect(HttpStatus.OK, JSON.stringify({ id: 1 }));
         await request(app).get('/groups/1')
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 1' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
 
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
@@ -125,13 +125,13 @@ describe('The OVE Core server', () => {
         expect(scope2.isDone()).not.toBeTruthy(); // request should not be made at this point.
 
         await request(app).get('/sections/0').expect(HttpStatus.OK, Utils.JSON.EMPTY);
-        await request(app).get('/groups/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 0' }));
+        await request(app).get('/groups/0').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
         await request(app).get('/groups/2').expect(HttpStatus.OK, JSON.stringify([1]));
         await request(app).get('/groups/1').expect(HttpStatus.OK, JSON.stringify([1]));
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
         expect(scope2.isDone()).toBeTruthy(); // request should be made at this point.
-        await request(app).get('/groups/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id: 1' }));
+        await request(app).get('/groups/1').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Group Id' }));
     });
 
     it('should be able to successfully read, update and delete sections by space, with an app', async () => {
@@ -186,7 +186,7 @@ describe('The OVE Core server', () => {
             .expect(HttpStatus.OK, JSON.stringify([ { 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } } ]));
 
         await request(app).post('/sections/transform').send({ 'translate': { x: -11, y: 0 } })
-            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions. Unable to update sections due to one or more range errors' }));
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
 
         await request(app).get('/sections/0')
             .expect(HttpStatus.OK, JSON.stringify({ 'id': 0, 'x': 10, 'y': 0, 'w': 10, 'h': 10, 'space': 'TestingNine', 'app': { 'url': 'http://localhost:8081' } }));
