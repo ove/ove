@@ -13,7 +13,7 @@ describe('The OVE Core server', () => {
         jest.resetModules();
         process.env = { ...OLD_ENV };
         process.env.OVE_HOST = 'localhost:8080';
-        // global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
+        global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
     });
 
     /* jshint ignore:start */
@@ -609,6 +609,105 @@ describe('The OVE Core server', () => {
         nock('http://localhost:8081').delete('/valid').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         const body = await RequestUtils.delete('http://localhost:8081/valid');
         expect(body).toEqual({ statusCode: HttpStatus.OK, text: {} });
+    });
+
+    it('fails when a protocol is provided but not a host when getting a section connection', async () => {
+        await request(app).get('/connections/sections/0').send({ protocol: 'http' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No host provided, only protocol' }));
+    });
+
+    it('fails when a host is provided but not a space when getting a section connection', async () => {
+        await request(app).get('/connections/sections/0').send({ host: 'localhost:8080' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Space must be specified' }));
+    });
+
+    it('fails when creating a connection if only one host was specified', async () => {
+        await request(app).post('/connection/TestingFour/TestingFourClone').send({ primary: 'localhost:8080' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Expected two hosts, only received one' }));
+    });
+
+    it('fails when creating a connection and the primary host is not that of the OVE_HOST environment variable', async () => {
+        await request(app).post('/connection/TestingFour/TestingFourClone').send({ primary: 'localhost:7080' })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Expected primary host: localhost:8080, received: localhost:7080' }));
+    });
+
+    it('fails when provided with an unknown host when distributing an event', async () => {
+        await request(app).post('/connections/sections/distribute/1').send({ event: {}, link: { host: 'localhost:7080' } })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Expected host: localhost:8080, received host: localhost:7080' }));
+    });
+
+    it('fails when no link is provided when distributing an event', async () => {
+        await request(app).post('/connections/sections/distribute/1')
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No link provided while distributing event' }));
+    });
+
+    it('fails when no event is provided when distributing an event', async () => {
+        await request(app).post('/connections/sections/distribute/1').send({ link: {} })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'No event provided while distributing event' }));
+    });
+
+    it('fails if link\'s space is not that of the provided id', async () => {
+        await request(app).post('/section').send({ w: 10, h: 10, x: 0, y: 0, space: 'TestingNine' });
+        await request(app).post('/connections/sections/distribute/0').send({ event: {}, link: { space: 'TestingNineClone', host: 'localhost:8080', protocol: 'http' } })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Expected space: TestingNine in link for section id: 0, received: TestingNineClone' }));
+    });
+
+    it('returns empty success if transforming sections without sections present', async () => {
+        await request(app).post('/sections/transform?space=TestingNine').send({ 'scale': { x: 10, y: 1 } })
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('fails to transform the sections of a replicated space', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ w: 10, h: 20, x: 0, y: 0, space: 'TestingNine' });
+        await request(app).post('/sections/transform?space=TestingNineClone').send({ scale: { x: 10, y: 1 } })
+            .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Operation unavailable as space is currently connected as a replica' }));
+    });
+
+    it('should return an empty object if no connection exists when fetching a connection', async () => {
+        await request(app).get('/connection').send({ space: 'TestingNine', host: 'localhost:8080', protocol: 'http' })
+            .expect(HttpStatus.OK, JSON.stringify({ connection: {} }));
+    });
+
+    it('should successfully update a connection', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        const connection = JSON.parse((await request(app).get('/connection').send({ space: 'TestingNine', host: 'localhost:8080', protocol: 'http' })).text).connection;
+        await request(app).post('/connection').send({ ...connection, isInitialized: false }).expect(HttpStatus.OK, Utils.JSON.EMPTY);
+    });
+
+    it('should be able to remove a connection', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).delete('/connection').send({ space: 'TestingNine', host: 'localhost:8080', protocol: 'http' })
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        await request(app).get('/connections').expect(HttpStatus.OK, Utils.JSON.EMPTY_ARRAY);
+    });
+
+    it('should be able to delete a link from a connection', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/connection/TestingNine/TestingFour');
+        await request(app).delete('/link').send({ link: { space: 'TestingNineClone', host: 'localhost:8080', protocol: 'http' } })
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        const connection = JSON.parse((await request(app).get('/connections')).text)[0];
+        expect(connection.secondary.length).toBe(1);
+        expect(connection.secondary[0]).toEqual({ space: 'TestingFour', host: 'localhost:8080', protocol: 'http' });
+    });
+
+    it('should be able to delete the sections for a link in a connection', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ h: 10, w: 10, x: 0, y: 0, space: 'TestingNine' });
+        await request(app).delete('/links/sections/').send({ link: { space: 'TestingNineClone', host: 'localhost:8080', protocol: 'http' } })
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        const connection = JSON.parse((await request(app).get('/connections')).text)[0];
+        expect(connection.sections).toEqual({});
+    });
+
+    it('should be able to delete the section for a link in a connection', async () => {
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ h: 10, w: 10, x: 0, y: 0, space: 'TestingNine' });
+        await request(app).delete('/links/sections/1').send({ link: { space: 'TestingNineClone', host: 'localhost:8080', protocol: 'http' } })
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        const connection = JSON.parse((await request(app).get('/connections')).text)[0];
+        expect(connection.sections).toEqual({});
     });
     /* jshint ignore:end */
 

@@ -1,13 +1,11 @@
 .unselectable {
-    -moz-user-select: -moz-none;
-    -khtml-user-select: none;
+    -moz-user-select: none;
     -webkit-user-select: none;
-    -o-user-select: none;
     user-select: none;
 }
 body {
-    margin: 0px !important;
+    margin: 0 !important;
     background: #222;
     color: #FFF;
-    font-family: helvetica;
+    font-family: Helvetica, serif;
 }

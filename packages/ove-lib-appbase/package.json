@@ -26,14 +26,17 @@
   "author": "Senaka Fernando <senaka.fernando15@imperial.ac.uk>",
   "license": "MIT",
   "dependencies": {
-    "@babel/core": "7.15.5",
-    "@babel/preset-env": "7.15.4",
-    "@babel/cli": "7.15.4",
-    "@ove-lib/utils": "^0.5.0",
+    "@ove-lib/utils": "0.6.2",
     "cors": "2.8.5",
     "express": "4.17.1",
     "http-status-codes": "2.1.4",
     "jquery": "3.6.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.15.5",
+    "@babel/preset-env": "7.15.6",
+    "@babel/cli": "7.15.7",
+    "@babel/node": "7.15.4"
   },
   "jest": {
     "collectCoverageFrom": [

@@ -781,6 +781,17 @@ describe('The OVE Core server', () => {
         expect(sockets.messages.includes(JSON.stringify(event))).toBeTruthy();
     });
 
+    it('should distribute an event to all sockets with correct sectionId', async () => {
+        const event = { appId: 'test', sectionId: '0', message: { test: 'test' } };
+        await request(app).post('/connection/TestingNine/TestingNineClone');
+        await request(app).post('/section').send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 });
+        await request(app).post('/connections/sections/distribute/1').send({ event: event, link: { space: 'TestingNineClone', host: 'localhost:8080', protocol: 'http' } })
+            .expect(HttpStatus.OK, Utils.JSON.EMPTY);
+        expect(sockets.messages.filter(message => JSON.parse(message).appId !== 'core').length).toBe(2);
+        event.sectionId = '1';
+        expect(sockets.messages.includes(JSON.stringify(event))).toBeTruthy();
+    });
+
     afterEach(async () => {
         sockets.messages.splice(0, sockets.messages.length);
         await request(app).delete('/connections');

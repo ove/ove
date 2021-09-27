@@ -81,7 +81,7 @@ function OVEUtils () {
         //-- Internal Utility function to build log messages.   --//
         const buildLogMessage = function (logLevel, args) {
             const time = (function (d) {
-                const locale = window.navigator.userLanguage || window.navigator.language;
+                const locale = window.navigator.language;
                 return d.toLocaleString(locale, { hour12: true }).replace(/([ ]?[aApP][mM])/,
                     '.' + (d.getMilliseconds() + '').padStart(3, '0') + ' $&');
             }(new Date()));
@@ -128,7 +128,7 @@ function OVEUtils () {
         __private.getOVEInstance().socket.on(function (message) {
             let m = message;
             if (m.sectionId) {
-                if (m.sectionId !== __self.getSectionId()) return;
+                if (Number(m.sectionId) !== Number(__self.getSectionId())) return;
                 m = m.message;
             }
             if (m.operation) return;
@@ -145,7 +145,7 @@ function OVEUtils () {
         __private.getOVEInstance().socket.on(function (message) {
             let m = message;
             if (m.sectionId) {
-                if (m.sectionId !== __self.getSectionId()) return;
+                if (Number(m.sectionId) !== Number(__self.getSectionId())) return;
                 m = m.message;
             }
             if (m.operation) return;

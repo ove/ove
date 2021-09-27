@@ -116,10 +116,10 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
 
         if (!connection) return;
         if (ApiUtils.isPrimaryForConnection(connection, link)) {
-            return [{ id: sectionId, link: link }].concat(ApiUtils.getReplicas(connection, sectionId).map(({ secondary, link }) => ({
+            return ApiUtils.getReplicas(connection, sectionId).map(({ secondary, link }) => ({
                 id: secondary,
                 link: link
-            })));
+            }));
         } else {
             const primary = ApiUtils.getPrimarySection(connection, sectionId, link);
             const replicas = ApiUtils.getReplicas(connection, primary).map(({ secondary, link }) => ({
@@ -160,20 +160,20 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
 
         // replicate all sections from primary space to secondary
         const replicas = primarySections.length === 0 ? [] : await Promise.all(primarySections
-            .map(async section => _replicate(connection, section, secondary)));
+            .map(async section => _replicate(connection, JSON.parse(JSON.stringify(section)), secondary)));
 
         await initialize(connection);
 
         return replicas.map(({ secondary }) => secondary);
     };
 
-    const _onEvent = (id, body) => {
-        const map = _getSectionMap(id, ApiUtils.getDefaultLink(ApiUtils.getSpaceBySectionId(id)));
+    const _onEvent = (i, body) => {
+        const map = _getSectionMap(i, ApiUtils.getDefaultLink(ApiUtils.getSpaceBySectionId(i)));
 
         if (!map) return [];
 
         map.forEach(({ id, link }) =>
-            ApiUtils.isLocal(link)
+            ApiUtils.isLocal(link.host)
                 ? _distributeEvent(id, body)
                 : RequestUtils.post(`${link.protocol}${link.host}/connections/sections/distribute/${id}`,
                     ApiUtils.JSONHeader, { event: body, link: link }).catch(log.warn));
@@ -266,9 +266,8 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
         const _loadReplicatedState = (body, primaryId, sectionId) => {
             if (!body.app.url) return;
             section.app = body.app;
-            log.debug('Loading state from primary section: ', primaryId);
             RequestUtils.get(`${body.oldURL}/instances/${primaryId}/state`, ApiUtils.JSONHeader)
-                .then(text => RequestUtils.post(`${body.app.url}/instances/${sectionId}/state`, ApiUtils.JSONHeader, text).catch(log.warn))
+                .then(({ text }) => RequestUtils.post(`${body.app.url}/instances/${sectionId}/state`, ApiUtils.JSONHeader, text).catch(log.warn))
                 .catch(() => log.debug(`No state found at ${body.oldURL}`));
         };
 
@@ -319,7 +318,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             }
         });
 
-        await ApiUtils.applyPrimary(body.space, async (connection, link) => _replicate(connection, section, link));
+        await ApiUtils.applyPrimary(body.space, async (connection, link) => _replicate(connection, JSON.parse(JSON.stringify(section)), link));
 
         log.debug('Successfully created replicas');
         log.info('Successfully created new section:', sectionId);

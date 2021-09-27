@@ -49,10 +49,10 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         log.debug('Getting Section Connection');
 
         if (req.body.protocol && !req.body.host) {
-            _sendError(res, `No host provided, only protocol`);
+            _sendError(res, 'No host provided, only protocol');
             return;
         } else if (req.body.host && !req.query.space) {
-            _sendError(res, `Space must be specified`);
+            _sendError(res, 'Space must be specified');
             return;
         }
 
@@ -94,9 +94,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
         }
 
         let error;
-        const ids = await APIBacking.cache(id, req.body).catch(e => {
-            error = e.message;
-        });
+        const ids = await APIBacking.cache(id, req.body).catch(e => { error = e.message; });
 
         if (error) {
             Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: error }));
@@ -119,7 +117,7 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
             sendError(`Expected primary host: ${process.env.OVE_HOST}, received: ${req.body.primary}`);
             return;
         } else if ((req.body.primary && !req.body.secondary) || (req.body.secondary && !req.body.primary)) {
-            sendError(`Expected two hosts, only received one`);
+            sendError('Expected two hosts, only received one');
             return;
         }
 
@@ -159,11 +157,21 @@ module.exports = (server, log, Utils, Constants, ApiUtils) => {
     };
 
     operation.distributeEvent = (req, res) => {
+        if (!req.body.link) {
+            _sendError(res, 'No link provided while distributing event');
+            return;
+        } else if (!req.body.event) {
+            _sendError(res, 'No event provided while distributing event');
+            return;
+        }
         const link = req.body.link;
         const id = Number(req.params.id);
 
         if (link.host !== process.env.OVE_HOST) {
-            Utils.sendMessage(res, HttpStatus.BAD_REQUEST, JSON.stringify({ error: `Expected host: ${process.env.OVE_HOST}, received host: ${link.host}` }));
+            _sendError(res, `Expected host: ${process.env.OVE_HOST}, received host: ${link.host}`);
+            return;
+        } else if (ApiUtils.getSpaceBySectionId(id) !== link.space) {
+            _sendError(res, `Expected space: ${ApiUtils.getSpaceBySectionId(id)} in link for section id: ${id}, received: ${link.space}`);
             return;
         }
 
