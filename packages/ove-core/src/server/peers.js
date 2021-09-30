@@ -5,8 +5,8 @@ module.exports = function (server, log, Utils, Constants) {
                            Peers of OVE Core
     **************************************************************/
     const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        let r = Math.random() * 16 | 0;
-        let v = c === 'x' ? r : (r & 0x3 | 0x8);
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
 
@@ -43,7 +43,7 @@ module.exports = function (server, log, Utils, Constants) {
         const socketURL = 'ws://' + peerHost;
         log.debug('Establishing WebSocket connection with:', socketURL);
 
-        let ws = new (require('ws'))(socketURL);
+        const ws = new (require('ws'))(socketURL);
         ws.on('close', function (code) {
             log.warn('Lost websocket connection: closed with code:', code);
             log.warn('Attempting to reconnect in ' + Constants.SOCKET_REFRESH_DELAY + 'ms');

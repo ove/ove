@@ -4,8 +4,8 @@ OVE.Utils = new OVEUtils();
 function OVEUtils () {
     // @CONSTANTS
 
-    let __self = this;
-    let __private = {};
+    const __self = this;
+    const __private = {};
 
     //-- It may be required to change the default OVE instance used by OVE.Utils --//
     //-- This function cannot be used unless it has been overridden.             --//
@@ -71,7 +71,7 @@ function OVEUtils () {
         //-- The logger name is stored for later use.           --//
         //-- The log level is either what is specified in the   --//
         //-- constructor or available as a constant.            --//
-        let __private = { name: name, logLevel: (logLevel !== undefined ? logLevel : Constants.LOG_LEVEL) };
+        const __private = { name: name, logLevel: (logLevel !== undefined ? logLevel : Constants.LOG_LEVEL) };
 
         //-- Internal Utility function to get log labels' CSS   --//
         const getLogLabel = function (logLevel) {
@@ -128,7 +128,7 @@ function OVEUtils () {
         __private.getOVEInstance().socket.on(function (message) {
             let m = message;
             if (m.sectionId) {
-                if (Number(m.sectionId) !== Number(__self.getSectionId())) return;
+                if (parseInt(m.sectionId, 10) !== parseInt(__self.getSectionId(), 10)) return;
                 m = m.message;
             }
             if (m.operation) return;
@@ -145,7 +145,7 @@ function OVEUtils () {
         __private.getOVEInstance().socket.on(function (message) {
             let m = message;
             if (m.sectionId) {
-                if (Number(m.sectionId) !== Number(__self.getSectionId())) return;
+                if (parseInt(m.sectionId, 10) !== parseInt(__self.getSectionId(), 10)) return;
                 m = m.message;
             }
             if (m.operation) return;
@@ -359,11 +359,7 @@ function OVEUtils () {
             log.error('Unable to convert', vector, 'from:', inputType, 'to:', outputType);
             return undefined;
         }
-        let output = [];
-        vector.forEach(function (e, i) {
-            output.push(e + conversion[i]);
-        });
-        return output;
+        return vector.map((e, i) => e + conversion[i]);
     };
 
     //-----------------------------------------------------------//

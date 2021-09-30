@@ -38,7 +38,7 @@ app.use('/', express.static(path.join(dirs.nodeModules, 'jquery', 'dist')));
 // variable or through a local file.
 /* jshint ignore:start */
 // current version of JSHint does not support async/await
-let getSpaces = async function () {
+const getSpaces = async function () {
     let spaces;
     // BACKWARDS-COMPATIBILITY: For <= v0.2.0
     const spacesJSONEnvVar = process.env.OVE_SPACES_JSON || process.env.OVE_CLIENTS_JSON;
@@ -59,7 +59,7 @@ let getSpaces = async function () {
     if (!spaces) {
         const spacesPath = path.join(__dirname, 'client', Constants.SPACES_JSON_FILENAME);
         log.info('Loading spaces configuration from path:', spacesPath);
-        spaces = JSON.parse(fs.readFileSync(spacesPath));
+        spaces = JSON.parse(fs.readFileSync(spacesPath).toString());
     }
     return spaces;
 };

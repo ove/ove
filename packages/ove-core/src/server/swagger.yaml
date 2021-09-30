@@ -1295,11 +1295,11 @@ definitions:
             properties:
               load:
                 type: "object"
-                example: {"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}
+                example: {"url": "https://www.youtube.com/embed/XY3NP4JHXZ4"}
                 description: "Accepts either a string or an application-specific state object."
               cache:
                 type: "object"
-                example: {"first":{"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}, "second":{"url": "http://www.youtube.com/embed/XY3NP4JHXZ4"}}
+                example: {"first":{"url": "https://www.youtube.com/embed/XY3NP4JHXZ4"}, "second":{"url": "https://www.youtube.com/embed/XY3NP4JHXZ4"}}
       space:
         type: "string"
         description: "Name of space"

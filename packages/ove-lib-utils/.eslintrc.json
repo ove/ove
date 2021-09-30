@@ -3,6 +3,9 @@
         "jest/globals": true
     },
     "extends": "standard",
+    "globals": {
+        "fetch": true
+    },
     "overrides": [
         {
             "files": [ "**/test/resources/**/*.js" ],

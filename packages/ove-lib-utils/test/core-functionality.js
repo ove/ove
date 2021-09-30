@@ -83,7 +83,7 @@ describe('The OVE Utils library', () => {
     });
 
     it('should be able to generate JSON responses', () => {
-        let res = mockHttp.createResponse();
+        const res = mockHttp.createResponse();
         Utils.sendMessage(res, 999, 'dummy message');
         expect(res._getData()).toEqual('dummy message');
         expect(res.statusCode).toEqual(999);
@@ -99,7 +99,7 @@ describe('The OVE Utils library', () => {
     });
 
     it('should be able to generate empty JSON responses', () => {
-        let res = mockHttp.createResponse();
+        const res = mockHttp.createResponse();
         Utils.sendEmptySuccess(res);
         expect(res._getData()).toEqual(Utils.JSON.EMPTY);
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -269,8 +269,8 @@ describe('The OVE Utils library', () => {
         const app = express();
         const { Utils } = index('core', app, dirs);
         Utils.registerRoutesForContent();
-        let resRoot = await request(app).get('/');
-        let resIndexHTML = await request(app).get('/index.html');
+        const resRoot = await request(app).get('/');
+        const resIndexHTML = await request(app).get('/index.html');
         expect(resRoot.text).toContain(resIndexHTML.text);
     });
 
@@ -284,8 +284,8 @@ describe('The OVE Utils library', () => {
         };
         const { Utils } = index('core', app, newDirs);
         Utils.registerRoutesForContent({ version: 'x.y.z' });
-        let resRoot = await request(app).get('/');
-        let resIndexHTML = await request(app).get('/index.html');
+        const resRoot = await request(app).get('/');
+        const resIndexHTML = await request(app).get('/index.html');
         expect(resRoot.text).not.toContain(resIndexHTML.text);
         expect(resRoot.text).toContain(fs.readFileSync(newDirs.rootPage));
     });
@@ -303,8 +303,8 @@ describe('The OVE Utils library', () => {
         };
         const { Utils } = index('foo', app, newDirs);
         Utils.registerRoutesForContent();
-        let resRoot = await request(app).get('/');
-        let resRootHTML = await request(app).get('/root.html');
+        const resRoot = await request(app).get('/');
+        const resRootHTML = await request(app).get('/root.html');
         expect(resRootHTML.text).not.toContain(resRoot.text);
         expect(resRootHTML.statusCode).toEqual(HttpStatus.NOT_FOUND);
 

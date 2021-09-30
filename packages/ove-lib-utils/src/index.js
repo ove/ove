@@ -52,7 +52,7 @@ function Utils (appName, app, dirs) {
 
     function OVELogger (name) {
         // The logger name is stored for later use.
-        let __private = { name: name };
+        const __private = { name: name };
 
         // Internal Utility function to get log labels
         const getLogLabel = function (logLevel) {
@@ -65,7 +65,7 @@ function Utils (appName, app, dirs) {
             // Each logger can have its own name. If this is
             // not provided, it will default to Unknown.
             const loggerName = __private.name || Constants.LOG_UNKNOWN_APP_ID;
-            return [ (logLevel.name.length === 4 ? ' ' : '') +
+            return [(logLevel.name.length === 4 ? ' ' : '') +
                 getLogLabel(logLevel)('[' + logLevel.name + ']'), time, '-',
             loggerName.padEnd(Constants.LOG_APP_ID_WIDTH), ':'].concat(Object.values(args));
         };
@@ -88,8 +88,8 @@ function Utils (appName, app, dirs) {
     **************************************************************/
     this.registerRoutesForPersistence = function () {
         log.debug('Registering routes for persistence');
-        let __self = this;
-        let __private = { provider: null, local: {}, interval: null };
+        const __self = this;
+        const __private = { provider: null, local: {}, interval: null };
 
         const setProvider = function (req, res) {
             if (!req.body.url) {
@@ -197,7 +197,7 @@ function Utils (appName, app, dirs) {
         }
         log.debug('Building Swagger API documentation');
         // Swagger API documentation
-        let swaggerDoc = (function (swagger, pjson) {
+        const swaggerDoc = (function (swagger, pjson) {
             swagger.basePath = swagger.basePath.replace(Constants.RegExp.Annotation.APP_NAME, appName);
             swagger.info.title = swagger.info.title.replace(Constants.RegExp.Annotation.NAME, pjson.name);
             swagger.info.version = swagger.info.version.replace(Constants.RegExp.Annotation.VERSION, pjson.version);
@@ -212,7 +212,7 @@ function Utils (appName, app, dirs) {
         if (arguments.length > 2 && swaggerExtPath) {
             (function (swaggerDoc, swaggerExt) {
                 if (fs.existsSync(swaggerExt)) {
-                    let swagger = yamljs.load(fs.readFileSync(swaggerExt));
+                    const swagger = yamljs.load(fs.readFileSync(swaggerExt));
                     // Copying tags (which is an array)
                     swagger.tags.forEach(function (e) {
                         swaggerDoc.tags.push(e);
@@ -273,18 +273,13 @@ function Utils (appName, app, dirs) {
         return socket;
     };
 
-    this.sendMessage = function (res, status, msg) {
-        res.status(status).set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
-    };
+    this.sendMessage = (res, status, msg) => res.status(status)
+        .set(Constants.HTTP_HEADER_CONTENT_TYPE, Constants.HTTP_CONTENT_TYPE_JSON).send(msg);
 
     // We don't want to see browser errors, so we send an empty success response in some cases.
-    this.sendEmptySuccess = function (res) {
-        this.sendMessage(res, HttpStatus.OK, this.JSON.EMPTY);
-    };
+    this.sendEmptySuccess = res => this.sendMessage(res, HttpStatus.OK, this.JSON.EMPTY);
 
-    this.isNullOrEmpty = function (input) {
-        return (!input && input !== 0 && input !== false) || this.JSON.equals(input, {}) || this.JSON.equals(input, []);
-    };
+    this.isNullOrEmpty = input => (!input && input !== 0 && input !== false) || this.JSON.equals(input, {}) || this.JSON.equals(input, []);
 }
 
 /**************************************************************

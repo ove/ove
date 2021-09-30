@@ -3,6 +3,8 @@ const fs = require('fs');
 const request = require('supertest');
 const HttpStatus = require('http-status-codes');
 
+const HTTP = 'http://';
+
 // Do not expose console during init.
 const OLD_CONSOLE = global.console;
 global.console = { log: jest.fn(x => x), warn: jest.fn(x => x), error: jest.fn(x => x) };
@@ -55,20 +57,20 @@ describe('The OVE App Base library', () => {
         const newBase = newIndex(path.join(srcDir, '..', 'test', 'fake'), 'dummy');
         const { app: newApp } = newBase;
         expect(Object.keys(newBase)).toContain('config');
-        let res = await request(newApp).post('/instances/flush');
+        const res = await request(newApp).post('/instances/flush');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
         expect(newBase.config).toEqual([]);
     });
 
     it('should return its name', async () => {
-        let res = await request(app).get('/name');
+        const res = await request(app).get('/name');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify('dummy'));
     });
 
     it('should return a clock', async () => {
-        let messages = [];
+        const messages = [];
         base.clock.setWS({
             safeSend: function (m) {
                 messages.push(m);
@@ -215,15 +217,15 @@ describe('The OVE App Base library', () => {
         expect(Object.keys(base.Utils)).toContain('validateState');
 
         expect(base.Utils.validateState({
-            'sessionId': 'random',
-            'maxSessions': 8
-        }, [ { value: ['state.sessionId'] }, { prefix: ['state.maxSessions'] } ])).toEqual(true);
+            sessionId: 'random',
+            maxSessions: 8
+        }, [{ value: ['state.sessionId'] }, { prefix: ['state.maxSessions'] }])).toEqual(true);
 
         expect(base.Utils.validateState({
-            'url': 'https://raw.githubusercontent.com/mozilla/pdf.js/master/test/pdfs/TAMReview.pdf',
-            'settings': {
-                'scale': 2,
-                'scrolling': 'vertical'
+            url: 'https://raw.githubusercontent.com/mozilla/pdf.js/master/test/pdfs/TAMReview.pdf',
+            settings: {
+                scale: 2,
+                scrolling: 'vertical'
             }
         }, [
             { value: ['state.url'] },
@@ -235,9 +237,9 @@ describe('The OVE App Base library', () => {
         ])).toEqual(true);
 
         expect(base.Utils.validateState({
-            'settings': {
-                'scale': 2,
-                'scrolling': 'vertical'
+            settings: {
+                scale: 2,
+                scrolling: 'vertical'
             }
         }, [
             { value: ['state.url'] },
@@ -249,19 +251,19 @@ describe('The OVE App Base library', () => {
         ])).not.toEqual(true);
 
         expect(base.Utils.validateState({
-            'neo4j': {
-                'x': { 'min': 0, 'max': 100 },
-                'y': { 'min': 0, 'max': 100 },
-                'db': { 'url': 'http://localhost:7474', 'user': 'neo4j', 'password': 'admin' },
-                'query': 'MATCH (n) WHERE n.y >= Y_MIN AND n.y < Y_MAX AND n.x >= X_MIN AND n.x < X_MAX RETURN n LIMIT 100'
+            neo4j: {
+                x: { min: 0, max: 100 },
+                y: { min: 0, max: 100 },
+                db: { url: 'http://localhost:7474', user: 'neo4j', password: 'admin' },
+                query: 'MATCH (n) WHERE n.y >= Y_MIN AND n.y < Y_MAX AND n.x >= X_MIN AND n.x < X_MAX RETURN n LIMIT 100'
             },
-            'settings': {
-                'autoRescale': true,
-                'clone': false,
-                'rescaleIgnoreSize': true,
-                'skipErrors': true
+            settings: {
+                autoRescale: true,
+                clone: false,
+                rescaleIgnoreSize: true,
+                skipErrors: true
             },
-            'renderer': 'canvas'
+            renderer: 'canvas'
         }, [
             { value: ['state.neo4j', 'state.neo4j.db', 'state.neo4j.db.url', 'state.neo4j.query'] },
             { prefix: ['state.settings'] },
@@ -273,7 +275,7 @@ describe('The OVE App Base library', () => {
     });
 
     it('should be able to perform a flush operation', async () => {
-        let res = await request(app).post('/instances/flush');
+        const res = await request(app).post('/instances/flush');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(Utils.JSON.EMPTY);
         // Validation of post condition after flush. This is not the only
@@ -281,11 +283,11 @@ describe('The OVE App Base library', () => {
         // various pre-conditions. However, this is the only test of /flush
         // with no pre-conditions.
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
-            path.join(srcDir, '..', 'test', 'resources', 'src', 'config.json'))));
+            path.join(srcDir, '..', 'test', 'resources', 'src', 'config.json')).toString()));
     });
 
     it('it should fail if the content type was not JSON', async () => {
-        const payload = '{"url": "http://dummy.com"}';
+        const payload = `{"url": "${HTTP}dummy.com"}`;
         let res = await request(app).post('/instances/0/state', payload);
         expect(res.statusCode).toEqual(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
 
@@ -294,7 +296,7 @@ describe('The OVE App Base library', () => {
     });
 
     it('should be able to store state of a section until it has been flushed', async () => {
-        const payload = { url: 'http://dummy.com' };
+        const payload = { url: `${HTTP}dummy.com` };
         await request(app).post('/instances/0/state').send(payload);
 
         let res = await request(app).get('/instances/0/state');
@@ -309,14 +311,14 @@ describe('The OVE App Base library', () => {
         let res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
 
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/instances/0/state').send(payload1);
 
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload1));
 
-        const payload2 = { url: 'http://another.dummy.com' };
+        const payload2 = { url: `${HTTP}another.dummy.com` };
         await request(app).post('/instances/1/state').send(payload2);
 
         res = await request(app).get('/instances/1/state');
@@ -341,14 +343,14 @@ describe('The OVE App Base library', () => {
         let res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.NO_CONTENT);
 
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/instances/0/state').send(payload1);
 
         res = await request(app).get('/instances/0/state');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload1));
 
-        const payload2 = { url: 'http://another.dummy.com' };
+        const payload2 = { url: `${HTTP}another.dummy.com` };
         await request(app).post('/instances/1/state').send(payload2);
 
         res = await request(app).get('/instances/1/state');
@@ -369,7 +371,7 @@ describe('The OVE App Base library', () => {
         // This test is different from the test above since there are
         // two ways to read state of multiple sections, either all at once
         // (as tested above) or one by one (as tested here).
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/instances/0/state').send(payload1);
 
         res = await request(app).get('/instances/0/state');
@@ -379,7 +381,7 @@ describe('The OVE App Base library', () => {
         res = await request(app).get('/instances/1/state');
         expect(res.statusCode).not.toEqual(HttpStatus.OK);
 
-        const payload2 = { url: 'http://another.dummy.com' };
+        const payload2 = { url: `${HTTP}another.dummy.com` };
         await request(app).post('/instances/1/state').send(payload2);
 
         res = await request(app).get('/instances/0/state');
@@ -403,7 +405,7 @@ describe('The OVE App Base library', () => {
 
         // This validates reading of state information using both (all at
         // once and one by one) approaches.
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/instances/0/state').send(payload1);
 
         res = await request(app).get('/instances/0/state');
@@ -414,7 +416,7 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify(payload1));
 
-        const payload2 = { url: 'http://another.dummy.com' };
+        const payload2 = { url: `${HTTP}another.dummy.com` };
         await request(app).post('/instances/0/state').send(payload2);
 
         res = await request(app).get('/instances/0/state');
@@ -439,9 +441,9 @@ describe('The OVE App Base library', () => {
         expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
         expect(res.text).toEqual(JSON.stringify({ error: 'invalid state name' }));
 
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/states/foo').send(payload1);
-        await request(app).post('/states/bar').send({ url: 'http://dummy.com' });
+        await request(app).post('/states/bar').send({ url: `${HTTP}dummy.com` });
 
         res = await request(app).get('/states/foo');
         expect(res.statusCode).toEqual(HttpStatus.OK);
@@ -465,11 +467,11 @@ describe('The OVE App Base library', () => {
     });
 
     it('should be able to list state names', async () => {
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/states/foo').send(payload1);
-        await request(app).post('/states/bar').send({ url: 'http://dummy.com' });
+        await request(app).post('/states/bar').send({ url: `${HTTP}dummy.com` });
 
-        let res = await request(app).get('/states');
+        const res = await request(app).get('/states');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(JSON.parse(res.text)).toContain('foo');
         expect(JSON.parse(res.text)).toContain('bar');
@@ -483,7 +485,7 @@ describe('The OVE App Base library', () => {
         // when it does not happen when debug logging is disabled at an application
         // level.
         const spy = jest.spyOn(log, 'debug');
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/states/foo').send(payload1);
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
@@ -551,7 +553,7 @@ describe('The OVE App Base library', () => {
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should not fail to set runtime or named state when state validation is not available at an app-level', async () => {
-        let validateState = base.operations.validateState;
+        const validateState = base.operations.validateState;
 
         const spy = jest.spyOn(log, 'error');
         base.operations.validateState = undefined;
@@ -571,7 +573,7 @@ describe('The OVE App Base library', () => {
     });
 
     it('should fail to set runtime or named state when state validation fails', async () => {
-        let validateState = base.operations.validateState;
+        const validateState = base.operations.validateState;
 
         const spy = jest.spyOn(log, 'error');
         base.operations.validateState = function (_state) {
@@ -682,10 +684,10 @@ describe('The OVE App Base library', () => {
         await request(app).post('/states/foo').send(payload1);
         await request(app).post('/instances/0/state').send(payload1);
 
-        let transform = base.operations.transform;
-        let diff = base.operations.diff;
-        let canTransform = base.operations.canTransform;
-        let canDiff = base.operations.canDiff;
+        const transform = base.operations.transform;
+        const diff = base.operations.diff;
+        const canTransform = base.operations.canTransform;
+        const canDiff = base.operations.canDiff;
 
         base.operations.transform = undefined;
         let res = await request(app).post('/states/foo/transform').send(Utils.JSON.EMPTY);
@@ -861,11 +863,11 @@ describe('The OVE App Base library', () => {
         const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
         const { app } = base;
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
-            path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
+            path.join(srcDir, '..', 'test', 'resources', 'package.json')).toString()));
         await request(app).post('/instances/flush');
         // Config must be reloaded after a flush operation
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
-            path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
+            path.join(srcDir, '..', 'test', 'resources', 'package.json')).toString()));
         delete process.env.OVE_DUMMY_CONFIG_JSON;
     });
 
@@ -881,7 +883,7 @@ describe('The OVE App Base library', () => {
         };
         const base = index(dirs, 'dummy');
         expect(base.config).toEqual(JSON.parse(fs.readFileSync(
-            path.join(srcDir, '..', 'test', 'resources', 'package.json'))));
+            path.join(srcDir, '..', 'test', 'resources', 'package.json')).toString()));
         delete process.env.OVE_DUMMY_CONFIG_JSON;
     });
 
@@ -891,7 +893,7 @@ describe('The OVE App Base library', () => {
         const base = index(path.join(srcDir, '..', 'test', 'resources', 'src'), 'dummy');
         const { app, log } = base;
         const spy = jest.spyOn(log, 'debug');
-        const payload1 = { url: 'http://dummy.com' };
+        const payload1 = { url: `${HTTP}dummy.com` };
         await request(app).post('/states/foo').send(payload1);
         expect(spy).not.toHaveBeenCalled();
         spy.mockRestore();

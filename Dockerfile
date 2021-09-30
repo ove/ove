@@ -1,9 +1,7 @@
 FROM node:14-alpine
 WORKDIR /usr/src/app
 
-ARG port=8080
-
-RUN echo "Starting OVE on port: ${port}"
+ARG PORT=8080
 
 RUN npm install -global pm2
 RUN npm install -global lerna
@@ -13,7 +11,8 @@ RUN npm run install:prod
 
 RUN npm uninstall -global lerna
 
-EXPOSE ${port}
+EXPOSE ${PORT}
 
-CMD [ "pm2-runtime", "pm2.json" ]
+ENTRYPOINT [ "pm2-runtime" ]
+CMD [ "pm2.json" ]
 

@@ -106,9 +106,7 @@ describe('The OVE Core server', () => {
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should be starting up on port ' + PORT, async () => {
-        let res = await httpRequest().get('/spaces?oveSectionId=0');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
-        expect(res.text).toEqual(Utils.JSON.EMPTY);
+        await httpRequest().get('/spaces?oveSectionId=0').expect(HttpStatus.OK, Utils.JSON.EMPTY);
     });
     /* jshint ignore:end */
 

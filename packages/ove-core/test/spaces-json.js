@@ -21,7 +21,7 @@ describe('The OVE Core server', () => {
     /* jshint ignore:start */
     // current version of JSHint does not support async/await
     it('should return a list of spaces', async () => {
-        let res = await request(app).get('/spaces');
+        const res = await request(app).get('/spaces');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // It is important to compare the JSON on both side since the ordering of
         // elements changes depending on how it was stringified.
@@ -34,17 +34,13 @@ describe('The OVE Core server', () => {
     });
 
     it('should return space geometries', async () => {
-        let res = await request(app).get('/spaces/LocalNine/geometry');
-        expect(res.statusCode).toEqual(HttpStatus.OK);
         // The width and height are hard-coded for the LocalNine space and will have
         // to be updated accordingly if the dimensions of the space has changed.
-        expect(res.text).toEqual(JSON.stringify({ w: 4320, h: 2424 }));
+        await request(app).get('/spaces/LocalNine/geometry').expect(HttpStatus.OK, JSON.stringify({ w: 4320, h: 2424 }));
     });
 
     it('should return an error if the space name was invalid', async () => {
-        let res = await request(app).get('/spaces/Fake/geometry');
-        expect(res.statusCode).toEqual(HttpStatus.BAD_REQUEST);
-        expect(res.text).toEqual(JSON.stringify({ error: 'Invalid Space: Fake' }));
+        await request(app).get('/spaces/Fake/geometry').expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Space: Fake' }));
     });
     /* jshint ignore:end */
 

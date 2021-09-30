@@ -21,7 +21,7 @@ describe('The OVE Core server', () => {
 
     it('should return an appropriate list of spaces by id after a section has been created', async () => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
 
         await request(app).get('/sections/0')
@@ -29,12 +29,12 @@ describe('The OVE Core server', () => {
 
         await request(app).get('/spaces?oveSectionId=0')
             .expect(HttpStatus.OK, JSON.stringify({
-                'TestingNine': [{}, {}, {}, {}, {}, {}, {
-                    'x': 0,
-                    'y': 0,
-                    'w': 10,
-                    'h': 10,
-                    'offset': { 'x': 10, 'y': 0 }
+                TestingNine: [{}, {}, {}, {}, {}, {}, {
+                    x: 0,
+                    y: 0,
+                    w: 10,
+                    h: 10,
+                    offset: { x: 10, y: 0 }
                 }, {}, {}]
             }));
 
@@ -43,22 +43,22 @@ describe('The OVE Core server', () => {
 
     it('should reject invalid requests when creating sections', async () => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, w: 10, y: 0, x: 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Space' }));
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'fake', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'fake', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Space' }));
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', y: 0, x: 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, x: 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
         await request(app).post('/section')
-            .send({ 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
     });
 
@@ -68,16 +68,16 @@ describe('The OVE Core server', () => {
     });
 
     it('should reject requests for updating a section when it does not exist', async () => {
-        await request(app).post('/sections/0').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+        await request(app).post('/sections/0').send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Section Id' }));
     });
 
     it('should reject invalid requests when updating sections', async () => {
-        await request(app).post('/sections/moveTo').send({ 'space': 'fake' })
+        await request(app).post('/sections/moveTo').send({ space: 'fake' })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Space' }));
-        await request(app).post('/sections/transform').send({ 'scale': { x: 0 } })
+        await request(app).post('/sections/transform').send({ scale: { x: 0 } })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
-        await request(app).post('/sections/transform').send({ 'translate': {} })
+        await request(app).post('/sections/transform').send({ translate: {} })
             .expect(HttpStatus.BAD_REQUEST, JSON.stringify({ error: 'Invalid Dimensions' }));
     });
 
@@ -115,7 +115,7 @@ describe('The OVE Core server', () => {
 
     it('should be supporting offsets', async () => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNineOffsets', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, space: 'TestingNineOffsets', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
 
         await request(app).get('/sections/0').expect(HttpStatus.OK, JSON.stringify(
@@ -123,12 +123,12 @@ describe('The OVE Core server', () => {
 
         await request(app).get('/spaces?oveSectionId=0')
             .expect(HttpStatus.OK, JSON.stringify({
-                'TestingNineOffsets': [{}, {}, {}, {}, {}, {}, {
-                    'x': 0,
-                    'y': 0,
-                    'w': 10,
-                    'h': 10,
-                    'offset': { 'x': 110, 'y': 100 }
+                TestingNineOffsets: [{}, {}, {}, {}, {}, {}, {
+                    x: 0,
+                    y: 0,
+                    w: 10,
+                    h: 10,
+                    offset: { x: 110, y: 100 }
                 }, {}, {}]
             }));
 
@@ -137,7 +137,7 @@ describe('The OVE Core server', () => {
 
     it('should be producing ove.js', async () => {
         const pjson = require(path.join('..', 'package.json'));
-        let res = await request(app).get('/ove.js');
+        const res = await request(app).get('/ove.js');
         expect(res.statusCode).toEqual(HttpStatus.OK);
         // Sometimes uglify fails to minify ove.js. Then the response could be either undefined or empty.
         expect(res.text).not.toBeUndefined();

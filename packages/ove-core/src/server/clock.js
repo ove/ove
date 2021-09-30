@@ -15,8 +15,8 @@ module.exports = function (server, log, Constants) {
     const clock = {
         syncResults: {},
         sync: function () {
-            let diffs = [];
-            let clients = [];
+            const diffs = [];
+            const clients = [];
             Object.keys(clock.syncResults).forEach(function (c) {
                 // We only worry about the current set of results
                 while (clock.syncResults[c].length > Constants.CLOCK_SYNC_ATTEMPTS) {
@@ -60,12 +60,10 @@ module.exports = function (server, log, Constants) {
                     function (a, b) { return a + b; }, 0) / (q3 - q1) | 0;
                 log.trace('Calculated overall difference:', clock.diff);
 
-                let clockDiff = {};
+                const clockDiff = {};
                 clients.forEach(function (c) {
                     // Always broadcast a difference as an integer
-                    let cDiff = clock.syncResults[c].reduce(
-                        function (a, b) { return a + b; }, 0) /
-                        clock.syncResults[c].length - clock.diff | 0;
+                    const cDiff = clock.syncResults[c].reduce((a, b) => a + b, 0) / clock.syncResults[c].length - clock.diff | 0;
                     delete clock.syncResults[c];
                     if (cDiff !== 0) {
                         clockDiff[c] = cDiff;

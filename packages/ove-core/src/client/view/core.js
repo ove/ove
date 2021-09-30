@@ -22,30 +22,30 @@ cullSections = function (id, hide) {
     // section was responsible for culling the given content. As culling happens in the
     // order of sections being created the responsibility would generally be with the
     // overlapping section that is the nearest.
-    let f = $('iframe:zIndex(' + id + ')');
+    const f = $('iframe:zIndex(' + id + ')');
     if (f.length && (!f.css('opacity') || +f.css('opacity') === 1)) {
         // The region has a format of {w}x{h}+{x}+{y}
-        let region = parseFloat(f.css('width')) + 'x' + parseFloat(f.css('height')) + '+' +
+        const region = parseFloat(f.css('width')) + 'x' + parseFloat(f.css('height')) + '+' +
             parseFloat(f.css('marginLeft')) + '+' + parseFloat(f.css('marginTop'));
         if (hide) {
-            let s = $('iframe:inRegion(' + region + '):behind(' + id + ')');
+            const s = $('iframe:inRegion(' + region + '):behind(' + id + ')');
             if (s.length) {
                 log.debug('Hiding ' + s.length + ' sections covered by section:', id);
                 s.hide();
                 s.each(function () {
-                    let e = $(this);
+                    const e = $(this);
                     e.attr({ hiddenSrc: e.attr('src') }).removeAttr('src');
                 });
                 s.attr('culledBy', id);
             }
         } else {
-            let s = $('iframe:inRegion(' + region + '):behind(' + id + '):hidden')
+            const s = $('iframe:inRegion(' + region + '):behind(' + id + '):hidden')
                 .filter(function () { return $(this).attr('culledBy') === id.toString(); });
             if (s.length) {
                 log.debug('Displaying ' + s.length + ' sections covered by section:', id);
                 s.removeAttr('culledBy');
                 s.each(function () {
-                    let e = $(this);
+                    const e = $(this);
                     e.attr({ src: e.attr('hiddenSrc') }).removeAttr('hiddenSrc');
                 });
                 s.show();
@@ -63,7 +63,7 @@ initView = function () {
         return +$(e).css('zIndex') < parseInt(match[3], 10);
     };
     $.expr[':'].inRegion = function (e, _i, match) {
-        let g = match[3].split('+');
+        const g = match[3].split('+');
         const bounds = {
             x: parseFloat(g[1]),
             y: parseFloat(g[2]),
@@ -139,8 +139,8 @@ updateSections = function (m) {
         log.warn('Client id not provided');
     }
     switch (m.action) {
-        case Constants.Action.CREATE:
-            let geometry = (m.spaces && ((m.spaces[space] || [])[client] || {})) || {};
+        case Constants.Action.CREATE: {
+            const geometry = (m.spaces && ((m.spaces[space] || [])[client] || {})) || {};
             if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                 log.info('Creating new section:', m.id, ', on client:', client, ', space:', space);
                 log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
@@ -162,14 +162,15 @@ updateSections = function (m) {
                 }).appendTo('.container');
             }
             break;
-        case Constants.Action.UPDATE:
+        }
+        case Constants.Action.UPDATE: {
             const frame = $(Constants.SECTION_FRAME_ID + m.id);
             if (frame.length) {
                 log.info('Updating section:', m.id, ', on client:', client, ', space:', space);
                 cullSections(m.id, false);
                 if (m.spaces) {
                     // If an iFrame exists, we may need to resize or remove it.
-                    let geometry = (m.spaces[space] || [])[client] || {};
+                    const geometry = (m.spaces[space] || [])[client] || {};
                     if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                         frame.css({
                             transformOrigin: 'top left',
@@ -197,7 +198,7 @@ updateSections = function (m) {
                     log.info('Removing iFrame source URL');
                 }
             } else if (m.spaces) {
-                let geometry = (m.spaces[space] || [])[client] || {};
+                const geometry = (m.spaces[space] || [])[client] || {};
                 if (Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0) {
                     log.info('Updating section:', m.id, ', on client:', client, ', space:', space);
                     log.debug('Creating new iFrame with id:', Constants.SECTION_FRAME_ID.substring(1) + m.id);
@@ -220,6 +221,7 @@ updateSections = function (m) {
                 }
             }
             break;
+        }
         case Constants.Action.DELETE:
             if (m.id !== undefined) {
                 const frame = $(Constants.SECTION_FRAME_ID + m.id);

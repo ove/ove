@@ -86,7 +86,8 @@ module.exports = (server, log, Utils, Constants) => {
     const _isPrimaryForConnection = (connection, link) => _linkEquals(connection.primary, link);
 
     // returns the primary section for the sectionId
-    const _getPrimarySection = (connection, sectionId, link) => connection.sections.find(s => Number(s.secondary) === Number(sectionId) && _linkEquals(s.link, link)).primary;
+    const _getPrimarySection = (connection, sectionId, link) => connection.sections
+        .find(s => parseInt(s.secondary, 10) === parseInt(sectionId, 10) && _linkEquals(s.link, link)).primary;
 
     const _getMappingsForSecondary = (connection, link) => connection.sections ? connection.sections.filter(x => _linkEquals(x.link, link)).map(({ secondary }) => secondary) : [];
 
@@ -151,7 +152,8 @@ module.exports = (server, log, Utils, Constants) => {
         const connection = _getConnection(link);
         const id = _getConnectionId(connection);
 
-        connection.sections.splice(connection.sections.findIndex(s => Number(s.secondary) === Number(sectionId) && _linkEquals(s.link, link)), 1);
+        connection.sections.splice(connection.sections
+            .findIndex(s => parseInt(s.secondary, 10) === parseInt(sectionId, 10) && _linkEquals(s.link, link)), 1);
         connection.id = id;
         server.state.set(`connections[${id}]`, connection);
     };
@@ -168,8 +170,9 @@ module.exports = (server, log, Utils, Constants) => {
     const _removeConnection = link => {
         const _remove = (index) => server.state.set(`connections[${index}]`, {});
         const primary = _getConnections().findIndex(connection => _linkEquals(connection.primary, link));
-        _remove(primary !== -1 ? primary : _getConnections()
-            .findIndex(connection => connection.secondary && connection.secondary.some(s => _linkEquals(s, link))));
+        _remove(primary !== -1
+            ? primary
+            : _getConnections().findIndex(connection => connection.secondary && connection.secondary.some(s => _linkEquals(s, link))));
     };
 
     // returns the section information for a given id

@@ -157,7 +157,7 @@ describe('The OVE Utils library - Persistence', () => {
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        let scopes = [];
+        const scopes = [];
         scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         scopes.push(nock('http://localhost:8081').delete('/core/fooNumber').reply(HttpStatus.OK, Utils.JSON.EMPTY));
 
@@ -191,7 +191,7 @@ describe('The OVE Utils library - Persistence', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
         expect(state.get('fooNumber')).toBeUndefined();
-        let scopes = [];
+        const scopes = [];
         scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         state.set('fooNumber', 10);
         expect(state.get('fooNumber')).toEqual(10);
@@ -295,7 +295,7 @@ describe('The OVE Utils library - Persistence', () => {
         const state = Utils.Persistence;
 
         expect(state.get('fooNumber')).toBeUndefined();
-        let scopes = [];
+        const scopes = [];
         scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         state.set('fooNumber', 10);
         expect(state.get('fooNumber')).toEqual(10);
@@ -401,10 +401,10 @@ describe('The OVE Utils library - Persistence', () => {
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
         expect(state.get('fooNumber')).toBeUndefined();
-        let scopes = [];
+        const scopes = [];
         scopes.push(nock('http://localhost:8081').filteringRequestBody(() => '*').post('/core/fooNumber', '*').reply(HttpStatus.OK, Utils.JSON.EMPTY));
         scopes.push(nock('http://localhost:8081').delete('/core/fooNumber/obj2').reply(HttpStatus.OK, Utils.JSON.EMPTY));
-        let func = function () {};
+        const func = function () {};
         let spy = jest.spyOn(global.console, 'warn');
         state.set('fooFunc', func);
         expect(spy).toHaveBeenCalled();
@@ -433,7 +433,7 @@ describe('The OVE Utils library - Persistence', () => {
         const { Utils } = index('core', app);
         Utils.registerRoutesForPersistence();
 
-        let spy = jest.spyOn(global.console, 'warn');
+        const spy = jest.spyOn(global.console, 'warn');
         Utils.Persistence.sync();
         expect(spy).toHaveBeenCalled();
         spy.mockRestore();
@@ -456,7 +456,7 @@ describe('The OVE Utils library - Persistence', () => {
         await request(app).post('/persistence').send({ url: 'http://localhost:8081' })
             .expect(HttpStatus.OK, Utils.JSON.EMPTY);
 
-        let scopes = [];
+        const scopes = [];
         const mockCallback = jest.fn(x => x);
         const OLD_CONSOLE = global.console;
         global.console = { error: mockCallback, log: OLD_CONSOLE.log, warn: OLD_CONSOLE.warn };

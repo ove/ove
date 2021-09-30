@@ -32,14 +32,14 @@ function Persistence (appName, log, Utils, Constants, __private) {
             case Type.ARRAY:
                 x = [];
                 item.value.forEach(function (e) {
-                    let key = e.key.substring(e.key.lastIndexOf('[') + 1, e.key.lastIndexOf(']'));
+                    const key = e.key.substring(e.key.lastIndexOf('[') + 1, e.key.lastIndexOf(']'));
                     x[parseInt(key, 10)] = _fromPersistable(e);
                 });
                 return x;
             case Type.OBJECT:
                 x = {};
                 item.value.forEach(function (e) {
-                    let key = e.key.substring(e.key.lastIndexOf('[') + 1, e.key.lastIndexOf(']'));
+                    const key = e.key.substring(e.key.lastIndexOf('[') + 1, e.key.lastIndexOf(']'));
                     x[key] = _fromPersistable(e);
                 });
                 return x;
@@ -109,7 +109,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
 
     // A utility method to covert keys to/from local from/to remote.
     const _convertKey = function (key) {
-        let result = key.split('');
+        const result = key.split('');
         if (key.indexOf('/') > -1) {
             while (result.indexOf('/') > -1) {
                 result.splice(result.indexOf('/') + 1, 0, '[');
@@ -141,7 +141,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
             item.value.forEach(function (e) {
                 updateRemoteItem(e);
             });
-        } else if (item !== undefined && item.type !== undefined) {
+        } else if (item?.type !== undefined) {
             const url = __private.provider + '/' + appName + '/' + _convertKey(item.key);
             if (item.value === undefined) {
                 request.delete(url, _handleRequestError);
@@ -215,7 +215,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                 }
                 return current;
             case Type.ARRAY:
-            case Type.OBJECT:
+            case Type.OBJECT: {
                 // The arrays are sorted to avoid objects being replaced during parsing.
                 current.value = _sortValues(current).value;
                 future.value = _sortValues(future).value;
@@ -247,6 +247,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                     }
                 }
                 return current;
+            }
             default:
                 _logUnknownType(current.type);
         }
@@ -256,7 +257,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
                 CRUD Operations on Persistable Objects
     **************************************************************/
     const createParentIfNotExisting = function (key) {
-        let parent = readPersistable(__private.local, key, true);
+        const parent = readPersistable(__private.local, key, true);
         if (!parent) {
             const parentKey = key.substring(0, key.lastIndexOf('['));
             createParentIfNotExisting(parentKey);
@@ -272,7 +273,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
     };
 
     const createOrUpdatePersistable = function (key, value) {
-        let parent = readPersistable(__private.local, key, true);
+        const parent = readPersistable(__private.local, key, true);
         if (!parent) {
             log.error('Invalid key:', key);
             return;
@@ -326,7 +327,7 @@ function Persistence (appName, log, Utils, Constants, __private) {
     const deletePersistable = function (key, deleteRemoteCopy) {
         let result;
         if (readPersistable(__private.local, key)) {
-            let parent = readPersistable(__private.local, key, true);
+            const parent = readPersistable(__private.local, key, true);
             if (parent === __private.local) {
                 result = __private.local[key];
                 delete __private.local[key];

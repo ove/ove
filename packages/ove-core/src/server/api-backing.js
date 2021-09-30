@@ -84,7 +84,8 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
 
         if (!connection) return false;
 
-        await (secondary ? ApiUtils.disconnectSpaceWrapper(connection, secondary)
+        await (secondary
+            ? ApiUtils.disconnectSpaceWrapper(connection, secondary)
             : ApiUtils.removeConnectionWrapper(connection, primary));
 
         return true;
@@ -125,7 +126,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             const replicas = ApiUtils.getReplicas(connection, primary).map(({ secondary, link }) => ({
                 id: secondary,
                 link: link
-            })).filter(({ id }) => Number(id) !== Number(sectionId));
+            })).filter(({ id }) => parseInt(id, 10) !== parseInt(sectionId, 10));
             return replicas.concat([{ id: primary, link: connection.primary }]);
         }
     };
@@ -159,8 +160,10 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
         const primarySections = ApiUtils.getSectionsForSpace(primary);
 
         // replicate all sections from primary space to secondary
-        const replicas = primarySections.length === 0 ? [] : await Promise.all(primarySections
-            .map(async section => _replicate(connection, JSON.parse(JSON.stringify(section)), secondary)));
+        const replicas = primarySections.length === 0
+            ? []
+            : await Promise.all(primarySections
+                .map(async section => _replicate(connection, JSON.parse(JSON.stringify(section)), secondary)));
 
         await initialize(connection);
 
@@ -190,7 +193,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
 
     const _calculateSectionLayout = (spaceName, geometry) => {
         // Calculate the dimensions on a client-by-client basis
-        let layout = [];
+        const layout = [];
         server.spaces[spaceName].forEach(e => {
             // A section overlaps with a client if all of these conditions are met:
             // - the section's left edge is to the left of the client's right edge
@@ -203,7 +206,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
                 layout.push({});
                 return;
             }
-            let c = Object.assign({}, e);
+            const c = Object.assign({}, e);
             // We generally don't use offsets, but this can be used to move content relative
             // to top-left both in the positive and negative directions. If the offsets were
             // not set (the most common case), we initialize it to (0,0).
@@ -256,7 +259,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             return true;
         }
 
-        let geometry = (spaces[socket.space] || [])[socket.client] || {};
+        const geometry = (spaces[socket.space] || [])[socket.client] || {};
 
         return Object.keys(geometry).length !== 0 && geometry.h > 0 && geometry.w > 0;
     };
@@ -271,19 +274,19 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
                 .catch(() => log.debug(`No state found at ${body.oldURL}`));
         };
 
-        let section = { w: body.w, h: body.h, x: body.x, y: body.y, spaces: {} };
+        const section = { w: body.w, h: body.h, x: body.x, y: body.y, spaces: {} };
         section.spaces[body.space] = _calculateSectionLayout(body.space, {
             x: body.x, y: body.y, w: body.w, h: body.h
         });
         log.debug('Generated spaces configuration for new section');
 
         // Deploy an App into a section
-        let sectionId = server.state.get('sections').length;
+        const sectionId = server.state.get('sections').length;
         section.id = sectionId;
 
         if (body.app) {
             const url = body.app.url.replace(/\/$/, '');
-            section.app = { 'url': url };
+            section.app = { url: url };
             log.debug('Got URL for app:', url);
 
             if (body.primaryId !== undefined) {
@@ -407,11 +410,12 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
     };
 
     const _deleteSections = async (space, groupId) => {
-        let sections = server.state.get('sections');
+        const sections = server.state.get('sections');
         _messagePeers('deleteSections', { query: { space: space, groupId: groupId } });
 
         if (groupId || space) {
-            const map = groupId ? e => { _deleteSectionById(e); return parseInt(e, 10); }
+            const map = groupId
+                ? e => { _deleteSectionById(e); return parseInt(e, 10); }
                 : ({ index }) => { _deleteSectionById(index); return parseInt(index, 10); };
             const deletedSections = _filterSections(groupId, space, sections, 'Deleted', map);
 
@@ -485,13 +489,13 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             }
         }
 
-        let result = [];
+        const result = [];
 
         let numSectionsToFetchState = sectionsToFetch.length;
 
         for (const i of sectionsToFetch) {
-            let s = sections[i];
-            let section = { id: i, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0] };
+            const s = sections[i];
+            const section = { id: i, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0] };
             const app = s.app;
             if (app) {
                 section.app = { url: app.url, state: app.state, opacity: app.opacity };
@@ -522,12 +526,12 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
     // either to update all sections belonging to a given group, or to update a specific
     // section by its id.
     const _updateSectionById = (sectionId, body, space, geometry, app) => {
-        let commands = [];
+        const commands = [];
         let oldURL = null;
         app = body ? body.app : app;
         let oldOpacity = null;
         space = body ? body.space : space;
-        let section = server.state.get('sections[' + sectionId + ']');
+        const section = server.state.get('sections[' + sectionId + ']');
         geometry = body ? { x: body.x, y: body.y, w: body.w, h: body.h } : geometry;
 
         if (!section) return;
@@ -590,7 +594,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
                 RequestUtils.post(`${oldURL}/instances/${sectionId}/flush`).catch(log.warn);
             }
 
-            section.app = { 'url': url };
+            section.app = { url: url };
             log.debug('Got URL for app:', url);
 
             if (app.states) {
@@ -630,7 +634,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
             }
             // If nothing changed, there is no point in making an update.
             if (needsUpdate) {
-                let $app = { 'url': section.app.url };
+                const $app = { url: section.app.url };
                 if (opacity) {
                     $app.opacity = opacity;
                 }
@@ -665,7 +669,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
     // Internal utility function to transform or move all or some sections.
     const _updateSections = (operation, space, groupId, body, sections) => {
         let rangeError = false;
-        let geometries = {};
+        const geometries = {};
 
         const sectionsToUpdate = _filterSections(groupId, space, sections, 'Updating');
         _messagePeers(operation.transform ? 'transformSections' : 'moveSectionsTo', { body: body, query: { space: space, groupId: groupId } });
@@ -769,7 +773,7 @@ module.exports = (server, operation, log, Utils, Constants, ApiUtils) => {
     const _readSectionById = async (sectionId, s, includeAppStates) => {
         const fetchAppStates = ((includeAppStates + '').toLowerCase() === 'true');
         const id = parseInt(sectionId, 10);
-        let section = { id, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0] };
+        const section = { id, x: s.x, y: s.y, w: s.w, h: s.h, space: Object.keys(s.spaces)[0] };
         const app = s.app;
 
         if (app) {

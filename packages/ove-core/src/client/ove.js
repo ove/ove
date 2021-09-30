@@ -18,7 +18,7 @@ function OVE (appId, hostname, sectionId) {
         if (__private.hostname) {
             return (withScheme ? '//' : '') + __private.hostname;
         }
-        let scripts = document.getElementsByTagName('script');
+        const scripts = document.getElementsByTagName('script');
         for (let i = 0; i < scripts.length; i++) {
             if (scripts[i].src.indexOf('ove.js') > 0) {
                 return scripts[i].src.substring(
@@ -57,7 +57,7 @@ function OVE (appId, hostname, sectionId) {
             //-- no further checks before responding. Matching code is used in client and server sides. --//
             if (data.sync) {
                 log.trace('Responded to sync request');
-                let clockDiff = {};
+                const clockDiff = {};
                 clockDiff[data.sync.id] = __private.clockDiff;
                 for (let i = 0; i < window.frames.length; i++) {
                     window.frames[i].postMessage({
@@ -74,7 +74,7 @@ function OVE (appId, hostname, sectionId) {
                             syncClock(__self, __private);
                         }, Constants.CLOCK_SYNC_INTERVAL);
                     };
-                    let diff = data.clockDiff[__self.context.uuid];
+                    const diff = data.clockDiff[__self.context.uuid];
                     __private.clockDiff = (__private.clockDiff || 0) + diff;
                     log.debug('Got a clock difference of:', diff);
                     if (diff) {
@@ -241,7 +241,7 @@ function OVE (appId, hostname, sectionId) {
                         }
                     } else {
                         //-- We must construct the sync result similar to the server, to avoid differences. --//
-                        let syncResult = {
+                        const syncResult = {
                             appId: data.appId,
                             sync: {
                                 id: data.sync.id,
@@ -271,7 +271,7 @@ function OVE (appId, hostname, sectionId) {
                     log.trace('Responded to sync request');
                     return;
                 } else if (data.clockDiff) {
-                    let diff = data.clockDiff[__self.context.uuid];
+                    const diff = data.clockDiff[__self.context.uuid];
                     __private.clockDiff = (__private.clockDiff || 0) + diff;
                     log.debug('Got a clock difference of:', diff);
                     if (diff) {
@@ -310,20 +310,19 @@ function OVE (appId, hostname, sectionId) {
         getSocket('ws://' + getHostName(false) + '/');
 
         //-- SDK functions --//
-        this.on = function (func) {
-            onMessage = func;
-        };
+        this.on = func => { onMessage = func; };
 
-        this.addEventListener = (func) => {
+        this.addEventListener = func => {
             __private.ws.addEventListener('message', message => {
                 if (!message || !message.data) return;
                 const data = JSON.parse(message.data);
-                if (data.appId !== appId || (data.sectionId && Number(data.sectionId) !== Number(OVE.Utils.getSectionId())) || !data.message) return;
+                if (data.appId !== appId || (data.sectionId && parseInt(data.sectionId, 10) !==
+                    parseInt(OVE.Utils.getSectionId(), 10)) || !data.message) return;
                 func(data.message);
             });
         };
 
-        this.send = function (message, appId) {
+        this.send = (message, appId) => {
             //-- The identifier of the target application could be omitted if the message was sent to self. --//
             const targetAppId = (arguments.length > 1 && appId) ? appId : __private.appId;
             message.controllerId = __self.context.uuid;
@@ -333,10 +332,10 @@ function OVE (appId, hostname, sectionId) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ appId: targetAppId, sectionId: __private.sectionId, message: message })
-                }).then(res => log.debug('Sent connection event and received status: ', res.status));
+                }).then(res => log.debug('Sent connection event and received status:', res?.status));
             }
 
-            sendWhenReady(function () {
+            sendWhenReady(() => {
                 //-- The same code works for the OVE Core viewer (which has no sectionId) and OVE Core Apps --//
                 let data;
                 if (__private.sectionId) {
@@ -381,7 +380,7 @@ function OVE (appId, hostname, sectionId) {
         let id = OVE.Utils.getViewId();
         //-- oveViewId will not be provided by a controller --//
         if (!id) {
-            let sectionId = OVE.Utils.getSectionId() || __private.proposedSectionId;
+            const sectionId = OVE.Utils.getSectionId() || __private.proposedSectionId;
             if (!sectionId && sectionId !== 0) {
                 log.warn('Section id not provided');
             }
@@ -439,7 +438,7 @@ function OVE (appId, hostname, sectionId) {
             $.ajax({ url: `${__self.context.hostname}/connections/sections/cache/${__private.sectionId}`, type: 'POST', data: currentState, contentType: 'application/json' });
         };
         this.load = function (url) {
-            let __self = this;
+            const __self = this;
             return new Promise(function (resolve, reject) {
                 const endpoint = url || ('instances/' + __private.sectionId + '/state');
                 const onLoad = function (state) {
@@ -461,7 +460,7 @@ function OVE (appId, hostname, sectionId) {
     };
 
     //-- holds private data within OVE library --//
-    let __private = { appId: appId, hostname: hostname };
+    const __private = { appId: appId, hostname: hostname };
 
     //-- sectionId can be provided into OVE but will only be used if it cannot be determined      --//
     //-- using the oveViewId and oveSectionId query parameters.                                 --//
@@ -472,9 +471,9 @@ function OVE (appId, hostname, sectionId) {
     this.context = {
         //-- A version 4 UUID is available for each OVE instance. This to support intra/inter-app --//
         //-- messaging and debugging.                                                             --//
-        uuid: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            let r = Math.random() * 16 | 0;
-            let v = c === 'x' ? r : (r & 0x3 | 0x8);
+        uuid: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         }),
         hostname: getHostName(true),

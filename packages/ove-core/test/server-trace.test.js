@@ -40,10 +40,8 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
     const PORT = 5556;
     const PEER_PORT = 5546;
 
-    let sockets = {};
-    WebSocket.prototype.send = (m) => {
-        sockets.messages.push(m);
-    };
+    const sockets = {};
+    WebSocket.prototype.send = (m) => sockets.messages.push(m);
 
     const OLD_CONSOLE = global.console;
     beforeAll(() => {
@@ -52,7 +50,7 @@ describe('The OVE Core server with log level TRACE_SERVER enabled', () => {
         const peerUrl = 'ws://localhost:' + PEER_PORT;
         sockets.server = new Server(url);
         sockets.peerServer = new Server(peerUrl);
-        let socket = new WebSocket(url);
+        const socket = new WebSocket(url);
         socket.readyState = 1;
         wss.clients.add(socket);
 

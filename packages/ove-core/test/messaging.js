@@ -27,10 +27,8 @@ global.console = OLD_CONSOLE;
 // WebSocket testing is done using a Mock Socket. The tests run a WSS and inject the mocked
 // WS into the express app. These tests also include clock sync related scenarios.
 describe('The OVE Core server', () => {
-    let sockets = {};
-    WebSocket.prototype.send = (m) => {
-        sockets.messages.push(m);
-    };
+    const sockets = {};
+    WebSocket.prototype.send = m => sockets.messages.push(m);
 
     const OLD_CONSOLE = global.console;
     const OLD_PROCESS = process.env;
@@ -184,11 +182,11 @@ describe('The OVE Core server', () => {
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid' } }));
         expect(sockets.messages.length).toEqual(1);
         expect(sockets.messages.pop()).toEqual(JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid', serverDiff: 0 } }));
-        let t1 = new Date().getTime();
+        const t1 = new Date().getTime();
         sockets.server.emit('message', JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid', serverDiff: 0, t1: t1 } }));
         expect(sockets.messages.length).toEqual(1);
-        let message = sockets.messages.pop();
-        let t2 = JSON.parse(message).sync.t2;
+        const message = sockets.messages.pop();
+        const t2 = JSON.parse(message).sync.t2;
         expect(message).toEqual(JSON.stringify({ appId: 'foo', sync: { id: 'some_uuid', serverDiff: 0, t2: t2, t1: t1 } }));
     });
 
@@ -356,12 +354,12 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when sections are refreshed by group', async () => {
         let res = await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 });
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
         res = await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 });
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 1 }));
 
@@ -405,7 +403,7 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when sections are refreshed by space', async () => {
         let res = await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 });
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
@@ -434,7 +432,7 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when a section is refreshed', async () => {
         let res = await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 });
         expect(res.statusCode).toEqual(HttpStatus.OK);
         expect(res.text).toEqual(JSON.stringify({ id: 0 }));
 
@@ -482,10 +480,12 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when a section is created and deleted', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
@@ -500,7 +500,7 @@ describe('The OVE Core server', () => {
             // Update request is generated after a timeout, so it is required to wait for it.
             expect(sockets.messages.length).toEqual(1);
             expect(sockets.messages.pop()).toEqual(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ));
             nock.cleanAll();
             done();
@@ -510,10 +510,12 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when a section is created and deleted without an app', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
@@ -534,10 +536,12 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when trying to read information about a section that has been created', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
@@ -552,10 +556,10 @@ describe('The OVE Core server', () => {
             // Update request is generated after a timeout, so it is required to wait for it.
             expect(sockets.messages.length).toEqual(2);
             expect(sockets.messages.pop()).toEqual(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ));
             expect(sockets.messages.pop()).toEqual(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ));
             nock.cleanAll();
             done();
@@ -566,10 +570,12 @@ describe('The OVE Core server', () => {
     it('should not trigger an event to its sockets when trying to read information about a section when the server-side socket is not ready', async (done) => {
         sockets.serverSocket.readyState = 0;
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
@@ -582,7 +588,7 @@ describe('The OVE Core server', () => {
             // Update request is generated after a timeout, so it is required to wait for it.
             expect(sockets.messages.length).toEqual(1);
             expect(sockets.messages.pop()).toEqual(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ));
             nock.cleanAll();
             done();
@@ -592,10 +598,12 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when trying to read information about a section that has been created without an app', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
@@ -617,16 +625,18 @@ describe('The OVE Core server', () => {
 
     it('should trigger limited events to its sockets when a section had a dimension change', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        let spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
-        let scope = nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        const scope = nock('http://localhost:8081').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/sections/0')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 20 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 20 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         expect(scope.isDone()).not.toBeTruthy(); // request should not be made at this point.
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -639,13 +649,15 @@ describe('The OVE Core server', () => {
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
             ))).toBeTruthy();
-            spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-                { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 20, 'y': 0 } }, { }, { } ] };
+            spaces = {
+                TestingNine: [{ }, { }, { }, { }, { }, { },
+                    { x: 0, y: 0, w: 10, h: 10, offset: { x: 20, y: 0 } }, { }, { }]
+            };
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, spaces: spaces } }
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
@@ -656,16 +668,18 @@ describe('The OVE Core server', () => {
 
     it('should trigger an event to its sockets when a section is updated in quick succession', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
-        let scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
+        const scope = nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/sections/0')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8082' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         expect(scope.isDone()).toBeTruthy(); // checks if the flush request was actually made.
         nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -679,10 +693,10 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8082' } } }
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
@@ -693,16 +707,18 @@ describe('The OVE Core server', () => {
 
     it('should trigger additional events to its sockets when a section is updated along with a dimension change', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        let spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
         nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).post('/sections/0')
-            .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 })
+            .send({ h: 100, app: { url: 'http://localhost:8082' }, space: 'TestingNine', w: 100, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
         nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
         await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -715,15 +731,17 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8082' } } }
             ))).toBeTruthy();
-            spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-                { 'x': 0, 'y': 0, 'w': 100, 'h': 100, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+            spaces = {
+                TestingNine: [{ }, { }, { }, { }, { }, { },
+                    { x: 0, y: 0, w: 100, h: 100, offset: { x: 10, y: 0 } }, { }, { }]
+            };
             expect(sockets.messages.includes(JSON.stringify(
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, spaces: spaces } }
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ))).toBeTruthy();
             sockets.messages = [];
             nock.cleanAll();
@@ -737,10 +755,12 @@ describe('The OVE Core server', () => {
     // Therefore, make this the last test case to avoid unexpected failures.
     it('should trigger an event to its sockets when a section is updated', async (done) => {
         await request(app).post('/section')
-            .send({ 'h': 10, 'app': { 'url': 'http://localhost:8081' }, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 })
+            .send({ h: 10, app: { url: 'http://localhost:8081' }, space: 'TestingNine', w: 10, y: 0, x: 10 })
             .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
-        let spaces = { 'TestingNine': [ { }, { }, { }, { }, { }, { },
-            { 'x': 0, 'y': 0, 'w': 10, 'h': 10, 'offset': { 'x': 10, 'y': 0 } }, { }, { } ] };
+        const spaces = {
+            TestingNine: [{ }, { }, { }, { }, { }, { },
+                { x: 0, y: 0, w: 10, h: 10, offset: { x: 10, y: 0 } }, { }, { }]
+        };
         expect(sockets.messages.pop()).toEqual(JSON.stringify(
             { appId: 'core', message: { action: Constants.Action.CREATE, id: 0, spaces: spaces } }
         ));
@@ -748,11 +768,11 @@ describe('The OVE Core server', () => {
             // Back to back calls could mean the update finds the new sectionId. This is not a problem in real,
             // but in order to test it, we have this delay.
             expect(sockets.messages.pop()).toEqual(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8081' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8081' } } }
             ));
             nock('http://localhost:8081').post('/instances/0/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
             await request(app).post('/sections/0')
-                .send({ 'h': 100, 'app': { 'url': 'http://localhost:8082' }, 'space': 'TestingNine', 'w': 100, 'y': 0, 'x': 10 })
+                .send({ h: 100, app: { url: 'http://localhost:8082' }, space: 'TestingNine', w: 100, y: 0, x: 10 })
                 .expect(HttpStatus.OK, JSON.stringify({ id: 0 }));
             nock('http://localhost:8082').post('/instances/flush').reply(HttpStatus.OK, Utils.JSON.EMPTY);
             await request(app).delete('/sections').expect(HttpStatus.OK, Utils.JSON.EMPTY);
@@ -763,7 +783,7 @@ describe('The OVE Core server', () => {
                 { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0 } }
             ))).toBeTruthy();
             expect(sockets.messages.includes(JSON.stringify(
-                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { 'url': 'http://localhost:8082' } } }
+                { appId: 'core', message: { action: Constants.Action.UPDATE, id: 0, app: { url: 'http://localhost:8082' } } }
             ))).toBeTruthy();
             nock.cleanAll();
             done();
@@ -774,7 +794,7 @@ describe('The OVE Core server', () => {
     it('should forward message to all sockets on connected event', async () => {
         const event = { appId: 'test', sectionId: '0', message: { test: 'test' } };
         await request(app).post('/connection/TestingNine/TestingNineClone');
-        await request(app).post('/section').send({ 'h': 10, 'space': 'TestingNine', 'w': 10, 'y': 0, 'x': 10 });
+        await request(app).post('/section').send({ h: 10, space: 'TestingNine', w: 10, y: 0, x: 10 });
         await request(app).post('/connections/sections/event/0').send(event);
         expect(sockets.messages.filter(message => JSON.parse(message).appId !== 'core').length).toBe(2);
         event.sectionId = '1';

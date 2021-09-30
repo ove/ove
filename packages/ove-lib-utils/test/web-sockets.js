@@ -6,10 +6,8 @@ describe('The OVE Core server', () => {
     const { WebSocket, Server } = require('mock-socket');
     const PORT = 5555;
 
-    let sockets = {};
-    WebSocket.prototype.send = (m) => {
-        sockets.messages.push(m);
-    };
+    const sockets = {};
+    WebSocket.prototype.send = m => sockets.messages.push(m);
 
     const OLD_CONSOLE = global.console;
     beforeAll(() => {

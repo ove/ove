@@ -4,16 +4,19 @@ const express = require('express');
 const cors = require('cors');
 const HttpStatus = require('http-status-codes');
 const app = express();
+const request = require('request');
 
 module.exports = function (baseDir, appName) {
     // Usually the baseDir is a string, but in some situations it may be required to pass
     // the entire dir structure, for example, when node_modules are located elsewhere.
-    const dirs = typeof baseDir === 'string' ? {
-        base: baseDir,
-        nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
-        constants: path.join(baseDir, 'client', 'constants'),
-        rootPage: path.join(__dirname, 'landing.html')
-    } : baseDir;
+    const dirs = typeof baseDir === 'string'
+        ? {
+            base: baseDir,
+            nodeModules: path.join(baseDir, '..', '..', '..', 'node_modules'),
+            constants: path.join(baseDir, 'client', 'constants'),
+            rootPage: path.join(__dirname, 'landing.html')
+        }
+        : baseDir;
     const { Constants, Utils } = require('@ove-lib/utils')(appName, app, dirs);
     const log = Utils.Logger(appName);
     const configPath = path.join(dirs.base, 'config.json');
@@ -29,9 +32,9 @@ module.exports = function (baseDir, appName) {
     module.exports.app = app;
     if (fs.existsSync(Constants.CONFIG_JSON_PATH(appName))) {
         module.exports.config = JSON.parse(
-            fs.readFileSync(Constants.CONFIG_JSON_PATH(appName), Constants.UTF8));
+            fs.readFileSync(Constants.CONFIG_JSON_PATH(appName), Constants.UTF8).toString());
     } else if (fs.existsSync(configPath)) {
-        module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
+        module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8).toString());
     } else {
         module.exports.config = [];
     }
@@ -40,14 +43,14 @@ module.exports = function (baseDir, appName) {
     module.exports.operations = {};
 
     const getClock = function () {
-        let clock = {
+        const clock = {
             uuid: 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                let r = Math.random() * 16 | 0;
-                let v = c === 'x' ? r : (r & 0x3 | 0x8);
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
                 return v.toString(16);
             })
         };
-        let __self = {};
+        const __self = {};
 
         __self.init = function () {
             if (!clock.syncResults) {
@@ -92,7 +95,7 @@ module.exports = function (baseDir, appName) {
                     } catch (e) {} // ignore all errors, since there is no value in recording them.
                 } else {
                     // We must construct the sync result similar to the server, to avoid differences.
-                    let syncResult = {
+                    const syncResult = {
                         appId: data.appId,
                         sync: {
                             id: data.sync.id,
@@ -124,7 +127,7 @@ module.exports = function (baseDir, appName) {
                 log.trace('Responded to sync request');
                 return true;
             } else if (data.clockDiff) {
-                let diff = data.clockDiff[clock.uuid];
+                const diff = data.clockDiff[clock.uuid];
                 clock.diff = (clock.diff || 0) + diff;
                 log.debug('Got a clock difference of:', diff);
                 /* istanbul ignore if */
@@ -189,6 +192,13 @@ module.exports = function (baseDir, appName) {
         return valid;
     };
 
+    const sendEvent = (sectionId, msg) => {
+        request.post(`http://${Utils.getOVEHost()}/connections/sections/event/${sectionId}`, {
+            headers: { [Constants.HTTP_HEADER_CONTENT_TYPE]: Constants.HTTP_CONTENT_TYPE_JSON },
+            json: msg
+        });
+    };
+
     // Exported functionality from Utils
     module.exports.Utils = {
         JSON: Utils.JSON,
@@ -197,7 +207,8 @@ module.exports = function (baseDir, appName) {
         sendMessage: Utils.sendMessage,
         sendEmptySuccess: Utils.sendEmptySuccess,
         isNullOrEmpty: Utils.isNullOrEmpty,
-        validateState: validateState
+        validateState: validateState,
+        sendEvent: sendEvent
     };
 
     Utils.registerRoutesForPersistence();
@@ -396,18 +407,16 @@ module.exports = function (baseDir, appName) {
         appState.set('state', []);
         if (fs.existsSync(Constants.CONFIG_JSON_PATH(appName))) {
             module.exports.config = JSON.parse(
-                fs.readFileSync(Constants.CONFIG_JSON_PATH(appName), Constants.UTF8));
+                fs.readFileSync(Constants.CONFIG_JSON_PATH(appName), Constants.UTF8).toString());
         } else if (fs.existsSync(configPath)) {
-            module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8));
+            module.exports.config = JSON.parse(fs.readFileSync(configPath, Constants.UTF8).toString());
         } else {
             module.exports.config = [];
         }
         Utils.sendEmptySuccess(res);
     };
 
-    const name = function (_req, res) {
-        return Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(appName));
-    };
+    const name = (_req, res) => Utils.sendMessage(res, HttpStatus.OK, JSON.stringify(appName));
 
     app.get('/states/:name', readStateByName);
     app.post('/states/:name', createStateByName);

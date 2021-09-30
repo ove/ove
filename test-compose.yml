@@ -9,6 +9,7 @@ services:
         port: 8080
     ports:
       - "8080:8080"
+    command: "pm2-test.json"
     environment:
       PORT: "8080"
       OVE_HOST: "ovehub-ove-test:8080"
@@ -23,6 +24,7 @@ services:
         port: 7080
     ports:
       - "7080:7080"
+    command: "pm2-test.json"
     environment:
       PORT: "7080"
       OVE_HOST: "ovehub-ove-test-clone:7080"
