@@ -21,7 +21,7 @@
     "axios": "0.21.1",
     "cors": "2.8.5",
     "d3": "6.7.0",
-    "datatables.net-dt": "1.10.24",
+    "datatables.net-dt": "1.13.5",
     "express": "4.17.1",
     "express-ws": "4.0.0",
     "github-markdown-css": "4.0.0",
