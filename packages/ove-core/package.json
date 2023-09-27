@@ -1,7 +1,7 @@
 {
   "name": "@ove/ove-core",
   "private": true,
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "The Core library of OVE",
   "main": "dist/index.js",
   "scripts": {
