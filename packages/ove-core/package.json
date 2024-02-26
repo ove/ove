@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "mock-socket": "9.0.3",
-    "nock": "13.0.11"
+    "nock": "13.5.4"
   },
   "jest": {
     "collectCoverageFrom": [
