@@ -20,7 +20,7 @@
     "@ove-lib/utils": "^0.6.0",
     "axios": "0.21.1",
     "cors": "2.8.5",
-    "d3": "6.7.0",
+    "d3": "7.9.0",
     "datatables.net-dt": "1.10.24",
     "express": "4.17.1",
     "express-ws": "4.0.0",
