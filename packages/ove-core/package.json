@@ -22,7 +22,7 @@
     "cors": "2.8.5",
     "d3": "6.7.0",
     "datatables.net-dt": "1.10.24",
-    "express": "4.17.1",
+    "express": "4.19.2",
     "express-ws": "4.0.0",
     "github-markdown-css": "4.0.0",
     "http-status-codes": "2.1.4",
