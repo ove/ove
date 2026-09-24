@@ -1,4 +1,3 @@
-[!IMPORTANT]
 🚨 This repository has been replaced and is no longer actively maintained.
 
 Please use the new repository instead:
